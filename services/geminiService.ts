@@ -2,8 +2,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { store } from "./mockStore";
 
-// Initialize the Gemini API client using the environment variable directly.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// NÃO pode usar process.env no frontend (browser). Vite usa import.meta.env.
+// Aqui a gente só evita crash. O Gemini “real” vai para /api na Fase 3.
+const getAi = () => {
+  const apiKey = (import.meta as any)?.env?.VITE_GEMINI_API_KEY || "";
+  if (!apiKey) return null;
+  return new GoogleGenAI({ apiKey });
+};
 
 const actionSchema = {
   type: Type.OBJECT,
