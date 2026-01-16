@@ -129,7 +129,7 @@ const FinanceDashboard: React.FC = () => {
         } else if (itemToDelete.type === 'TRANSACTION') {
             store.deleteTransaction(itemToDelete.id);
         } else if (itemToDelete.type === 'FORECAST') {
-            store.deleteForecast(itemToDelete.id, 'ONLY_THIS', selectedMonth, selectedYear);
+            store.deleteForecast(itemToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
         }
         triggerUpdate();
         setItemToDelete(null);
