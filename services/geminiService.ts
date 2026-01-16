@@ -65,7 +65,13 @@ const extractJson = (str: string): string => {
  */
 export const processUserCommand = async (inputText: string, imageBase64?: string) => {
   try {
+    const ai = getAi();
+    if (!ai) {
+      return { success: false, data: { action: "UNKNOWN" }, message: "Gemini não configurado ainda." };
+    }
+
     const parts: any[] = [{ text: inputText }];
+
     if (imageBase64) {
       parts.push({
         inlineData: { mimeType: 'image/jpeg', data: imageBase64 }
