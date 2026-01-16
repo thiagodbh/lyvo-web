@@ -600,6 +600,19 @@ const FinanceDashboard: React.FC = () => {
                     onCancel={() => setItemToDelete(null)}
                 />
             )}
+            {billToDelete && (
+  <ConfirmationModal
+    message="Excluir esta conta fixa?"
+    onConfirm={() => {
+      // POR PADRÃO: exclui esta e as futuras
+      store.deleteFixedBill(billToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
+      setBillToDelete(null);
+      triggerUpdate();
+    }}
+    onCancel={() => setBillToDelete(null)}
+  />
+)}
+
         </div>
     );
 };
