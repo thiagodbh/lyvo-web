@@ -1,5 +1,7 @@
 
 import React, { useState } from 'react';
+import { authService } from './services/authService';
+import { User as FirebaseUser } from 'firebase/auth';
 import { MessageCircle, PieChart, Calendar, User, Settings, LogOut } from 'lucide-react';
 import ChatInterface from './components/ChatInterface';
 import FinanceDashboard from './components/FinanceDashboard';
@@ -36,20 +38,38 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
 );
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+const [authLoading, setAuthLoading] = useState(true);
+const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
+React.useEffect(() => {
+  const unsub = authService.onChange((u) => {
+    setUser(u);
+    setAuthLoading(false);
+  });
+  return () => unsub();
+}, []);
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentTab(AppTab.CHAT);
-  };
+  const handleLogin = async (email: string, password: string) => {
+  await authService.signIn(email, password);
+};
+
+const handleLogout = async () => {
+  await authService.signOut();
+  setCurrentTab(AppTab.CHAT);
+};
+
 
   // --- Authenticated Layout (Responsive with Fixed Bottom Nav) ---
-  if (isAuthenticated) {
+  if (authLoading) {
+  return (
+    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+      <div className="text-gray-500 font-medium">Carregando...</div>
+    </div>
+  );
+}
+
+  if (!authLoading && user) {
     const renderContent = () => {
       switch (currentTab) {
         case AppTab.CHAT:
