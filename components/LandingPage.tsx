@@ -18,8 +18,9 @@ import {
 } from 'lucide-react';
 
 interface LandingPageProps {
-  onLogin: () => void;
+  onLogin: (email: string, password: string) => Promise<void> | void;
 }
+
 
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -31,13 +32,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     setOpenFaq(openFaq === index ? null : index);
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simulate login
-    if (email && password) {
-      onLogin();
-    }
-  };
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (email && password) {
+    await onLogin(email, password);
+    setShowLoginModal(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-800">
