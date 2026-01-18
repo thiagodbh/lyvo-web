@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAMjEvI1iLTMXMxYPfaB6-042hs8bApK2k",
+  apiKey: "AIzaSyAMjEvIi1LIMXMxYPfaB6-042hs8bApK2k",
   authDomain: "lyvo-web.firebaseapp.com",
   projectId: "lyvo-web",
   storageBucket: "lyvo-web.appspot.com",
