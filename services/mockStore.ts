@@ -1,3 +1,4 @@
+console.log("MOCK STORE", "calculateBalances:", typeof (store as any)?.calculateBalances);
 
 
 import { 
