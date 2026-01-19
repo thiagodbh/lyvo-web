@@ -1,5 +1,3 @@
-console.log("MOCK STORE", "calculateBalances:", typeof (store as any)?.calculateBalances);
-
 
 import { 
     Transaction, 
@@ -368,3 +366,4 @@ import {
     }
   }
 export const store = new MockStore();
+console.log("MOCK STORE", "calculateBalances:", typeof (store as any).calculateBalances);
