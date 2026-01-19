@@ -367,4 +367,3 @@ import {
         return card.name;
     }
   }
-  
