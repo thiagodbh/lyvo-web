@@ -22,6 +22,13 @@ export const authService = {
   },
 
   onChange(callback: (user: User | null) => void) {
-    return onAuthStateChanged(auth, callback);
-  },
+  return onAuthStateChanged(auth, (user) => {
+    if (user) {
+      store.setUser(user.uid); // 🔴 LINHA NOVA
+    } else {
+      store.clearUser();       // 🔴 LINHA NOVA
+    }
+    callback(user);
+  });
+},
 };
