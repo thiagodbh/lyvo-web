@@ -1,5 +1,4 @@
-// services/mockStore.ts
-export { store } from "./firestoreStore";
+
 
 import { 
     Transaction, 
@@ -367,3 +366,4 @@ import {
         return card.name;
     }
   }
+export const store = new MockStore();
