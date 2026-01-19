@@ -43,9 +43,11 @@ const [authLoading, setAuthLoading] = useState(true);
 const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 React.useEffect(() => {
   const unsub = authService.onChange((u) => {
-    setUser(u);
-    setAuthLoading(false);
-  });
+  setUser(u);
+  if (u) store.setUser(u.uid);
+  else store.clearUser();
+  setAuthLoading(false);
+});
   return () => unsub();
 }, []);
 
@@ -56,7 +58,8 @@ React.useEffect(() => {
 
 const handleLogout = async () => {
   await authService.signOut();
-  setCurrentTab(AppTab.CHAT);
+store.clearUser();
+setCurrentTab(AppTab.CHAT);
 };
 
 
