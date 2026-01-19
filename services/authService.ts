@@ -1,4 +1,4 @@
-import { store } from "./mockStore";
+
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
