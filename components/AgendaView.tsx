@@ -11,7 +11,7 @@ import {
     X,
     Check
 } from 'lucide-react';
-import { store } from '../services/mockStore';
+import { store } from "../services/firestoreStore";
 import { CalendarEvent, CalendarConnection } from '../types';
 
 type ViewMode = 'DAY' | 'WEEK' | 'MONTH';
