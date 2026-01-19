@@ -698,7 +698,7 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
 
                     <div className="space-y-4">
                         <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest ml-2">Lançamentos do Mês</h3>
-                        {transactions.map(t => (
+                        {transactions && transactions.map(t => (
                             <div key={t.id} className="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm group">
                                 <div className="text-gray-900">
                                     <p className="text-sm font-bold">{t.description}</p>
