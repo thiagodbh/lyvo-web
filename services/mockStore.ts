@@ -368,4 +368,3 @@ import {
     }
   }
   
-  export const store = new MockStore();
