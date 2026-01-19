@@ -367,3 +367,4 @@ import {
         return card.name;
     }
   }
+export const store = new MockStore();
