@@ -1,3 +1,4 @@
+import { store } from "./firestoreStore";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
