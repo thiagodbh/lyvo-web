@@ -15,10 +15,41 @@ type Listener = () => void;
 class FirestoreStore {
   private uid: string | null = null;
   private listeners: Listener[] = [];
-
+  private transactions: any[] = [];
   setUser(uid: string) {
     this.uid = uid;
     this.notify();
+    getTransactionsByMonth(month: number, year: number) {
+  return this.transactions.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+}
+
+calculateBalances(month: number, year: number) {
+  const monthTransactions = this.getTransactionsByMonth(month, year);
+
+  const income = monthTransactions
+    .filter(t => t.type === "INCOME")
+    .reduce((sum, t) => sum + Number(t.value || 0), 0);
+
+  const expense = monthTransactions
+    .filter(t => t.type === "EXPENSE")
+    .reduce((sum, t) => sum + Number(t.value || 0), 0);
+
+  const allTransactions = this.transactions.filter(t => !t.relatedCardId);
+
+  const totalIncome = allTransactions
+    .filter(t => t.type === "INCOME")
+    .reduce((sum, t) => sum + Number(t.value || 0), 0);
+
+  const totalExpense = allTransactions
+    .filter(t => t.type === "EXPENSE")
+    .reduce((sum, t) => sum + Number(t.value || 0), 0);
+
+  return { income, expense, balance: totalIncome - totalExpense };
+}
+
   }
 
   clearUser() {
@@ -54,7 +85,9 @@ class FirestoreStore {
       where("userId", "==", this.uid)
     );
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+this.transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+return this.transactions;
+
   }
 
   async deleteTransaction(id: string) {
