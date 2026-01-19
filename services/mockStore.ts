@@ -1,3 +1,6 @@
+// services/mockStore.ts
+export { store } from "./firestoreStore";
+
 import { 
     Transaction, 
     FixedBill, 
