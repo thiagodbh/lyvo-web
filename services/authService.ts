@@ -1,22 +1,29 @@
-type AuthUser = { uid: string; email: string } | null;
+type Unsubscribe = () => void;
 
 class AuthService {
-  private user: AuthUser = null;
-  private listeners: Array<(u: AuthUser) => void> = [];
+  private user: any = null;
+  private listeners = new Set<(user: any) => void>();
 
-  private emit() {
-    for (const cb of this.listeners) cb(this.user);
+  // compatível com o App.tsx (ele espera isso)
+  onChange(callback: (user: any) => void): Unsubscribe {
+    this.listeners.add(callback);
+
+    // dispara imediatamente com o estado atual
+    try {
+      callback(this.user);
+    } catch {}
+
+    return () => {
+      this.listeners.delete(callback);
+    };
   }
 
-  onChange(cb: (u: AuthUser) => void) {
-    this.listeners.push(cb);
-    // dispara imediatamente com o estado atual
-    cb(this.user);
-
-    // unsubscribe
-    return () => {
-      this.listeners = this.listeners.filter(x => x !== cb);
-    };
+  private emit() {
+    for (const cb of this.listeners) {
+      try {
+        cb(this.user);
+      } catch {}
+    }
   }
 
   async login(email: string, password: string) {
