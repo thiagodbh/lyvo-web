@@ -1,30 +1,21 @@
+class AuthService {
+  private user: any = null;
 
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  User,
-} from "firebase/auth";
-import { auth } from "./firebase";
+  async login(email: string, password: string) {
+    this.user = {
+      uid: "mock-user",
+      email
+    };
+    return this.user;
+  }
 
-export const authService = {
-  signUp(email: string, password: string) {
-    return createUserWithEmailAndPassword(auth, email, password);
-  },
+  logout() {
+    this.user = null;
+  }
 
-  signIn(email: string, password: string) {
-    return signInWithEmailAndPassword(auth, email, password);
-  },
+  getCurrentUser() {
+    return this.user;
+  }
+}
 
-  signOut() {
-    return signOut(auth);
-  },
-
-  onChange(callback: (user: User | null) => void) {
-  return onAuthStateChanged(auth, (user) => {
-    
-    callback(user);
-  });
-},
-};
+export const authService = new AuthService();
