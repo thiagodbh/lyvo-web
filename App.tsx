@@ -1,7 +1,5 @@
 
 import React, { useState } from 'react';
-import { authService } from './services/authService';
-import { User as FirebaseUser } from 'firebase/auth';
 import { MessageCircle, PieChart, Calendar, User, Settings, LogOut } from 'lucide-react';
 import ChatInterface from './components/ChatInterface';
 import FinanceDashboard from './components/FinanceDashboard';
@@ -38,41 +36,20 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
 );
 
 function App() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-const [authLoading, setAuthLoading] = useState(true);
-const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
-React.useEffect(() => {
-  const unsub = authService.onChange((u) => {
-  setUser(u);
-  if (u) store.setUser(u.uid);
-  else store.clearUser();
-  setAuthLoading(false);
-});
-  return () => unsub();
-}, []);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
 
-  const handleLogin = async (email: string, password: string) => {
-  await authService.signIn(email, password);
-};
-
-const handleLogout = async () => {
-  await authService.signOut();
-store.clearUser();
-setCurrentTab(AppTab.CHAT);
-};
-
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentTab(AppTab.CHAT);
+  };
 
   // --- Authenticated Layout (Responsive with Fixed Bottom Nav) ---
-  if (authLoading) {
-  return (
-    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-      <div className="text-gray-500 font-medium">Carregando...</div>
-    </div>
-  );
-}
-
-  if (!authLoading && user) {
+  if (isAuthenticated) {
     const renderContent = () => {
       switch (currentTab) {
         case AppTab.CHAT:
