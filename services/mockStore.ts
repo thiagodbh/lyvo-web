@@ -367,10 +367,4 @@ import {
   }
 export const store = new MockStore();
 
-console.log(
-  "MOCKSTORE_LOADED_v1",
-  "ctor=", (store as any)?.constructor?.name,
-  "calc=", typeof (store as any)?.calculateBalances,
-  "protoKeys=", Object.getOwnPropertyNames(Object.getPrototypeOf(store))
-);
 
