@@ -1,53 +1,40 @@
-type Unsubscribe = () => void;
+// services/authService.ts
+import { store } from "./mockStore";
 
-class AuthService {
-  private user: any = null;
-  private listeners = new Set<(user: any) => void>();
+type User = { uid: string; email: string } | null;
 
-  // O App costuma esperar algo tipo "onAuthStateChanged"
-  onAuthStateChanged(callback: (user: any) => void): Unsubscribe {
-    return this.onChange(callback);
-  }
-
-  // E em alguns lugares pode estar usando "onChange"
-  onChange(callback: (user: any) => void): Unsubscribe {
-    this.listeners.add(callback);
-
-    // dispara imediatamente (isso tira o "Carregando" travado)
-    queueMicrotask(() => {
-      try { callback(this.user); } catch {}
-    });
-
-    return () => {
-      this.listeners.delete(callback);
-    };
-  }
+class MockAuthService {
+  private user: User = null;
+  private listeners = new Set<(user: User) => void>();
 
   private emit() {
-    for (const cb of this.listeners) {
-      try { cb(this.user); } catch {}
-    }
+    for (const cb of this.listeners) cb(this.user);
   }
 
-  // aliases que o App pode usar
   async signIn(email: string, password: string) {
-    return this.login(email, password);
-  }
-
-  async signOut() {
-    this.logout();
-  }
-
-  // suas funções mock
-  async login(email: string, password: string) {
+    // mock login
     this.user = { uid: "mock-user", email };
+    store.setUser(this.user.uid);
     this.emit();
     return this.user;
   }
 
-  logout() {
+  async signUp(email: string, password: string) {
+    // mock signup = mock login
+    return this.signIn(email, password);
+  }
+
+  async signOut() {
     this.user = null;
+    store.clearUser();
     this.emit();
+  }
+
+  // ✅ o App.tsx espera isso (pelo seu print do erro e buscas)
+  onChange(callback: (user: User) => void) {
+    this.listeners.add(callback);
+    callback(this.user); // dispara estado inicial
+    return () => this.listeners.delete(callback);
   }
 
   getCurrentUser() {
@@ -55,4 +42,4 @@ class AuthService {
   }
 }
 
-export const authService = new AuthService();
+export const authService = new MockAuthService();
