@@ -1,4 +1,4 @@
-import { store } from './services/mockStore';
+
 import React, { useState } from 'react';
 import { authService } from './services/authService';
 import { User as FirebaseUser } from 'firebase/auth';
