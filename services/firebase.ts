@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAMjEvIi1LIMXMxYPfaB6-042hs8bApK2k",
+  apiKey: "AIzaSyAMjEviILIMXMxYPfaB6-042hs8bApK2k",
   authDomain: "lyvo-web.firebaseapp.com",
   projectId: "lyvo-web",
   storageBucket: "lyvo-web.firebasestorage.app",
@@ -13,4 +13,3 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-
