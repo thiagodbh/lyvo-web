@@ -27,7 +27,16 @@ import {
     ];
     events: CalendarEvent[] = [];
     calendarConnections: CalendarConnection[] = [];
-  
+  private uid: string | null = null;
+
+setUser(uid: string) {
+  this.uid = uid;
+}
+
+clearUser() {
+  this.uid = null;
+}
+
     getTransactionsByMonth(month: number, year: number) {
       return this.transactions.filter(t => {
         const d = new Date(t.date);
