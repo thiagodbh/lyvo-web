@@ -289,6 +289,8 @@ class FirestoreStore {
       uid: this.uid,
       createdAt: Timestamp.now(),
     });
+// update otimista (evita “só aparece na segunda”)
+this.fixedBills = [{ ...(newBill as any), id: ref.id } as any, ...this.fixedBills];
 
     return { ...(newBill as any), id: ref.id } as FixedBill;
   }
