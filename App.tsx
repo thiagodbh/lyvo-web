@@ -37,8 +37,17 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
 );
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!authService.getCurrentUser());
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
+  React.useEffect(() => {
+  const u = authService.getCurrentUser();
+  if (u?.uid) {
+    store.setUser(u.uid);
+  } else {
+    store.clearUser();
+  }
+}, []);
+
 
   const handleLogin = async (email: string, password: string) => {
   await authService.signIn(email, password);
