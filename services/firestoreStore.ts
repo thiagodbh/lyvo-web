@@ -96,7 +96,7 @@ class FirestoreStore {
   }
 }
   // ⚠️ TEMPORÁRIO — compatibilidade com mockStore
-  calculateBalances(...args: any[]) {
+  calculateBalances(...args) {
     return {
       income: 0,
       expense: 0,
