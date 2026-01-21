@@ -42,16 +42,21 @@ function App() {
 
   const handleLogin = async (email: string, password: string) => {
   await authService.signIn(email, password);
+  const u = authService.getCurrentUser();
+if (u?.uid) store.setUser(u.uid);
   setIsAuthenticated(true);
 };
 
 const handleSignUp = async (email: string, password: string) => {
   await authService.signUp(email, password);
+  const u = authService.getCurrentUser();
+if (u?.uid) store.setUser(u.uid);
   setIsAuthenticated(true);
 };
 
 
   const handleLogout = () => {
+    store.clearUser();
     setIsAuthenticated(false);
     setCurrentTab(AppTab.CHAT);
   };
