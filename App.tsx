@@ -1,4 +1,4 @@
-import { store } from './services/firestoreStore';
+
 import React, { useState } from 'react';
 import { authService } from './services/authService';
 import { MessageCircle, PieChart, Calendar, User, Settings, LogOut } from 'lucide-react';
