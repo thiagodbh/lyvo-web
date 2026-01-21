@@ -91,17 +91,18 @@ class FirestoreStore {
     });
   }
 
-  async deleteEvent(id: string) {
+    async deleteEvent(id: string) {
     await deleteDoc(doc(db, 'events', id));
   }
-}
+
   // ⚠️ TEMPORÁRIO — compatibilidade com mockStore
-  calculateBalances(...args) {
+  calculateBalances(...args: any[]) {
     return {
       income: 0,
       expense: 0,
       balance: 0,
     };
   }
+}
 
 export const store = new FirestoreStore();
