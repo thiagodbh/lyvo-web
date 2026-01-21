@@ -39,9 +39,16 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
+  const handleLogin = async (email: string, password: string) => {
+  await authService.signIn(email, password);
+  setIsAuthenticated(true);
+};
+
+const handleSignUp = async (email: string, password: string) => {
+  await authService.signUp(email, password);
+  setIsAuthenticated(true);
+};
+
 
   const handleLogout = () => {
     setIsAuthenticated(false);
@@ -107,7 +114,7 @@ function App() {
   }
 
   // --- Unauthenticated Layout (Landing Page) ---
-  return <LandingPage onLogin={handleLogin} />;
+  return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
 }
 
 export default App;
