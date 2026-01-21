@@ -19,14 +19,17 @@ import {
 
 interface LandingPageProps {
   onLogin: (email: string, password: string) => Promise<void> | void;
+  onSignUp: (email: string, password: string) => Promise<void> | void;
 }
 
-
-const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+const [formError, setFormError] = useState<string | null>(null);
+
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
@@ -34,9 +37,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
-  if (email && password) {
-    await onLogin(email, password);
-    setShowLoginModal(false);
+  setFormError(null);
+
+  try {
+    if (email && password) {
+      if (isSignUp) await onSignUp(email, password);
+      else await onLogin(email, password);
+
+      setShowLoginModal(false);
+      setEmail('');
+      setPassword('');
+      setIsSignUp(false);
+    }
+  } catch (err: any) {
+    setFormError(err?.message || 'Erro ao autenticar.');
   }
 };
 
@@ -436,7 +450,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <Lock className="w-6 h-6" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">Acesse sua Conta</h3>
+                <h3 className="text-2xl font-bold text-gray-900">
+  {isSignUp ? 'Crie sua Conta' : 'Acesse sua Conta'}
+</h3>
+
                 <p className="text-gray-500 text-sm mt-2">Bem-vindo de volta ao LYVO</p>
              </div>
 
@@ -469,11 +486,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 </div>
 
                 <button 
-                  type="submit"
-                  className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200"
-                >
-                  Entrar
-                </button>
+  type="submit"
+  className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200"
+>
+  {isSignUp ? 'Criar conta' : 'Entrar'}
+</button>
+
              </form>
              
              <div className="mt-8 text-center">
