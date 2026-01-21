@@ -7,101 +7,555 @@ import {
   where,
   Timestamp,
   deleteDoc,
-  doc
-} from 'firebase/firestore';
-import { db } from './firebase';
+  doc,
+  updateDoc,
+  getDocs,
+} from "firebase/firestore";
 
-/**
- * ⚠️ CONTRATO:
- * - NÃO importa authService
- * - UID é passado pelo App / caller
- * - Mesma API do mockStore
- */
+import {
+  Transaction,
+  FixedBill,
+  CreditCard,
+  Forecast,
+  BudgetLimit,
+  CalendarEvent,
+  CalendarConnection,
+} from "../types";
+
+import { db } from "./firebase";
+
+const DEFAULT_CREDIT_CARDS: Omit<CreditCard, "id">[] = [
+  {
+    name: "Nubank",
+    limit: 5000,
+    dueDay: 10,
+    bestPurchaseDay: 3,
+    color: "bg-purple-600",
+    brand: "mastercard",
+    paidInvoices: [],
+  },
+  {
+    name: "Inter",
+    limit: 3000,
+    dueDay: 15,
+    bestPurchaseDay: 8,
+    color: "bg-orange-500",
+    brand: "mastercard",
+    paidInvoices: [],
+  },
+];
+
+const DEFAULT_BUDGET_LIMITS: Omit<BudgetLimit, "id">[] = [
+  { category: "Alimentação", monthlyLimit: 800.0, spent: 0 },
+  { category: "Moradia", monthlyLimit: 2000.0, spent: 0 },
+  { category: "Transporte", monthlyLimit: 300.0, spent: 0 },
+  { category: "Lazer", monthlyLimit: 400.0, spent: 0 },
+  { category: "Saúde", monthlyLimit: 500.0, spent: 0 },
+  { category: "Outros", monthlyLimit: 200.0, spent: 0 },
+];
+
+type Unsub = () => void;
 
 class FirestoreStore {
+  transactions: Transaction[] = [];
+  fixedBills: FixedBill[] = [];
+  creditCards: CreditCard[] = [];
+  forecasts: Forecast[] = [];
+  budgetLimits: BudgetLimit[] = [];
+  events: CalendarEvent[] = [];
+  calendarConnections: CalendarConnection[] = [];
+
   private uid: string | null = null;
+  private unsubs: Unsub[] = [];
+  private seeded = false;
 
   setUser(uid: string) {
+    if (this.uid === uid) return;
+    this.clearSubscriptions();
     this.uid = uid;
+    this.startSubscriptions();
+    this.seedDefaultsOnce().catch(() => {});
   }
 
   clearUser() {
     this.uid = null;
+    this.clearSubscriptions();
+    this.transactions = [];
+    this.fixedBills = [];
+    this.creditCards = [];
+    this.forecasts = [];
+    this.budgetLimits = [];
+    this.events = [];
+    this.calendarConnections = [];
+    this.seeded = false;
+  }
+
+  private clearSubscriptions() {
+    this.unsubs.forEach((u) => u());
+    this.unsubs = [];
+  }
+
+  private col(name: string) {
+    return collection(db, name);
+  }
+
+  private qByUid(name: string) {
+    if (!this.uid) return null;
+    return query(this.col(name), where("uid", "==", this.uid));
+  }
+
+  private startSubscriptions() {
+    if (!this.uid) return;
+
+    const bind = <T>(colName: string, assign: (items: T[]) => void) => {
+      const q = this.qByUid(colName);
+      if (!q) return;
+      const unsub = onSnapshot(q, (snap) => {
+        const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as T[];
+        assign(items);
+      });
+      this.unsubs.push(unsub);
+    };
+
+    bind<Transaction>("transactions", (items) => {
+      this.transactions = items.sort(
+        (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+    });
+
+    bind<FixedBill>("fixedBills", (items) => (this.fixedBills = items));
+    bind<CreditCard>("creditCards", (items) => (this.creditCards = items));
+    bind<Forecast>("forecasts", (items) => (this.forecasts = items));
+    bind<BudgetLimit>("budgetLimits", (items) => (this.budgetLimits = items));
+    bind<CalendarEvent>("events", (items) => (this.events = items));
+    bind<CalendarConnection>("calendarConnections", (items) => (this.calendarConnections = items));
+  }
+
+  private async seedDefaultsOnce() {
+    if (!this.uid || this.seeded) return;
+    this.seeded = true;
+
+    // seed credit cards if empty
+    const ccSnap = await getDocs(this.qByUid("creditCards")!);
+    if (ccSnap.empty) {
+      for (const card of DEFAULT_CREDIT_CARDS) {
+        await addDoc(this.col("creditCards"), { ...card, uid: this.uid, createdAt: Timestamp.now() });
+      }
+    }
+
+    // seed budget limits if empty
+    const blSnap = await getDocs(this.qByUid("budgetLimits")!);
+    if (blSnap.empty) {
+      for (const lim of DEFAULT_BUDGET_LIMITS) {
+        await addDoc(this.col("budgetLimits"), { ...lim, uid: this.uid, createdAt: Timestamp.now() });
+      }
+    }
   }
 
   // ---------------- TRANSAÇÕES ----------------
 
-  streamTransactions(callback: (data: any[]) => void) {
-    if (!this.uid) return () => {};
-
-    const q = query(
-      collection(db, 'transactions'),
-      where('uid', '==', this.uid)
-    );
-
-    return onSnapshot(q, (snap) => {
-      const data = snap.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-      }));
-      callback(data);
-    });
+  getTransactionsByMonth(month: number, year: number) {
+    return this.transactions
+      .filter((t) => {
+        const d = new Date(t.date);
+        return d.getMonth() === month && d.getFullYear() === year && !(t as any).relatedCardId;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
-  async addTransaction(tx: any) {
-    if (!this.uid) return;
+  calculateBalances(month: number, year: number) {
+    const monthTransactions = this.getTransactionsByMonth(month, year);
+    const income = monthTransactions
+      .filter((t) => t.type === "INCOME")
+      .reduce((sum, t) => sum + t.value, 0);
+    const expense = monthTransactions
+      .filter((t) => t.type === "EXPENSE")
+      .reduce((sum, t) => sum + t.value, 0);
 
-    await addDoc(collection(db, 'transactions'), {
-      ...tx,
+    const allTransactions = this.transactions.filter((t: any) => !t.relatedCardId);
+    const totalIncome = allTransactions
+      .filter((t) => t.type === "INCOME")
+      .reduce((sum, t) => sum + t.value, 0);
+    const totalExpense = allTransactions
+      .filter((t) => t.type === "EXPENSE")
+      .reduce((sum, t) => sum + t.value, 0);
+
+    return { income, expense, balance: totalIncome - totalExpense };
+  }
+
+  private calculateBillingMonth(dateStr: string, cardId: string): string {
+    const card = this.creditCards.find((c) => c.id === cardId);
+    if (!card) return "";
+    const d = new Date(dateStr);
+    const day = d.getDate();
+    const billingDate = new Date(d.getFullYear(), d.getMonth(), 1);
+
+    if (day >= card.bestPurchaseDay) billingDate.setMonth(billingDate.getMonth() + 1);
+
+    return `${billingDate.getFullYear()}-${String(billingDate.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  async addTransaction(t: Omit<Transaction, "id">, installments: number = 1) {
+    if (!this.uid) return null;
+
+    // cartão (parcelado)
+    if ((t as any).relatedCardId) {
+      const baseDate = new Date(t.date);
+      const valPerInstallment = t.value / installments;
+
+      for (let i = 0; i < installments; i++) {
+        const d = new Date(baseDate);
+        d.setMonth(baseDate.getMonth() + i);
+        const billingMonth = this.calculateBillingMonth(d.toISOString(), (t as any).relatedCardId);
+
+        await addDoc(this.col("transactions"), {
+          ...t,
+          uid: this.uid,
+          value: valPerInstallment,
+          description: installments > 1 ? `${t.description} (${i + 1}/${installments})` : t.description,
+          date: d.toISOString(),
+          billingMonth,
+          createdAt: Timestamp.now(),
+        });
+      }
+      return null;
+    }
+
+    const ref = await addDoc(this.col("transactions"), {
+      ...t,
       uid: this.uid,
       createdAt: Timestamp.now(),
     });
+
+    // atualizar spent (opcional, igual ao mock)
+    if (t.type === "EXPENSE") {
+      const budget = this.budgetLimits.find((b) => b.category === t.category);
+      if (budget) {
+        await updateDoc(doc(db, "budgetLimits", budget.id), {
+          spent: (budget.spent || 0) + t.value,
+        });
+      }
+    }
+
+    return { ...(t as any), id: ref.id } as Transaction;
   }
 
   async deleteTransaction(id: string) {
-    await deleteDoc(doc(db, 'transactions', id));
+    await deleteDoc(doc(db, "transactions", id));
   }
 
-  // ---------------- EVENTOS ----------------
+  async updateTransaction(id: string, data: Partial<Transaction>) {
+    // recalcula billingMonth se mexer em date e for transação de cartão
+    const current = this.transactions.find((t) => t.id === id);
+    const patch: any = { ...data };
 
-  streamEvents(callback: (data: any[]) => void) {
-    if (!this.uid) return () => {};
+    if (current && (current as any).relatedCardId && data.date) {
+      patch.billingMonth = this.calculateBillingMonth(data.date, (current as any).relatedCardId);
+    }
 
-    const q = query(
-      collection(db, 'events'),
-      where('uid', '==', this.uid)
-    );
+    await updateDoc(doc(db, "transactions", id), patch);
+    return { ...(current as any), ...patch } as Transaction;
+  }
 
-    return onSnapshot(q, (snap) => {
-      const data = snap.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-      }));
-      callback(data);
+  // ---------------- FIXED BILLS ----------------
+
+  getFixedBillsByMonth(month: number, year: number) {
+    const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+    return this.fixedBills.filter((bill) => {
+      if (currentMonthStr < bill.startMonth) return false;
+      if ((bill as any).endedAt && currentMonthStr >= (bill as any).endedAt) return false;
+      if (bill.skippedMonths.includes(currentMonthStr)) return false;
+      return true;
     });
   }
 
-  async addEvent(event: any) {
-    if (!this.uid) return;
+  async addFixedBill(
+    bill: Omit<FixedBill, "id" | "paidMonths" | "skippedMonths" | "startMonth">,
+    month: number,
+    year: number
+  ) {
+    if (!this.uid) return null;
+    const startMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
 
-    await addDoc(collection(db, 'events'), {
-      ...event,
+    const newBill: Omit<FixedBill, "id"> = {
+      ...(bill as any),
+      startMonth: startMonthStr,
+      paidMonths: [],
+      skippedMonths: [],
+    };
+
+    const ref = await addDoc(this.col("fixedBills"), {
+      ...newBill,
       uid: this.uid,
       createdAt: Timestamp.now(),
     });
+
+    return { ...(newBill as any), id: ref.id } as FixedBill;
   }
 
-    async deleteEvent(id: string) {
-    await deleteDoc(doc(db, 'events', id));
+  async toggleFixedBillStatus(id: string, month: number, year: number) {
+    const bill = this.fixedBills.find((b) => b.id === id);
+    if (!bill) return;
+
+    const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const isPaid = bill.paidMonths.includes(key);
+
+    if (!isPaid) {
+      await updateDoc(doc(db, "fixedBills", id), { paidMonths: [...bill.paidMonths, key] });
+
+      await this.addTransaction({
+        type: "EXPENSE",
+        value: bill.baseValue,
+        description: `Pagamento: ${bill.name}`,
+        category: bill.category,
+        date: new Date(year, month, bill.dueDay).toISOString(),
+      } as any);
+    } else {
+      await updateDoc(doc(db, "fixedBills", id), { paidMonths: bill.paidMonths.filter((m) => m !== key) });
+
+      const desc = `Pagamento: ${bill.name}`;
+      const trans = this.transactions.find(
+        (t) => t.description === desc && new Date(t.date).getMonth() === month && new Date(t.date).getFullYear() === year
+      );
+      if (trans) await this.deleteTransaction(trans.id);
+    }
   }
 
-  // ⚠️ TEMPORÁRIO — compatibilidade com mockStore
-  calculateBalances(...args: any[]) {
-    return {
-      income: 0,
-      expense: 0,
-      balance: 0,
+  async deleteFixedBill(id: string, mode: "ONLY_THIS" | "ALL_FUTURE", month: number, year: number) {
+    const bill = this.fixedBills.find((b) => b.id === id);
+    if (!bill) return;
+
+    const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+    if (mode === "ALL_FUTURE") {
+      await updateDoc(doc(db, "fixedBills", id), { endedAt: currentMonthStr });
+    } else {
+      const skipped = bill.skippedMonths.includes(currentMonthStr)
+        ? bill.skippedMonths
+        : [...bill.skippedMonths, currentMonthStr];
+      await updateDoc(doc(db, "fixedBills", id), { skippedMonths: skipped });
+    }
+  }
+
+  // ---------------- FORECASTS ----------------
+
+  getForecastsByMonth(month: number, year: number) {
+    const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+    return this.forecasts.filter((f) => {
+      if (currentMonthStr < f.startMonth) return false;
+      if (!f.isRecurring && currentMonthStr !== f.startMonth) return false;
+      if (f.skippedMonths.includes(currentMonthStr)) return false;
+      if ((f as any).endedAt && currentMonthStr >= (f as any).endedAt) return false;
+      return true;
+    });
+  }
+
+  async addForecast(
+    f: Omit<Forecast, "id" | "status" | "startMonth" | "skippedMonths">,
+    month: number,
+    year: number
+  ) {
+    if (!this.uid) return null;
+    const startMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+    const newF: Omit<Forecast, "id"> = {
+      ...(f as any),
+      status: "PENDING",
+      startMonth: startMonthStr,
+      skippedMonths: [],
     };
+
+    const ref = await addDoc(this.col("forecasts"), {
+      ...newF,
+      uid: this.uid,
+      createdAt: Timestamp.now(),
+    });
+
+    return { ...(newF as any), id: ref.id } as Forecast;
+  }
+
+  async updateForecast(id: string, data: Partial<Omit<Forecast, "id">>) {
+    await updateDoc(doc(db, "forecasts", id), data as any);
+  }
+
+  async deleteForecast(id: string, mode: "ONLY_THIS" | "ALL_FUTURE", month: number, year: number) {
+    const f = this.forecasts.find((x) => x.id === id);
+    if (!f) return;
+
+    const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+    if (mode === "ALL_FUTURE") {
+      await updateDoc(doc(db, "forecasts", id), { endedAt: currentMonthStr } as any);
+    } else {
+      const skipped = f.skippedMonths.includes(currentMonthStr) ? f.skippedMonths : [...f.skippedMonths, currentMonthStr];
+      await updateDoc(doc(db, "forecasts", id), { skippedMonths: skipped } as any);
+    }
+  }
+
+  async confirmForecast(id: string, month: number, year: number) {
+    const f = this.forecasts.find((x) => x.id === id);
+    if (!f) return;
+
+    const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+    if (!f.skippedMonths.includes(currentMonthStr)) {
+      await updateDoc(doc(db, "forecasts", id), { skippedMonths: [...f.skippedMonths, currentMonthStr] } as any);
+    }
+
+    await this.addTransaction({
+      type: f.type === "EXPECTED_INCOME" ? "INCOME" : "EXPENSE",
+      value: f.value,
+      description: f.description,
+      category: (f as any).category || "Outros",
+      date: new Date(year, month, new Date().getDate()).toISOString(),
+    } as any);
+  }
+
+  // ---------------- BUDGET LIMITS ----------------
+
+  async addBudgetLimit(category: string, monthlyLimit: number) {
+    if (!this.uid) return null;
+    const newLimit: Omit<BudgetLimit, "id"> = { category, monthlyLimit, spent: 0 };
+    const ref = await addDoc(this.col("budgetLimits"), { ...newLimit, uid: this.uid, createdAt: Timestamp.now() });
+    return { ...(newLimit as any), id: ref.id } as BudgetLimit;
+  }
+
+  async updateBudgetLimit(id: string, category: string, monthlyLimit: number) {
+    await updateDoc(doc(db, "budgetLimits", id), { category, monthlyLimit } as any);
+  }
+
+  // ---------------- CREDIT CARDS ----------------
+
+  async addCreditCard(card: Omit<CreditCard, "id" | "paidInvoices">) {
+    if (!this.uid) return null;
+    const newCard: Omit<CreditCard, "id"> = { ...(card as any), paidInvoices: [] };
+    const ref = await addDoc(this.col("creditCards"), { ...newCard, uid: this.uid, createdAt: Timestamp.now() });
+    return { ...(newCard as any), id: ref.id } as CreditCard;
+  }
+
+  async updateCreditCard(id: string, data: Partial<Omit<CreditCard, "id">>) {
+    await updateDoc(doc(db, "creditCards", id), data as any);
+  }
+
+  async deleteCreditCard(id: string) {
+    await deleteDoc(doc(db, "creditCards", id));
+    // remove transactions linked to this card (best-effort)
+    const linked = this.transactions.filter((t: any) => t.relatedCardId === id);
+    for (const t of linked) {
+      await this.deleteTransaction(t.id);
+    }
+  }
+
+  calculateCardInvoice(cardId: string, month: number, year: number) {
+    const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+    return this.transactions
+      .filter((t: any) => t.relatedCardId === cardId && t.billingMonth === monthStr)
+      .reduce((acc, t) => acc + t.value, 0);
+  }
+
+  calculateTotalPaidOnInvoice(cardId: string, month: number, year: number) {
+    const key = `PGTO_${cardId}_${year}-${String(month + 1).padStart(2, "0")}`;
+    return this.transactions.filter((t) => t.description.includes(key)).reduce((acc, t) => acc + t.value, 0);
+  }
+
+  getCardTransactions(cardId: string, month: number, year: number) {
+    const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+    return this.transactions.filter((t: any) => t.relatedCardId === cardId && t.billingMonth === monthStr);
+  }
+
+  async payCardInvoice(cardId: string, amountPaid: number, month: number, year: number) {
+    const card = this.creditCards.find((c) => c.id === cardId);
+    if (!card) return;
+
+    const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const totalInvoice = this.calculateCardInvoice(cardId, month, year);
+    const previouslyPaid = this.calculateTotalPaidOnInvoice(cardId, month, year);
+    const totalPaidSoFar = previouslyPaid + amountPaid;
+
+    await this.addTransaction({
+      type: "EXPENSE",
+      value: amountPaid,
+      description: `Pagamento Fatura: ${card.name} (Ref: PGTO_${cardId}_${currentMonthStr})`,
+      category: "Cartão de Crédito",
+      date: new Date().toISOString(),
+    } as any);
+
+    const nextMonthDate = new Date(year, month + 1, 1);
+    const nextMonthStr = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}`;
+    const residualDesc = `Resíduo Fatura Anterior: ${card.name}`;
+
+    // remove residual duplicates
+    const residuals = this.transactions.filter(
+      (t: any) => t.description === residualDesc && t.billingMonth === nextMonthStr
+    );
+    for (const r of residuals) {
+      await this.deleteTransaction(r.id);
+    }
+
+    if (totalPaidSoFar < totalInvoice) {
+      const residual = Math.max(0, totalInvoice - totalPaidSoFar);
+      await this.addTransaction(
+        {
+          type: "EXPENSE",
+          value: residual,
+          description: residualDesc,
+          date: nextMonthDate.toISOString(),
+          category: "Cartão de Crédito",
+          relatedCardId: card.id,
+          billingMonth: nextMonthStr,
+        } as any,
+        1
+      );
+    } else {
+      const paidInvoices = card.paidInvoices.includes(currentMonthStr) ? card.paidInvoices : [...card.paidInvoices, currentMonthStr];
+      await updateDoc(doc(db, "creditCards", card.id), { paidInvoices } as any);
+    }
+  }
+
+  isInvoicePaid(cardId: string, month: number, year: number) {
+    const card = this.creditCards.find((c) => c.id === cardId);
+    const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+    return card ? card.paidInvoices.includes(key) : false;
+  }
+
+  addCreditCardTransaction(details: any) {
+    const card =
+      this.creditCards.find((c) => c.name.toLowerCase().includes(details.cardName.toLowerCase())) || this.creditCards[0];
+    if (!card) return null;
+
+    this.addTransaction(
+      {
+        type: "EXPENSE",
+        value: details.value,
+        description: details.description,
+        date: details.purchaseDate?.toISOString?.() || new Date().toISOString(),
+        category: details.category,
+        relatedCardId: card.id,
+      } as any,
+      details.installments || 1
+    );
+    return card.name;
+  }
+
+  // ---------------- AGENDA ----------------
+
+  addEvent(e: Omit<CalendarEvent, "id" | "source">) {
+    if (!this.uid) return null;
+    const payload: Omit<CalendarEvent, "id"> = { ...(e as any), source: "INTERNAL" };
+    return addDoc(this.col("events"), { ...payload, uid: this.uid, createdAt: Timestamp.now() }).then((ref) => ({
+      ...(payload as any),
+      id: ref.id,
+    }));
+  }
+
+  toggleConnection(id: string) {
+    const conn = this.calendarConnections.find((c) => c.id === id);
+    if (!conn) return;
+    const next = conn.connectionStatus === "CONNECTED" ? "DISCONNECTED" : "CONNECTED";
+    return updateDoc(doc(db, "calendarConnections", conn.id), { connectionStatus: next } as any);
+  }
+
+  getConsolidatedEvents(): CalendarEvent[] {
+    return [...this.events].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
   }
 }
 
