@@ -493,11 +493,29 @@ const [formError, setFormError] = useState<string | null>(null);
 </button>
 
              </form>
-             
+
+{formError && (
+  <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium">
+    {formError}
+  </div>
+)}
+
+<div className="mt-8 text-center">
+  ...
+</div>
+
              <div className="mt-8 text-center">
                 <p className="text-sm text-gray-500">
-                  Ainda não tem conta? <a href="#" className="text-blue-600 font-bold hover:underline">Criar conta grátis</a>
-                </p>
+  {isSignUp ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
+  <button
+    type="button"
+    onClick={() => { setIsSignUp(!isSignUp); setFormError(null); }}
+    className="text-blue-600 font-bold hover:underline"
+  >
+    {isSignUp ? 'Entrar' : 'Criar conta grátis'}
+  </button>
+</p>
+
              </div>
           </div>
         </div>
