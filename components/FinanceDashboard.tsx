@@ -597,13 +597,61 @@ const FinanceDashboard: React.FC = () => {
             {showAddForecastModal && <AddForecastModal selectedMonth={selectedMonth} selectedYear={selectedYear} initialData={editingForecast} onClose={() => { setShowAddForecastModal(false); setEditingForecast(null); }} onSave={() => { triggerUpdate(); setShowAddForecastModal(false); setEditingForecast(null); }} />}
             {showCategoryModal && <CategoryModal initialData={editingCategory} onClose={() => { setShowCategoryModal(false); setEditingCategory(null); }} onSave={() => { triggerUpdate(); setShowCategoryModal(false); setEditingCategory(null); }} />}
 
-            {itemToDelete && (
-                 <ConfirmationModal 
-                    message={itemToDelete.type === 'CARD' ? "Excluir cartão e todos os seus lançamentos?" : itemToDelete.type === 'FORECAST' ? "Remover esta previsão de receita?" : "Excluir este lançamento?"}
-                    onConfirm={handleDelete}
-                    onCancel={() => setItemToDelete(null)}
-                />
-            )}
+           {itemToDelete && itemToDelete.type !== 'FORECAST' && (
+  <ConfirmationModal 
+    message={itemToDelete.type === 'CARD'
+      ? "Excluir cartão e todos os seus lançamentos?"
+      : itemToDelete.type === 'TRANSACTION'
+      ? "Excluir este lançamento?"
+      : "Remover item?"
+    }
+    onConfirm={handleDelete}
+    onCancel={() => setItemToDelete(null)}
+  />
+)}
+
+{itemToDelete && itemToDelete.type === 'FORECAST' && (
+  <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
+    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+      <h3 className="text-lg font-bold text-gray-900">Excluir receita prevista</h3>
+      <p className="text-sm text-gray-600 mt-1">
+        Você quer excluir só deste mês ou também todos os meses futuros?
+      </p>
+
+      <div className="mt-4 space-y-2">
+        <button
+          className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
+          onClick={async () => {
+            await store.deleteForecast(itemToDelete.id, 'ONLY_THIS', selectedMonth, selectedYear);
+            setItemToDelete(null);
+            triggerUpdate();
+          }}
+        >
+          Excluir somente este mês
+        </button>
+
+        <button
+          className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
+          onClick={async () => {
+            await store.deleteForecast(itemToDelete.id, 'ALL_FUTURE', selectedMonth, selectedYear);
+            setItemToDelete(null);
+            triggerUpdate();
+          }}
+        >
+          Excluir este mês e os futuros
+        </button>
+
+        <button
+          className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
+          onClick={() => setItemToDelete(null)}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
             {billToDelete && (
   <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
     <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
