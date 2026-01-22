@@ -602,15 +602,29 @@ const FinanceDashboard: React.FC = () => {
             )}
             {billToDelete && (
   <ConfirmationModal
-    message="Excluir esta conta fixa?"
+    message="Excluir conta fixa: somente este mês ou este mês + futuros?"
+    confirmText="Excluir este mês"
+    cancelText="Cancelar"
     onConfirm={() => {
-      // POR PADRÃO: exclui esta e as futuras
-      store.deleteFixedBill(billToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
+      // opção 1: só o mês atual
+      store.deleteFixedBill(billToDelete.id, 'ONLY_THIS_MONTH', selectedMonth, selectedYear);
       setBillToDelete(null);
       triggerUpdate();
     }}
     onCancel={() => setBillToDelete(null)}
-  />
+  >
+    <button
+      className="w-full mt-2 bg-red-600 text-white p-3 rounded-xl font-bold hover:bg-red-700 transition"
+      onClick={() => {
+        // opção 2: este mês + todos os futuros
+        store.deleteFixedBill(billToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
+        setBillToDelete(null);
+        triggerUpdate();
+      }}
+    >
+      Excluir este mês e futuros
+    </button>
+  </ConfirmationModal>
 )}
 
         </div>
