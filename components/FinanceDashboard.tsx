@@ -121,19 +121,23 @@ const FinanceDashboard: React.FC = () => {
         });
     };
 
-    const handleDelete = () => {
-        if (!itemToDelete) return;
-        if (itemToDelete.type === 'CARD') {
-            store.deleteCreditCard(itemToDelete.id);
-            setSelectedCardForDetails(null);
-        } else if (itemToDelete.type === 'TRANSACTION') {
-            store.deleteTransaction(itemToDelete.id);
-        } else if (itemToDelete.type === 'FORECAST') {
-            store.deleteForecast(itemToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
-        }
-        triggerUpdate();
-        setItemToDelete(null);
-    };
+    const handleDelete = async () => {
+  if (!itemToDelete) return;
+
+  if (itemToDelete.type === 'CARD') {
+    await store.deleteCreditCard(itemToDelete.id);
+    setSelectedCardForDetails(null);
+
+  } else if (itemToDelete.type === 'TRANSACTION') {
+    await store.deleteTransaction(itemToDelete.id);
+
+  } else if (itemToDelete.type === 'FORECAST') {
+    await store.deleteForecast(itemToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
+  }
+
+  triggerUpdate();
+  setItemToDelete(null);
+};
 
     const confirmPayment = (amount: number) => {
         if (payInvoiceModal) {
