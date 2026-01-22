@@ -611,31 +611,28 @@ const FinanceDashboard: React.FC = () => {
       <div className="mt-4 space-y-2">
         {/* Opção 1: só este mês */}
         <button
-          className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
-          onClick={async () => {
-            const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
-            // ✅ só este mês: marcar como "pulada"
-            await store.skipFixedBillForMonth(billToDelete.id, monthKey);
-            setBillToDelete(null);
-            triggerUpdate();
-          }}
-        >
-          Excluir somente este mês
-        </button>
+          <button
+  className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
+  onClick={() => {
+    store.deleteFixedBill(billToDelete.id, 'ONLY_THIS_MONTH', selectedMonth, selectedYear);
+    setBillToDelete(null);
+    triggerUpdate();
+  }}
+>
+  Excluir somente este mês
+</button>
 
-        {/* Opção 2: este mês + futuros */}
-        <button
-          className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
-          onClick={async () => {
-            const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
-            // ✅ daqui pra frente: define endMonth (último mês ativo = mês anterior)
-            await store.endFixedBillFromMonth(billToDelete.id, monthKey);
-            setBillToDelete(null);
-            triggerUpdate();
-          }}
-        >
-          Excluir este mês e os futuros
-        </button>
+<button
+  className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
+  onClick={() => {
+    store.deleteFixedBill(billToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
+    setBillToDelete(null);
+    triggerUpdate();
+  }}
+>
+  Excluir este mês e os futuros
+</button>
+
 
         <button
           className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
