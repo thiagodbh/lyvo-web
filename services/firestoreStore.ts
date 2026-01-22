@@ -330,7 +330,14 @@ this.fixedBills = [{ ...(newBill as any), id: ref.id } as any, ...this.fixedBill
     const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
 
     if (mode === "ALL_FUTURE") {
-      await updateDoc(doc(db, "fixedBills", id), { endedAt: currentMonthStr });
+  // encerra a recorrência no mês ANTERIOR ao atual
+  const [yy, mm] = currentMonthStr.split("-").map(Number);
+  const prev = new Date(yy, mm - 2, 1);
+  const endMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+
+  await updateDoc(doc(db, "fixedBills", id), { endedAt: endMonth });
+}
+
     } else {
       const skipped = bill.skippedMonths.includes(currentMonthStr)
         ? bill.skippedMonths
