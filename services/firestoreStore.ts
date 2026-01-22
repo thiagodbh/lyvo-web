@@ -323,28 +323,39 @@ this.fixedBills = [{ ...(newBill as any), id: ref.id } as any, ...this.fixedBill
     }
   }
 
-  async deleteFixedBill(id: string, mode: "ONLY_THIS" | "ALL_FUTURE", month: number, year: number) {
-    const bill = this.fixedBills.find((b) => b.id === id);
-    if (!bill) return;
+  async deleteFixedBill(
+  id: string,
+  mode: "ONLY_THIS" | "ALL_FUTURE",
+  month: number,
+  year: number
+) {
+  const bill = this.fixedBills.find((b) => b.id === id);
+  if (!bill) return;
 
-    const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
 
-    if (mode === "ALL_FUTURE") {
-  // encerra a recorrência no mês ANTERIOR ao atual
-  const [yy, mm] = currentMonthStr.split("-").map(Number);
-  const prev = new Date(yy, mm - 2, 1);
-  const endMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+  if (mode === "ALL_FUTURE") {
+    // encerra a recorrência no mês ANTERIOR ao atual
+    const [yy, mm] = currentMonthStr.split("-").map(Number);
+    const prev = new Date(yy, mm - 2, 1);
+    const endMonth = `${prev.getFullYear()}-${String(
+      prev.getMonth() + 1
+    ).padStart(2, "0")}`;
 
-  await updateDoc(doc(db, "fixedBills", id), { endedAt: endMonth });
+    await updateDoc(doc(db, "fixedBills", id), {
+      endedAt: endMonth,
+    });
+  } else {
+    const skipped = bill.skippedMonths.includes(currentMonthStr)
+      ? bill.skippedMonths
+      : [...bill.skippedMonths, currentMonthStr];
+
+    await updateDoc(doc(db, "fixedBills", id), {
+      skippedMonths: skipped,
+    });
+  }
 }
 
-    } else {
-      const skipped = bill.skippedMonths.includes(currentMonthStr)
-        ? bill.skippedMonths
-        : [...bill.skippedMonths, currentMonthStr];
-      await updateDoc(doc(db, "fixedBills", id), { skippedMonths: skipped });
-    }
-  }
 
   // ---------------- FORECASTS ----------------
 
