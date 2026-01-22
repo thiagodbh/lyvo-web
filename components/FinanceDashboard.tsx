@@ -613,7 +613,7 @@ const FinanceDashboard: React.FC = () => {
         <button
   className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
   onClick={() => {
-    store.deleteFixedBill(billToDelete.id, 'ONLY_THIS_MONTH', selectedMonth, selectedYear);
+    store.deleteFixedBill(billToDelete.id, 'ONLY_THIS', selectedMonth, selectedYear);
     setBillToDelete(null);
     triggerUpdate();
   }}
@@ -624,7 +624,7 @@ const FinanceDashboard: React.FC = () => {
 <button
   className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
   onClick={() => {
-    store.deleteFixedBill(billToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
+    store.deleteFixedBill(billToDelete.id, 'ALL_FUTURE', selectedMonth, selectedYear);
     setBillToDelete(null);
     triggerUpdate();
   }}
