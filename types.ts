@@ -26,6 +26,7 @@ export interface FixedBill {
   endedAt?: string;   // Formato YYYY-MM
   paidMonths: string[]; // Chaves no formato YYYY-MM
   skippedMonths: string[]; // Chaves no formato YYYY-MM para exclusão pontual
+  endMonth?: string | null;
 }
 
 export interface CreditCard {
