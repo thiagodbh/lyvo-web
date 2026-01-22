@@ -250,7 +250,7 @@ const FinanceDashboard: React.FC = () => {
                     </div>
                     <div className="bg-lyvo-primary p-4 rounded-2xl shadow-md border-l-4 border-blue-300 text-white flex justify-between items-center">
                         <div>
-                            <p className="text-xs text-lyvo-primary font-medium uppercase">Saldo Acumulado</p>
+                            <p className="text-xs text-gray-900 font-medium uppercase">Saldo Acumulado</p>
                             <p className="text-2xl font-bold mt-1">{formatCurrency(balanceData.balance)}</p>
                         </div>
                     </div>
