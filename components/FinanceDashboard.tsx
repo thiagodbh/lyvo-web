@@ -601,30 +601,51 @@ const FinanceDashboard: React.FC = () => {
                 />
             )}
             {billToDelete && (
-  <ConfirmationModal
-    message="Excluir conta fixa: somente este mês ou este mês + futuros?"
-    confirmText="Excluir este mês"
-    cancelText="Cancelar"
-    onConfirm={() => {
-      // opção 1: só o mês atual
-      store.deleteFixedBill(billToDelete.id, 'ONLY_THIS_MONTH', selectedMonth, selectedYear);
-      setBillToDelete(null);
-      triggerUpdate();
-    }}
-    onCancel={() => setBillToDelete(null)}
-  >
-    <button
-      className="w-full mt-2 bg-red-600 text-white p-3 rounded-xl font-bold hover:bg-red-700 transition"
-      onClick={() => {
-        // opção 2: este mês + todos os futuros
-        store.deleteFixedBill(billToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
-        setBillToDelete(null);
-        triggerUpdate();
-      }}
-    >
-      Excluir este mês e futuros
-    </button>
-  </ConfirmationModal>
+  <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
+    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+      <h3 className="text-lg font-bold text-gray-900">Excluir conta fixa</h3>
+      <p className="text-sm text-gray-600 mt-1">
+        Você quer excluir só deste mês ou também todos os meses futuros?
+      </p>
+
+      <div className="mt-4 space-y-2">
+        {/* Opção 1: só este mês */}
+        <button
+          className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
+          onClick={async () => {
+            const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
+            // ✅ só este mês: marcar como "pulada"
+            await store.skipFixedBillForMonth(billToDelete.id, monthKey);
+            setBillToDelete(null);
+            triggerUpdate();
+          }}
+        >
+          Excluir somente este mês
+        </button>
+
+        {/* Opção 2: este mês + futuros */}
+        <button
+          className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
+          onClick={async () => {
+            const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
+            // ✅ daqui pra frente: define endMonth (último mês ativo = mês anterior)
+            await store.endFixedBillFromMonth(billToDelete.id, monthKey);
+            setBillToDelete(null);
+            triggerUpdate();
+          }}
+        >
+          Excluir este mês e os futuros
+        </button>
+
+        <button
+          className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
+          onClick={() => setBillToDelete(null)}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
 )}
 
         </div>
