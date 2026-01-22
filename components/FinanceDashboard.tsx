@@ -611,7 +611,6 @@ const FinanceDashboard: React.FC = () => {
       <div className="mt-4 space-y-2">
         {/* Opção 1: só este mês */}
         <button
-          <button
   className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
   onClick={() => {
     store.deleteFixedBill(billToDelete.id, 'ONLY_THIS_MONTH', selectedMonth, selectedYear);
