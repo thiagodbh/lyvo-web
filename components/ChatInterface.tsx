@@ -238,7 +238,6 @@ const ChatInterface: React.FC = () => {
       { id: Date.now().toString(), role: 'assistant', content: "❌ Não consegui salvar. Veja o console." }
     ]);
   }
-}}
                 } else {
                     const isCredit = data.paymentMethod === 'Cartão de Crédito';
                     store.addTransaction({
