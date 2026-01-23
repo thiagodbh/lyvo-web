@@ -13,6 +13,195 @@ interface Message {
 
 type EntryType = 'EXPENSE' | 'INCOME' | 'EVENT';
 
+const DynamicManualEntryModal: React.FC<{
+  type: EntryType;
+  initialData?: any;
+  onClose: () => void;
+  onSave: (data: any) => void;
+}> = ({ type, initialData, onClose, onSave }) => {
+  const [value, setValue] = useState(initialData?.value?.toString() || '');
+  const [description, setDescription] = useState(initialData?.description || initialData?.title || '');
+  const [category, setCategory] = useState(initialData?.category || (type === 'INCOME' ? 'Salário' : 'Alimentação'));
+  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [time, setTime] = useState(initialData?.time || '09:00');
+  const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'Dinheiro');
+  const [cardId, setCardId] = useState(initialData?.cardId || store.creditCards[0]?.id || '');
+  const [installments, setInstallments] = useState(initialData?.installments?.toString() || '1');
+
+  const isCredit = type === 'EXPENSE' && paymentMethod === 'Cartão de Crédito';
+  const expenseCategories = ['Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Lazer', 'Outros'];
+  const incomeCategories = ['Salário', 'Freela', 'Comissão', 'Outros'];
+
+  const primaryColor = type === 'EXPENSE' ? '#3A86FF' : type === 'INCOME' ? '#7AE582' : '#3A86FF';
+
+  return (
+    <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100">
+        <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+          <h3 className="font-poppins font-black text-gray-900 text-lg uppercase tracking-tight">
+            {type === 'EXPENSE' ? 'Nova Despesa' : type === 'INCOME' ? 'Nova Receita' : 'Novo Evento'}
+          </h3>
+          <button onClick={onClose} className="p-2 bg-white rounded-full text-gray-400 hover:text-gray-600 shadow-sm">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-8 space-y-6 overflow-y-auto max-h-[65vh]">
+          {type !== 'EVENT' ? (
+            <div className="flex items-center justify-between group bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50">
+              <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Valor</label>
+              <div className="flex items-center text-gray-900">
+                <span className="font-black text-2xl mr-1">R$</span>
+                <input
+                  type="number"
+                  value={value}
+                  onChange={e => setValue(e.target.value)}
+                  className="w-32 text-right text-3xl outline-none bg-transparent font-black text-gray-900"
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60 ml-1">Título</label>
+              <input
+                type="text"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-100 p-4 rounded-2xl font-black text-sm text-gray-900 outline-none"
+              />
+            </div>
+          )}
+
+          <div className="space-y-5">
+            {type !== 'EVENT' && (
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Descrição</label>
+                <input
+                  type="text"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  className="flex-1 max-w-[180px] text-right text-sm outline-none bg-transparent font-black text-gray-900"
+                />
+              </div>
+            )}
+
+            {type !== 'EVENT' && (
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Categoria</label>
+                <select
+                  value={category}
+                  onChange={e => setCategory(e.target.value)}
+                  className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-[11px] font-black text-gray-900 outline-none"
+                >
+                  {(type === 'EXPENSE' ? expenseCategories : incomeCategories).map(cat => (
+                    <option key={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Data</label>
+              <input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="text-right text-sm font-black text-gray-900 outline-none bg-transparent"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Horário</label>
+              <input
+                type="time"
+                value={time}
+                onChange={e => setTime(e.target.value)}
+                className="text-right text-sm font-black text-gray-900 outline-none bg-transparent"
+              />
+            </div>
+          </div>
+
+          {type === 'EXPENSE' && (
+            <div className="space-y-4 pt-4 border-t border-gray-50">
+              <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Pagamento</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Dinheiro', 'PIX', 'Cartão de Crédito'].map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setPaymentMethod(m)}
+                    className={`py-3 text-[9px] font-black uppercase rounded-xl transition-all ${
+                      paymentMethod === m ? 'bg-[#3A86FF] text-white' : 'bg-gray-50 text-gray-400'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isCredit && (
+            <div className="space-y-5 pt-6 mt-6 border-t border-gray-100 bg-blue-50/30 p-4 rounded-3xl">
+              <label className="block text-[10px] font-black text-gray-900 uppercase ml-1 opacity-60">Cartão de Crédito</label>
+              <select
+                value={cardId}
+                onChange={e => setCardId(e.target.value)}
+                className="w-full bg-white border border-gray-100 rounded-2xl p-4 text-xs font-black text-gray-900 outline-none"
+              >
+                {store.creditCards.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-black text-gray-900 uppercase opacity-60">Parcelas</label>
+                  <select
+                    value={installments}
+                    onChange={e => setInstallments(e.target.value)}
+                    className="w-full bg-white border border-gray-100 rounded-2xl p-3 text-xs font-black text-gray-900"
+                  >
+                    {[1, 2, 3, 4, 6, 10, 12].map(n => (
+                      <option key={n} value={n.toString()}>
+                        {n}x
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-black text-gray-900 uppercase opacity-60">Ciclo Mensal</label>
+                  <div className="bg-gray-100/50 p-3 rounded-2xl text-[10px] font-black text-gray-400 text-center uppercase tracking-tighter">
+                    Automático
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-8 flex space-x-3 bg-white border-t border-gray-50">
+          <button
+            onClick={() => onSave({ type, value, description, category, date, time, paymentMethod, cardId, installments })}
+            style={{ backgroundColor: primaryColor }}
+            className="flex-[4] text-white py-4 rounded-2xl font-poppins font-black text-sm uppercase tracking-widest active:scale-95 transition-all shadow-xl"
+          >
+            Confirmar
+          </button>
+          <button onClick={onClose} className="flex-1 bg-gray-100 text-gray-400 py-4 rounded-2xl flex items-center justify-center font-black">
+            X
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([{ id: '1', role: 'assistant', content: 'Olá! Sou o Lyvo. 🤖\n\nEstou pronto para ouvir você ou analisar seus recibos. O que vamos organizar hoje?' }]);
   const [inputText, setInputText] = useState('');
@@ -247,137 +436,8 @@ const ChatInterface: React.FC = () => {
   }
 }}
 />
-const DynamicManualEntryModal: React.FC<{ type: EntryType, initialData?: any, onClose: () => void, onSave: (data: any) => void }> = ({ type, initialData, onClose, onSave }) => {
-    const [value, setValue] = useState(initialData?.value?.toString() || '');
-    const [description, setDescription] = useState(initialData?.description || initialData?.title || '');
-    const [category, setCategory] = useState(initialData?.category || (type === 'INCOME' ? 'Salário' : 'Alimentação'));
-    const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
-    const [time, setTime] = useState(initialData?.time || '09:00');
-    const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'Dinheiro');
-    const [cardId, setCardId] = useState(initialData?.cardId || store.creditCards[0]?.id || '');
-    const [installments, setInstallments] = useState(initialData?.installments?.toString() || '1');
+)}
 
-    const isCredit = type === 'EXPENSE' && paymentMethod === 'Cartão de Crédito';
-    const card = store.creditCards.find(c => c.id === cardId);
-
-    const expenseCategories = ['Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Lazer', 'Outros'];
-    const incomeCategories = ['Salário', 'Freela', 'Comissão', 'Outros'];
-
-    const primaryColor = type === 'EXPENSE' ? '#3A86FF' : type === 'INCOME' ? '#7AE582' : '#3A86FF';
-
-    return (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-            <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100">
-                <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
-                    <h3 className="font-poppins font-black text-gray-900 text-lg uppercase tracking-tight">
-                        {type === 'EXPENSE' ? 'Nova Despesa' : type === 'INCOME' ? 'Nova Receita' : 'Novo Evento'}
-                    </h3>
-                    <button onClick={onClose} className="p-2 bg-white rounded-full text-gray-400 hover:text-gray-600 shadow-sm"><X className="w-4 h-4" /></button>
-                </div>
-
-                <div className="p-8 space-y-6 overflow-y-auto max-h-[65vh]">
-                    {type !== 'EVENT' ? (
-                        <div className="flex items-center justify-between group bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50">
-                            <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Valor</label>
-                            <div className="flex items-center text-gray-900">
-                                <span className="font-black text-2xl mr-1">R$</span>
-                                <input 
-                                    type="number" 
-                                    value={value} 
-                                    onChange={e => setValue(e.target.value)} 
-                                    className="w-32 text-right text-3xl outline-none bg-transparent font-black text-gray-900" 
-                                    placeholder="0,00" 
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                             <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60 ml-1">Título</label>
-                             <input 
-                                type="text" 
-                                value={description} 
-                                onChange={e => setDescription(e.target.value)} 
-                                className="w-full bg-gray-50 border border-gray-100 p-4 rounded-2xl font-black text-sm text-gray-900 outline-none" 
-                             />
-                        </div>
-                    )}
-
-                    <div className="space-y-5">
-                        {type !== 'EVENT' && (
-                            <div className="flex items-center justify-between">
-                                <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Descrição</label>
-                                <input type="text" value={description} onChange={e => setDescription(e.target.value)} className="flex-1 max-w-[180px] text-right text-sm outline-none bg-transparent font-black text-gray-900" />
-                            </div>
-                        )}
-
-                        {type !== 'EVENT' && (
-                            <div className="flex items-center justify-between">
-                                <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Categoria</label>
-                                <select value={category} onChange={e => setCategory(e.target.value)} className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-[11px] font-black text-gray-900 outline-none">
-                                    {(type === 'EXPENSE' ? expenseCategories : incomeCategories).map(cat => <option key={cat}>{cat}</option>)}
-                                </select>
-                            </div>
-                        )}
-
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Data</label>
-                            <input type="date" value={date} onChange={e => setDate(e.target.value)} className="text-right text-sm font-black text-gray-900 outline-none bg-transparent" />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Horário</label>
-                            <input type="time" value={time} onChange={e => setTime(e.target.value)} className="text-right text-sm font-black text-gray-900 outline-none bg-transparent" />
-                        </div>
-                    </div>
-
-                    {type === 'EXPENSE' && (
-                        <div className="space-y-4 pt-4 border-t border-gray-50">
-                            <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Pagamento</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {['Dinheiro', 'PIX', 'Cartão de Crédito'].map(m => (
-                                    <button key={m} onClick={() => setPaymentMethod(m)} className={`py-3 text-[9px] font-black uppercase rounded-xl transition-all ${paymentMethod === m ? 'bg-[#3A86FF] text-white' : 'bg-gray-50 text-gray-400'}`}>
-                                        {m === 'Dinheiro' ? 'Dinheiro' : m}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {isCredit && (
-                        <div className="space-y-5 pt-6 mt-6 border-t border-gray-100 bg-blue-50/30 p-4 rounded-3xl">
-                            <label className="block text-[10px] font-black text-gray-900 uppercase ml-1 opacity-60">Cartão de Crédito</label>
-                            <select value={cardId} onChange={e => setCardId(e.target.value)} className="w-full bg-white border border-gray-100 rounded-2xl p-4 text-xs font-black text-gray-900 outline-none">
-                                {store.creditCards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-black text-gray-900 uppercase opacity-60">Parcelas</label>
-                                    <select value={installments} onChange={e => setInstallments(e.target.value)} className="w-full bg-white border border-gray-100 rounded-2xl p-3 text-xs font-black text-gray-900">
-                                        {[1,2,3,4,6,10,12].map(n => <option key={n} value={n.toString()}>{n}x</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-black text-gray-900 uppercase opacity-60">Ciclo Mensal</label>
-                                    <div className="bg-gray-100/50 p-3 rounded-2xl text-[10px] font-black text-gray-400 text-center uppercase tracking-tighter">Automático</div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="p-8 flex space-x-3 bg-white border-t border-gray-50">
-                    <button 
-                      onClick={() => onSave({ type, value, description, category, date, time, paymentMethod, cardId, installments })} 
-                      style={{ backgroundColor: primaryColor }} 
-                      className="flex-[4] text-white py-4 rounded-2xl font-poppins font-black text-sm uppercase tracking-widest active:scale-95 transition-all shadow-xl"
-                    >
-                      Confirmar
-                    </button>
-                    <button onClick={onClose} className="flex-1 bg-gray-100 text-gray-400 py-4 rounded-2xl flex items-center justify-center font-black">X</button>
-                </div>
-            </div>
-        </div>
-    );
-};
+                    
 
 export default ChatInterface;
