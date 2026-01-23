@@ -246,7 +246,7 @@ const ChatInterface: React.FC = () => {
     ]);
   }
 }}
-
+/>
 const DynamicManualEntryModal: React.FC<{ type: EntryType, initialData?: any, onClose: () => void, onSave: (data: any) => void }> = ({ type, initialData, onClose, onSave }) => {
     const [value, setValue] = useState(initialData?.value?.toString() || '');
     const [description, setDescription] = useState(initialData?.description || initialData?.title || '');
