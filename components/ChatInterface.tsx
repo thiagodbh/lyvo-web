@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Mic, Camera, TrendingDown, TrendingUp, Calendar, Loader2, X, Check, Bot, ChevronDown, DollarSign, Type as TypeIcon, Tag, CalendarDays, CreditCard as CreditCardIcon, Clock } from 'lucide-react';
 import { processUserCommand } from '../services/geminiService';
-import { store } from '../services/mockStore';
+import { store } from '../services/firestoreStore';
 
 interface Message {
   id: string;
