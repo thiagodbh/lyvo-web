@@ -206,13 +206,39 @@ const ChatInterface: React.FC = () => {
             type={activeModal} 
             initialData={modalInitialData}
             onClose={() => { setActiveModal(null); setModalInitialData(null); }} 
-            onSave={(data) => {
-                if (data.type === 'EVENT') {
-                    store.addEvent({ 
-                        title: data.description || data.title, 
-                        dateTime: `${data.date}T${data.time}:00`, 
-                        description: data.notes 
-                    });
+            onSave={async (data) => {
+  try {
+    const isCredit = data.paymentMethod === 'Cartão de Crédito';
+
+    await store.addTransaction(
+      {
+        type: data.type,
+        value: parseFloat(data.value),
+        category: data.category,
+        description: data.description,
+        date: new Date(data.date).toISOString(),
+        relatedCardId: isCredit ? data.cardId : undefined,
+      },
+      isCredit ? parseInt(data.installments || '1', 10) : 1
+    );
+
+    // ✅ força atualização do FinanceDashboard
+    window.dispatchEvent(new Event("lyvo:data-changed"));
+
+    setActiveModal(null);
+    setModalInitialData(null);
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now().toString(), role: 'assistant', content: "✅ Registrado com sucesso!" }
+    ]);
+  } catch (e) {
+    console.error("SAVE ERROR:", e);
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now().toString(), role: 'assistant', content: "❌ Não consegui salvar. Veja o console." }
+    ]);
+  }
+}}
                 } else {
                     const isCredit = data.paymentMethod === 'Cartão de Crédito';
                     store.addTransaction({
