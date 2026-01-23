@@ -389,55 +389,56 @@ const ChatInterface: React.FC = () => {
         </button>
       </div>
 
-      {/* Manual Entry Modals */}
+            {/* Manual Entry Modals */}
       {activeModal && (
-          <DynamicManualEntryModal 
-            type={activeModal} 
-            initialData={modalInitialData}
-            onClose={() => { setActiveModal(null); setModalInitialData(null); }} 
-            onSave={async (data) => {
-  try {
-    if (data.type === 'EVENT') {
-      await store.addEvent({
-        title: data.description || data.title,
-        dateTime: `${data.date}T${data.time}:00`,
-        description: data.notes,
-      });
-    } else {
-      const isCredit = data.paymentMethod === 'Cartão de Crédito';
+        <DynamicManualEntryModal
+          type={activeModal}
+          initialData={modalInitialData}
+          onClose={() => { setActiveModal(null); setModalInitialData(null); }}
+          onSave={async (data) => {
+            try {
+              if (data.type === 'EVENT') {
+                await store.addEvent({
+                  title: data.description || data.title,
+                  dateTime: `${data.date}T${data.time}:00`,
+                  description: data.notes,
+                });
+              } else {
+                const isCredit = data.paymentMethod === 'Cartão de Crédito';
 
-      await store.addTransaction(
-        {
-          type: data.type as any,
-          value: parseFloat(data.value),
-          category: data.category,
-          description: data.description,
-          date: new Date(data.date).toISOString(),
-          relatedCardId: isCredit ? data.cardId : undefined,
-        },
-        isCredit ? parseInt(data.installments || '1', 10) : 1
-      );
-    }
+                await store.addTransaction(
+                  {
+                    type: data.type as any,
+                    value: parseFloat(data.value),
+                    category: data.category,
+                    description: data.description,
+                    date: new Date(data.date).toISOString(),
+                    relatedCardId: isCredit ? data.cardId : undefined,
+                  },
+                  isCredit ? parseInt(data.installments || '1', 10) : 1
+                );
+              }
 
-    window.dispatchEvent(new Event('lyvo:data-changed'));
+              window.dispatchEvent(new Event('lyvo:data-changed'));
 
-    setActiveModal(null);
-    setModalInitialData(null);
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), role: 'assistant', content: '✅ Registrado com sucesso!' },
-    ]);
-  } catch (e) {
-    console.error('SAVE ERROR:', e);
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), role: 'assistant', content: '❌ Não consegui salvar. Veja o console.' },
-    ]);
-  }
-}}
-/>
-)}
-
-                    
+              setActiveModal(null);
+              setModalInitialData(null);
+              setMessages((prev) => [
+                ...prev,
+                { id: Date.now().toString(), role: 'assistant', content: '✅ Registrado com sucesso!' },
+              ]);
+            } catch (e) {
+              console.error('SAVE ERROR:', e);
+              setMessages((prev) => [
+                ...prev,
+                { id: Date.now().toString(), role: 'assistant', content: '❌ Não consegui salvar. Veja o console.' },
+              ]);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
 export default ChatInterface;
