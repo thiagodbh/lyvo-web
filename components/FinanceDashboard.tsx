@@ -88,6 +88,12 @@ const FinanceDashboard: React.FC = () => {
     useEffect(() => {
         refreshData();
     }, [viewDate, refreshTrigger]);
+    useEffect(() => {
+  const handler = () => setRefreshTrigger((prev) => prev + 1);
+  window.addEventListener("lyvo:data-changed", handler);
+  return () => window.removeEventListener("lyvo:data-changed", handler);
+}, []);
+
 
     const triggerUpdate = () => setRefreshTrigger(prev => prev + 1);
 
