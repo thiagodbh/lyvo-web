@@ -1,4 +1,4 @@
-console.log('ENV GEMINI:', import.meta.env.VITE_GEMINI_API_KEY);
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { store } from "./mockStore";
 
