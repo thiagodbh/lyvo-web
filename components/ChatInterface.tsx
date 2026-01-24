@@ -401,7 +401,7 @@ const ChatInterface: React.FC = () => {
                 await store.addEvent({
                   title: data.description || data.title,
                   dateTime: `${data.date}T${data.time}:00`,
-                  description: data.notes,
+                  description: data.notes || '',
                 });
               } else {
                 const isCredit = data.paymentMethod === 'Cartão de Crédito';
