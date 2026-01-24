@@ -1,18 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { processUserCommand } from "./geminiService";
 
 const actionSchema = {
   type: Type.OBJECT,
   properties: {
     action: {
       type: Type.STRING,
-      enum: [
-        "ADD_TRANSACTION",
-        "ADD_CREDIT_TRANSACTION",
-        "ADD_EVENT",
-        "QUERY",
-        "UNKNOWN",
-      ],
+      enum: ["ADD_TRANSACTION", "ADD_CREDIT_TRANSACTION", "ADD_EVENT", "QUERY", "UNKNOWN"],
     },
     transactionDetails: {
       type: Type.OBJECT,
@@ -20,9 +13,10 @@ const actionSchema = {
         type: { type: Type.STRING, enum: ["INCOME", "EXPENSE"] },
         value: { type: Type.NUMBER },
         description: { type: Type.STRING },
-        date: { type: Type.STRING },
         category: { type: Type.STRING },
-        relatedCardId: { type: Type.STRING },
+        cardName: { type: Type.STRING },
+        installments: { type: Type.NUMBER },
+        date: { type: Type.STRING, description: "Formato YYYY-MM-DD" },
       },
       nullable: true,
     },
@@ -30,56 +24,52 @@ const actionSchema = {
       type: Type.OBJECT,
       properties: {
         title: { type: Type.STRING },
-        dateTime: { type: Type.STRING },
+        date: { type: Type.STRING, description: "YYYY-MM-DD" },
+        time: { type: Type.STRING, description: "HH:mm" },
+        description: { type: Type.STRING },
       },
       nullable: true,
     },
+    responseMessage: { type: Type.STRING },
   },
+  required: ["action", "responseMessage"],
 };
 
-export default async function handler(req: Request): Promise<Response> {
+export default async function handler(req: any, res: any) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
   try {
-    const body = await req.json();
-    const message = body.message;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
 
-    if (!message) {
-      return new Response(
-        JSON.stringify({ error: "Mensagem não enviada" }),
-        { status: 400 }
-      );
-    }
+    const { text, imageBase64 } = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    const genAI = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY!,
-    });
+    const ai = new GoogleGenAI({ apiKey });
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      generationConfig: {
+    const parts: any[] = [];
+    if (text) parts.push({ text });
+    if (imageBase64) parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
+
+    const response = await ai.models.generateContent({
+      // ✅ modelo válido (use um destes)
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts }],
+      config: {
         responseMimeType: "application/json",
         responseSchema: actionSchema,
+        thinkingConfig: { thinkingBudget: 0 },
       },
     });
 
-    const result = await model.generateContent(message);
-    const parsed = JSON.parse(result.response.text());
+    const raw = response.text || "{}";
+    const parsed = JSON.parse(raw);
 
-    const payload = await processUserCommand(parsed);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: payload,
-      }),
-      { status: 200 }
-    );
+    return res.status(200).json({
+      message: parsed.responseMessage || "Ok.",
+      data: parsed,
+    });
   } catch (error: any) {
-    return new Response(
-      JSON.stringify({
-        error: "Gemini processing failed",
-        details: String(error?.message || error),
-      }),
-      { status: 500 }
-    );
+    console.error("Gemini API Error:", error?.message || error);
+    return res.status(500).json({ error: "Gemini processing failed", details: String(error?.message || error) });
   }
 }
