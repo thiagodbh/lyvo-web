@@ -1,25 +1,59 @@
-// services/geminiService.ts
+import { saveTransaction } from "./dataService";
+import { saveEvent } from "./agendaService";
 
-// (opcional) só pra debug em DEV
-if (import.meta.env.DEV) console.log("ENV GEMINI:", import.meta.env.VITE_GEMINI_API_KEY);
+type GeminiAction =
+  | "ADD_TRANSACTION"
+  | "ADD_CREDIT_TRANSACTION"
+  | "ADD_EVENT"
+  | "QUERY"
+  | "UNKNOWN";
 
-export async function processUserCommand(text: string, imageBase64?: string) {
-  const res = await fetch("/api/gemini", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, imageBase64 }),
-  });
+interface GeminiPayload {
+  action: GeminiAction;
+  transactionDetails?: any;
+  eventDetails?: any;
+}
 
-  const raw = await res.text();
+export async function processUserCommand(payload: GeminiPayload) {
+  switch (payload.action) {
+    case "ADD_TRANSACTION": {
+      await saveTransaction(payload.transactionDetails);
+      return {
+        message: "Transação registrada com sucesso.",
+        data: payload.transactionDetails,
+      };
+    }
 
-  if (!res.ok) {
-    throw new Error(`Erro ao processar Gemini: ${res.status} ${raw}`);
+    case "ADD_CREDIT_TRANSACTION": {
+      await saveTransaction({
+        ...payload.transactionDetails,
+        isCredit: true,
+      });
+      return {
+        message: "Transação no cartão registrada com sucesso.",
+        data: payload.transactionDetails,
+      };
+    }
+
+    case "ADD_EVENT": {
+      await saveEvent(payload.eventDetails);
+      return {
+        message: "Evento adicionado à agenda.",
+        data: payload.eventDetails,
+      };
+    }
+
+    case "QUERY": {
+      return {
+        message: "Consulta recebida.",
+        data: payload,
+      };
+    }
+
+    default:
+      return {
+        message: "Não entendi o comando.",
+        data: payload.data, // <- importante!
+      };
   }
-
-  const data = JSON.parse(raw);
-
-  return {
-    message: data.message ?? "",
-    data: null, // mantém compatibilidade com seu fluxo atual
-  };
 }
