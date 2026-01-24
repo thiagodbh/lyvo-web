@@ -1,14 +1,31 @@
 if (import.meta.env.DEV) console.log('ENV GEMINI:', import.meta.env.VITE_GEMINI_API_KEY);
-import { GoogleGenAI, Type } from "@google/genai";
-import { store } from "./mockStore";
+export async function processUserCommand(
+  text: string,
+  imageBase64?: string
+) {
+  const res = await fetch("/api/gemini", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      text,
+      imageBase64,
+    }),
+  });
 
-// NÃO pode usar process.env no frontend (browser). Vite usa import.meta.env.
-// Aqui a gente só evita crash. O Gemini “real” vai para /api na Fase 3.
-const getAi = () => {
-  const apiKey = (import.meta as any)?.env?.VITE_GEMINI_API_KEY || "";
-  if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
-};
+  if (!res.ok) {
+    throw new Error("Erro ao processar Gemini");
+  }
+
+  const data = await res.json();
+
+  return {
+    message: data.message,
+    data: null, // mantém compatibilidade com seu fluxo atual
+  };
+}
+
 
 const actionSchema = {
   type: Type.OBJECT,
