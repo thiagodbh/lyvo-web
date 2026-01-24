@@ -413,7 +413,7 @@ const ChatInterface: React.FC = () => {
                     category: data.category,
                     description: data.description,
                     date: new Date(data.date).toISOString(),
-                    relatedCardId: isCredit ? data.cardId : undefined,
+                    ...(isCredit && data.cardId ? { relatedCardId: data.cardId } : {}),
                   },
                   isCredit ? parseInt(data.installments || '1', 10) : 1
                 );
