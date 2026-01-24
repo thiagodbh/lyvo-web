@@ -858,7 +858,7 @@ const PayInvoiceValueModal: React.FC<{ fullValue: number, alreadyPaid: number, o
             <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl text-center text-2xl font-black outline-none text-gray-900 mb-6" />
             <div className="flex gap-3">
               <button onClick={onCancel} className="flex-1 py-3 text-gray-400 font-bold">Cancelar</button>
-              <button onClick={() => onConfirm(parseFloat(amount))} className="flex-1 py-3 bg-[#3A86FF] text-white rounded-xl font-bold">Confirmar</button>
+              <button onClick={() => onConfirm(parseFloat(amount))} className="flex-1 py-3 bg-lyvo-primary text-white rounded-xl font-bold">Confirmar</button>
             </div>
           </div>
         </div>
