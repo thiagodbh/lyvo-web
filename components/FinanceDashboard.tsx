@@ -326,7 +326,7 @@ const FinanceDashboard: React.FC = () => {
                                     <CreditCardIcon className="w-5 h-5 text-lyvo-primary" />
                                     Meus Cartões
                                 </h2>
-                                <button onClick={() => { setEditingCard(null); setShowAddCardModal(true); }} className="text-lyvo-primary [#3A86FF] font-bold flex items-center bg-blue-50 px-3 py-1.5 rounded-xl transition-colors">
+                                <button onClick={() => { setEditingCard(null); setShowAddCardModal(true); }} className="bg-[#3A86FF] text-sm font-bold flex items-center bg-blue-50 px-3 py-1.5 rounded-xl transition-colors">
                                     <Plus className="w-4 h-4 mr-1" /> Novo
                                 </button>
                             </div>
