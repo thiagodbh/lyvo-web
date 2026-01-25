@@ -954,7 +954,7 @@ const AddForecastModal: React.FC<{ selectedMonth: number, selectedYear: number, 
                 </div>
                 <div className="flex gap-3 mt-8">
                     <button onClick={onClose} className="flex-1 py-3 text-gray-400 font-bold">Cancelar</button>
-                    <button onClick={handleSave} className="flex-1 py-3 bg-lyvo-primary text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all">Salvar</button>
+                    <button onClick={handleSave} className="flex-1 py-3 bg-lyvo-primary [#3A86FF] rounded-xl font-bold shadow-lg active:scale-95 transition-all">Salvar</button>
                 </div>
             </div>
         </div>
