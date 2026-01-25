@@ -809,7 +809,7 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
                     {currentInvoice > paidValue ? (
                         <button 
                             onClick={onPay}
-                            className={`w-full py-4 rounded-2xl font-black text-white text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 ${card.color || 'bg-lyvo-primary'}`}
+                            className="w-full py-4 rounded-2xl font-black text-white text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 bg-green-500 hover:bg-green-600"
                         >
                             Pagar Fatura
                         </button>
