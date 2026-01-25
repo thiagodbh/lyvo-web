@@ -351,7 +351,7 @@ const FinanceDashboard: React.FC = () => {
                                                     </div>
                                                     <div className="flex space-x-1">
                                                         <button onClick={() => { setEditingCard(card); setShowAddCardModal(true); }} className="p-1 text-gray-300 hover:text-blue-500 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                                                        <button onClick={() => setItemToDelete({type: 'CARD', id: card.id})} className="p-1 bg-[#3A86FF] hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                                        <button onClick={() => setItemToDelete({type: 'CARD', id: card.id})} className="p-1 text-gray-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                                                     </div>
                                                 </div>
                                                 
