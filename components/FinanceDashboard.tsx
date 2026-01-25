@@ -950,7 +950,7 @@ const AddForecastModal: React.FC<{ selectedMonth: number, selectedYear: number, 
                         </div>
                         <button 
                             onClick={() => setIsRecurring(!isRecurring)}
-                            className={`w-10 h-6 rounded-full p-1 transition-colors ${isRecurring ? 'bg-lyvo-primary' : 'bg-blue-500'}`}
+                            className={`w-10 h-6 rounded-full p-1 transition-colors ${isRecurring ? 'bg-green-500' : 'bg-blue-500'}`}
                         >
                             <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${isRecurring ? 'translate-x-4' : 'translate-x-0'}`}></div>
                         </button>
