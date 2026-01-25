@@ -946,7 +946,7 @@ const AddForecastModal: React.FC<{ selectedMonth: number, selectedYear: number, 
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mt-2">
                         <div>
                             <p className="text-xs font-bold text-gray-900">Repetir mensalmente?</p>
-                            <p className="text-[10px] text-gray-400 font-medium">Ativa receita recorrente no sistema</p>
+                            <p className="text-[10px] bg-blue-500 font-medium">Ativa receita recorrente no sistema</p>
                         </div>
                         <button 
                             onClick={() => setIsRecurring(!isRecurring)}
