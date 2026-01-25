@@ -998,7 +998,7 @@ const AddCreditCardModal: React.FC<{ initialData?: CreditCard | null, onClose: (
             </div>
             <div className="flex gap-3 mt-8">
               <button onClick={onClose} className="flex-1 py-3 text-gray-400 font-bold">Voltar</button>
-              <button onClick={handleSave} className="flex-1 py-3 bg-lyvo-primary text-white rounded-xl font-bold">Salvar</button>
+              <button onClick={handleSave} className="flex-1 py-3 bg-[#3A86FF] text-white rounded-xl font-bold">Salvar</button>
             </div>
           </div>
         </div>
