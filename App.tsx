@@ -1,3 +1,5 @@
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./services/firebase";
 import { store } from './services/firestoreStore';
 import React, { useState } from 'react';
 import { authService } from './services/authService';
@@ -37,40 +39,46 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
 );
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(!!authService.getCurrentUser());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+const [authChecked, setAuthChecked] = useState(false);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
   React.useEffect(() => {
-  const u = authService.getCurrentUser();
-  if (u?.uid) {
-    store.setUser(u.uid);
-  } else {
-    store.clearUser();
-  }
-}, []);
+  const unsub = onAuthStateChanged(auth, (u) => {
+    if (u?.uid) {
+      store.setUser(u.uid);
+      setIsAuthenticated(true);
+    } else {
+      store.clearUser();
+      setIsAuthenticated(false);
+    }
+    setAuthChecked(true);
+  });
 
+  return () => unsub();
+}, []);
 
   const handleLogin = async (email: string, password: string) => {
   await authService.signIn(email, password);
-  const u = authService.getCurrentUser();
-if (u?.uid) store.setUser(u.uid);
-  setIsAuthenticated(true);
+  // NÃO seta isAuthenticated aqui — o onAuthStateChanged vai cuidar
 };
 
 const handleSignUp = async (email: string, password: string) => {
   await authService.signUp(email, password);
-  const u = authService.getCurrentUser();
-if (u?.uid) store.setUser(u.uid);
-  setIsAuthenticated(true);
+  // NÃO seta isAuthenticated aqui — o onAuthStateChanged vai cuidar
+};
+
+ const handleLogout = async () => {
+  await authService.signOut();
+  store.clearUser();
+  setIsAuthenticated(false);
+  setCurrentTab(AppTab.CHAT);
 };
 
 
-  const handleLogout = () => {
-    store.clearUser();
-    setIsAuthenticated(false);
-    setCurrentTab(AppTab.CHAT);
-  };
-
   // --- Authenticated Layout (Responsive with Fixed Bottom Nav) ---
+  if (!authChecked) {
+  return <div className="h-screen w-full bg-gray-50" />;
+}
   if (isAuthenticated) {
     const renderContent = () => {
       switch (currentTab) {
