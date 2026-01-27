@@ -61,26 +61,28 @@ const [authChecked, setAuthChecked] = useState(false);
 }, []);
 
   const handleLogin = async (email: string, password: string) => {
-  try {
-    await authService.signIn(email, password);
-    console.log("signIn OK");
-  } catch (e) {
-    console.error("signIn FAIL:", e);
-    alert("Falha no login. Veja o console.");
+  await authService.signIn(email, password);
+
+  // força o App a sair da LP imediatamente
+  const u = auth.currentUser;
+  if (u?.uid) {
+    store.setUser(u.uid);
+    setIsAuthenticated(true);
   }
+  setAuthChecked(true);
 };
 
 const handleSignUp = async (email: string, password: string) => {
   await authService.signUp(email, password);
-  // NÃO seta isAuthenticated aqui — o onAuthStateChanged vai cuidar
+
+  const u = auth.currentUser;
+  if (u?.uid) {
+    store.setUser(u.uid);
+    setIsAuthenticated(true);
+  }
+  setAuthChecked(true);
 };
 
- const handleLogout = async () => {
-  await authService.signOut();
-  store.clearUser();
-  setIsAuthenticated(false);
-  setCurrentTab(AppTab.CHAT);
-};
 
 
   // --- Authenticated Layout (Responsive with Fixed Bottom Nav) ---
