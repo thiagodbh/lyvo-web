@@ -97,6 +97,16 @@ const FinanceDashboard: React.FC = () => {
 
     const triggerUpdate = () => setRefreshTrigger(prev => prev + 1);
 
+useEffect(() => {
+  refreshData();
+}, [viewDate, refreshTrigger]);
+
+useEffect(() => {
+  const handler = () => triggerUpdate();
+  window.addEventListener("lyvo:data-changed", handler);
+  return () => window.removeEventListener("lyvo:data-changed", handler);
+}, []);
+
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
     };
