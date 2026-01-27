@@ -111,9 +111,12 @@ class FirestoreStore {
       const q = this.qByUid(colName);
       if (!q) return;
       const unsub = onSnapshot(q, (snap) => {
-        const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as T[];
-        assign(items);
-      });
+  const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as T[];
+  assign(items);
+
+  // força o React a atualizar quando o Firestore atualizar
+  window.dispatchEvent(new Event("lyvo:data-changed"));
+});
       this.unsubs.push(unsub);
     };
 
