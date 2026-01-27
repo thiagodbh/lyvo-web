@@ -42,10 +42,10 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 const [authChecked, setAuthChecked] = useState(false);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
-  React.useEffect(() => {
+ React.useEffect(() => {
   const unsub = onAuthStateChanged(auth, (u) => {
-  console.log("AUTH STATE:", u?.uid || null);
-});
+    console.log("AUTH STATE:", u?.uid || null);
+
     if (u?.uid) {
       store.setUser(u.uid);
       setIsAuthenticated(true);
@@ -53,6 +53,7 @@ const [authChecked, setAuthChecked] = useState(false);
       store.clearUser();
       setIsAuthenticated(false);
     }
+
     setAuthChecked(true);
   });
 
