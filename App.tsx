@@ -45,7 +45,6 @@ const [authChecked, setAuthChecked] = useState(false);
   React.useEffect(() => {
   const unsub = onAuthStateChanged(auth, (u) => {
   console.log("AUTH STATE:", u?.uid || null);
-  ...
 });
     if (u?.uid) {
       store.setUser(u.uid);
