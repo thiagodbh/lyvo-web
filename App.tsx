@@ -44,6 +44,9 @@ const [authChecked, setAuthChecked] = useState(false);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
   React.useEffect(() => {
   const unsub = onAuthStateChanged(auth, (u) => {
+  console.log("AUTH STATE:", u?.uid || null);
+  ...
+});
     if (u?.uid) {
       store.setUser(u.uid);
       setIsAuthenticated(true);
@@ -58,8 +61,13 @@ const [authChecked, setAuthChecked] = useState(false);
 }, []);
 
   const handleLogin = async (email: string, password: string) => {
-  await authService.signIn(email, password);
-  // NÃO seta isAuthenticated aqui — o onAuthStateChanged vai cuidar
+  try {
+    await authService.signIn(email, password);
+    console.log("signIn OK");
+  } catch (e) {
+    console.error("signIn FAIL:", e);
+    alert("Falha no login. Veja o console.");
+  }
 };
 
 const handleSignUp = async (email: string, password: string) => {
