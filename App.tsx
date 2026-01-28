@@ -1,5 +1,3 @@
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./services/firebase";
 import { store } from './services/firestoreStore';
 import React, { useState } from 'react';
 import { authService } from './services/authService';
@@ -39,56 +37,39 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
 );
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!authService.getCurrentUser());
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
- React.useEffect(() => {
-  const unsub = onAuthStateChanged(auth, (u) => {
-    console.log("AUTH STATE:", u?.uid || null);
 
+  React.useEffect(() => {
+    const u = authService.getCurrentUser();
     if (u?.uid) {
       store.setUser(u.uid);
-      setIsAuthenticated(true);
     } else {
       store.clearUser();
-      setIsAuthenticated(false);
     }
-
-    setAuthChecked(true);
-  });
-
-  return () => unsub();
-}, []);
+  }, []);
 
   const handleLogin = async (email: string, password: string) => {
-  await authService.signIn(email, password);
-
-  // força o App a sair da LP imediatamente
-  const u = auth.currentUser;
-  if (u?.uid) {
-    store.setUser(u.uid);
+    await authService.signIn(email, password);
+    const u = authService.getCurrentUser();
+    if (u?.uid) store.setUser(u.uid);
     setIsAuthenticated(true);
-  }
-  setAuthChecked(true);
-};
+  };
 
-const handleSignUp = async (email: string, password: string) => {
-  await authService.signUp(email, password);
-
-  const u = auth.currentUser;
-  if (u?.uid) {
-    store.setUser(u.uid);
+  const handleSignUp = async (email: string, password: string) => {
+    await authService.signUp(email, password);
+    const u = authService.getCurrentUser();
+    if (u?.uid) store.setUser(u.uid);
     setIsAuthenticated(true);
-  }
-  setAuthChecked(true);
-};
+  };
 
-
+  const handleLogout = () => {
+    store.clearUser();
+    setIsAuthenticated(false);
+    setCurrentTab(AppTab.CHAT);
+  };
 
   // --- Authenticated Layout (Responsive with Fixed Bottom Nav) ---
-  if (!authChecked) {
-  return <div className="h-screen w-full bg-gray-50" />;
-}
   if (isAuthenticated) {
     const renderContent = () => {
       switch (currentTab) {
@@ -115,21 +96,27 @@ const handleSignUp = async (email: string, password: string) => {
             ${isActive ? 'text-lyvo-primary' : 'text-gray-400 hover:text-gray-600'}
           `}
         >
-          <Icon className={`
-            w-6 h-6 
-            ${isActive ? 'fill-current' : ''} transition-all duration-300
-          `} strokeWidth={isActive ? 2.5 : 2} />
-          <span className={`
-            text-[10px] 
-            font-medium ${isActive ? 'font-bold' : ''}
-          `}>{label}</span>
+          <Icon
+            className={`
+              w-6 h-6 
+              ${isActive ? 'fill-current' : ''} transition-all duration-300
+            `}
+            strokeWidth={isActive ? 2.5 : 2}
+          />
+          <span
+            className={`
+              text-[10px] 
+              font-medium ${isActive ? 'font-bold' : ''}
+            `}
+          >
+            {label}
+          </span>
         </button>
       );
     };
 
     return (
       <div className="h-screen w-full bg-gray-50 relative overflow-hidden flex flex-col">
-        
         {/* MAIN CONTENT AREA - Padding bottom matched to nav height */}
         <main className="flex-1 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
           {renderContent()}
