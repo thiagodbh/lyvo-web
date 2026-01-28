@@ -37,17 +37,22 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
 );
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(!!authService.getCurrentUser());
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
-  React.useEffect(() => {
-    const u = authService.getCurrentUser();
+ React.useEffect(() => {
+  const unsubscribe = authService.onChange((u) => {
     if (u?.uid) {
       store.setUser(u.uid);
+      setIsAuthenticated(true);
     } else {
       store.clearUser();
+      setIsAuthenticated(false);
     }
-  }, []);
+  });
+
+  return () => unsubscribe?.();
+}, []);
 
   const handleLogin = async (email: string, password: string) => {
     await authService.signIn(email, password);
@@ -63,13 +68,21 @@ function App() {
     setIsAuthenticated(true);
   };
 
-  const handleLogout = () => {
-    store.clearUser();
-    setIsAuthenticated(false);
-    setCurrentTab(AppTab.CHAT);
-  };
+  const handleLogout = async () => {
+  await authService.signOut();
+  // o onChange vai limpar store e setar isAuthenticated=false automaticamente
+  setCurrentTab(AppTab.CHAT);
+};
+
 
   // --- Authenticated Layout (Responsive with Fixed Bottom Nav) ---
+  if (isAuthenticated === null) {
+  return (
+    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+      <div className="text-gray-500 font-medium">Carregando...</div>
+    </div>
+  );
+}
   if (isAuthenticated) {
     const renderContent = () => {
       switch (currentTab) {
