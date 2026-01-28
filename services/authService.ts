@@ -19,7 +19,6 @@ function writeUsers(users: StoredUser[]) {
 }
 
 function setSession(uid: string | null) {
-...
     this.user = { uid: found.uid, email: found.email };
     setSession(found.uid);
     this.emit();
