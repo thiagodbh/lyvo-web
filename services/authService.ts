@@ -1,25 +1,36 @@
 // services/authService.ts
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User } from "firebase/auth";
-import { auth } from "./firebase";
+export type User = { uid: string; email: string } | null;
 
-class FirebaseAuthService {
-  getCurrentUser(): User | null {
-    return auth.currentUser;
-  }
+type StoredUser = { uid: string; email: string; password: string };
 
-  async signUp(email: string, password: string) {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    return cred.user;
-  }
+const LS_USERS_KEY = "lyvo_mock_users";
+const LS_SESSION_KEY = "lyvo_mock_session_uid";
 
-  async signIn(email: string, password: string) {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    return cred.user;
-  }
-
-  async signOut() {
-    await signOut(auth);
+function readUsers(): StoredUser[] {
+  try { 
+    return JSON.parse(localStorage.getItem(LS_USERS_KEY) || "[]"); 
+  } catch { 
+    return []; 
   }
 }
 
-export const authService = new FirebaseAuthService();
+function writeUsers(users: StoredUser[]) {
+  localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
+}
+
+function setSession(uid: string | null) {
+...
+    this.user = { uid: found.uid, email: found.email };
+    setSession(found.uid);
+    this.emit();
+    return this.user;
+  }
+
+  async signOut() {
+    this.user = null;
+    setSession(null);
+    this.emit();
+  }
+}
+
+export const authService = new MockAuthService();
