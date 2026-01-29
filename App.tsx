@@ -71,23 +71,17 @@ function App() {
 
 
   const handleLogin = async (email: string, password: string) => {
-    await authService.signIn(email, password);
-    const u = authService.getCurrentUser();
-    if (u?.uid) store.setUser(u.uid);
-    setIsAuthenticated(true);
-  };
+  await authService.signIn(email, password);
+};
 
-  const handleSignUp = async (email: string, password: string) => {
-    await authService.signUp(email, password);
-    const u = authService.getCurrentUser();
-    if (u?.uid) store.setUser(u.uid);
-    setIsAuthenticated(true);
-  };
+const handleSignUp = async (email: string, password: string) => {
+  await authService.signUp(email, password);
+};
 
   const handleLogout = async () => {
   await authService.signOut();
-  // o onChange vai limpar store e setar isAuthenticated=false automaticamente
   setCurrentTab(AppTab.CHAT);
+  setIsAuthorized(null);
 };
 
 
