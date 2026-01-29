@@ -80,14 +80,14 @@ const handleSignUp = async (email: string, password: string) => {
   const u = authService.getCurrentUser();
   if (!u?.uid) return;
 
-  // cria o doc do usuário no Firestore (se não existir)
   const userRef = doc(db, "users", u.uid);
   const snap = await getDoc(userRef);
 
+  // cria o cadastro do usuário no Firestore (uma única vez)
   if (!snap.exists()) {
     await setDoc(userRef, {
       email,
-      active: false,
+      active: false,          // começa bloqueado
       plan: "free",
       createdAt: serverTimestamp(),
     });
