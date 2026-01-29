@@ -1,5 +1,5 @@
 import Paywall from './components/Paywall';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from './services/firebase';
 import { store } from './services/firestoreStore';
 import React, { useState } from 'react';
@@ -76,6 +76,22 @@ function App() {
 
 const handleSignUp = async (email: string, password: string) => {
   await authService.signUp(email, password);
+
+  const u = authService.getCurrentUser();
+  if (!u?.uid) return;
+
+  // cria o doc do usuário no Firestore (se não existir)
+  const userRef = doc(db, "users", u.uid);
+  const snap = await getDoc(userRef);
+
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      email,
+      active: false,
+      plan: "free",
+      createdAt: serverTimestamp(),
+    });
+  }
 };
 
   const handleLogout = async () => {
