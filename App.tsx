@@ -69,11 +69,6 @@ function App() {
   return () => unsubscribe?.();
 }, []);
 
-  return () => unsubscribe?.();
-}, []);
-
-  return () => unsubscribe?.();
-}, []);
 
   const handleLogin = async (email: string, password: string) => {
     await authService.signIn(email, password);
