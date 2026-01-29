@@ -1,3 +1,6 @@
+import Paywall from './components/Paywall';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from './services/firebase';
 import { store } from './services/firestoreStore';
 import React, { useState } from 'react';
 import { authService } from './services/authService';
@@ -38,18 +41,41 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
  React.useEffect(() => {
-  const unsubscribe = authService.onChange((u) => {
-    if (u?.uid) {
-      store.setUser(u.uid);
-      setIsAuthenticated(true);
-    } else {
+  const unsubscribe = authService.onChange(async (u) => {
+    // deslogado
+    if (!u?.uid) {
       store.clearUser();
       setIsAuthenticated(false);
+      setIsAuthorized(null);
+      return;
+    }
+
+    // logado (a sessão existe)
+    store.setUser(u.uid);
+    setIsAuthenticated(true);
+
+    // começa verificando autorização
+    setIsAuthorized(null);
+
+    try {
+      const snap = await getDoc(doc(db, 'users', u.uid));
+      if (snap.exists() && snap.data()?.active === true) {
+        setIsAuthorized(true);
+      } else {
+        setIsAuthorized(false);
+      }
+    } catch {
+      // se der erro de leitura, por segurança vira paywall
+      setIsAuthorized(false);
     }
   });
+
+  return () => unsubscribe?.();
+}, []);
 
   return () => unsubscribe?.();
 }, []);
@@ -83,6 +109,18 @@ function App() {
     </div>
   );
 }
+if (isAuthenticated && isAuthorized === null) {
+  return (
+    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+      <div className="text-gray-500 font-medium">Verificando acesso...</div>
+    </div>
+  );
+}
+
+if (isAuthenticated && isAuthorized === false) {
+  return <Paywall onLogout={handleLogout} />;
+}
+
   if (isAuthenticated) {
     const renderContent = () => {
       switch (currentTab) {
