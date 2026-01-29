@@ -46,7 +46,6 @@ function App() {
 
  React.useEffect(() => {
   const unsubscribe = authService.onChange(async (u) => {
-    // deslogado
     if (!u?.uid) {
       store.clearUser();
       setIsAuthenticated(false);
@@ -54,25 +53,21 @@ function App() {
       return;
     }
 
-    // logado (a sessão existe)
     store.setUser(u.uid);
     setIsAuthenticated(true);
 
-    // começa verificando autorização
     setIsAuthorized(null);
 
     try {
-      const snap = await getDoc(doc(db, 'users', u.uid));
-      if (snap.exists() && snap.data()?.active === true) {
-        setIsAuthorized(true);
-      } else {
-        setIsAuthorized(false);
-      }
+      const snap = await getDoc(doc(db, "users", u.uid));
+      setIsAuthorized(snap.exists() && snap.data()?.active === true);
     } catch {
-      // se der erro de leitura, por segurança vira paywall
       setIsAuthorized(false);
     }
   });
+
+  return () => unsubscribe?.();
+}, []);
 
   return () => unsubscribe?.();
 }, []);
