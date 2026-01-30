@@ -833,7 +833,7 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
                                 <div className="flex items-center space-x-3">
                                     <span className="text-sm font-black text-gray-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}</span>
                                     <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setEditingTransaction(t)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                        <button onClick={() => setEditingGeneralTransaction(t)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                                         <button onClick={() => handleDeleteTransaction(t.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                                     </div>
                                 </div>
