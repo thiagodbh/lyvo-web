@@ -309,7 +309,7 @@ const ChatInterface: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#E5DDD5] relative overflow-hidden"> 
+    <div className="flex flex-col flex-1 min-h-0 bg-[#E5DDD5] relative overflow-hidden">
       {/* Visual Header */}
       <div className="bg-white/95 backdrop-blur-md shadow-sm z-10 rounded-b-[2.5rem] w-full p-6 pb-4 border-b border-gray-100">
         <div className="flex items-center space-x-4 mb-4">
@@ -330,7 +330,7 @@ const ChatInterface: React.FC = () => {
       </div>
 
       {/* Chat History */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] px-4 py-3 rounded-[1.5rem] shadow-sm relative ${msg.role === 'user' ? 'bg-[#3A86FF] text-white rounded-tr-none' : 'bg-white text-gray-900 rounded-tl-none'}`}>
@@ -351,7 +351,7 @@ const ChatInterface: React.FC = () => {
       </div>
 
       {/* Input Section */}
-      <div className="bg-white p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] flex items-center space-x-2 sticky bottom-0 z-20 pb-[env(safe-area-inset-bottom)]">
+      <div className="bg-white p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] flex items-center space-x-2 sticky bottom-0 z-20 shrink-0 pb-[env(safe-area-inset-bottom)]">
         <div className="flex-1 bg-gray-100 rounded-full flex items-center px-4 py-1 border border-gray-100">
              <input 
               type="text" 
