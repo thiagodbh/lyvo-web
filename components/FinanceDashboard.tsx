@@ -842,20 +842,21 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
   <Edit2 className="w-4 h-4" />
 </button>
 
-<button
-  type="button"
-  onClick={() => handleDeleteTransaction(t.id)}
-  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-  aria-label="Excluir transação"
->
-  <Trash2 className="w-4 h-4" />
-</button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteTransaction(t.id)}
+                                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                          aria-label="Excluir transação"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
 
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                                      </div> {/* fecha div dos botões (#4) */}
+                                    </div> {/* fecha div valor + botões (#3) */}
+                                  </div> {/* fecha container text-gray (#2) */}
+                                </div> {/* fecha item principal (#1) */}
+                              ))}
+
 
                 <div className="p-8 border-t border-gray-100">
                     {currentInvoice > paidValue ? (
