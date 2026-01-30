@@ -404,11 +404,38 @@ useEffect(() => {
                                             <span className={`font-bold text-sm ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
                                                 {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.value)}
                                             </span>
-                                            <button onClick={() => setItemToDelete({type: 'TRANSACTION', id: t.id})} className="p-1 text-gray-300 hover:text-red-500 transition-opacity opacity-0 group-hover:opacity-100"><Trash2 className="w-3.5 h-3.5" /></button>
+                                            <div className="flex items-center space-x-1 transition-opacity opacity-0 group-hover:opacity-100">
+  <button
+    type="button"
+    onClick={() => setEditingTransaction(t)}
+    className="p-1 text-gray-300 hover:text-blue-500"
+    aria-label="Editar transação"
+  >
+    <Edit2 className="w-3.5 h-3.5" />
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setItemToDelete({ type: "TRANSACTION", id: t.id })}
+    className="p-1 text-gray-300 hover:text-red-500"
+    aria-label="Excluir transação"
+  >
+    <Trash2 className="w-3.5 h-3.5" />
+  </button>
+</div>
                                         </div>
                                     </div>
                                 ))}
                                 {transactions.length === 0 && <p className="text-center text-gray-400 text-xs py-4">Sem lançamentos avulsos.</p>}
+                                {transactions.length > 4 && (
+  <button
+    type="button"
+    onClick={() => setExpandTransactions(v => !v)}
+    className="w-full mt-2 text-xs font-bold text-lyvo-primary py-2 rounded-xl hover:bg-gray-50"
+  >
+    {expandTransactions ? "Ver menos" : "Ver mais"}
+  </button>
+)}
                             </div>
                         </div>
                     </div>
