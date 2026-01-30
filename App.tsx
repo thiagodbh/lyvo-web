@@ -167,9 +167,9 @@ if (isAuthenticated && isAuthorized === false) {
     };
 
     return (
-      <div className="h-screen w-full bg-gray-50 relative overflow-hidden flex flex-col">
+      <div className="w-full bg-gray-50 relative overflow-hidden flex flex-col min-h-[100dvh] h-[100dvh]">
         {/* MAIN CONTENT AREA - Padding bottom matched to nav height */}
-        <main className="flex-1 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
+        <main className="flex-1 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16 min-h-0">
           {renderContent()}
         </main>
 
