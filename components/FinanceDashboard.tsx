@@ -404,38 +404,11 @@ useEffect(() => {
                                             <span className={`font-bold text-sm ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
                                                 {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.value)}
                                             </span>
-                                            <div className="flex items-center space-x-1 transition-opacity opacity-0 group-hover:opacity-100">
-  <button
-    type="button"
-    onClick={() => setEditingTransaction(t)}
-    className="p-1 text-gray-300 hover:text-blue-500"
-    aria-label="Editar transação"
-  >
-    <Edit2 className="w-3.5 h-3.5" />
-  </button>
-
-  <button
-    type="button"
-    onClick={() => setItemToDelete({ type: "TRANSACTION", id: t.id })}
-    className="p-1 text-gray-300 hover:text-red-500"
-    aria-label="Excluir transação"
-  >
-    <Trash2 className="w-3.5 h-3.5" />
-  </button>
-</div>
+                                            <button onClick={() => setItemToDelete({type: 'TRANSACTION', id: t.id})} className="p-1 text-gray-300 hover:text-red-500 transition-opacity opacity-0 group-hover:opacity-100"><Trash2 className="w-3.5 h-3.5" /></button>
                                         </div>
                                     </div>
                                 ))}
                                 {transactions.length === 0 && <p className="text-center text-gray-400 text-xs py-4">Sem lançamentos avulsos.</p>}
-                                {transactions.length > 4 && (
-  <button
-    type="button"
-    onClick={() => setExpandTransactions(v => !v)}
-    className="w-full mt-2 text-xs font-bold text-lyvo-primary py-2 rounded-xl hover:bg-gray-50"
-  >
-    {expandTransactions ? "Ver menos" : "Ver mais"}
-  </button>
-)}
                             </div>
                         </div>
                     </div>
@@ -823,74 +796,41 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
                     </div>
 
                     <div className="space-y-4">
-  <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest ml-2">
-    Lançamentos do Mês
-  </h3>
+                        <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest ml-2">Lançamentos do Mês</h3>
+                        {transactions?.map(t => (
+                            <div key={t.id} className="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm group">
+                                <div className="text-gray-900">
+                                    <p className="text-sm font-bold">{t.description}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                    <span className="text-sm font-black text-gray-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}</span>
+                                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setEditingTransaction(t)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                        <button onClick={() => handleDeleteTransaction(t.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
 
-  {transactions?.map(t => (
-    <div
-      key={t.id}
-      className="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm group"
-    >
-      <div className="text-gray-900">
-        <p className="text-sm font-bold">{t.description}</p>
-        <p className="text-[10px] text-gray-400 font-bold">
-          {new Date(t.date).toLocaleDateString('pt-BR')}
-        </p>
-      </div>
-
-      <div className="flex items-center space-x-3">
-        <span className="text-sm font-black text-gray-900">
-          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}
-        </span>
-
-        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            type="button"
-            onClick={() => setEditingTransaction(t)}
-            className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-            aria-label="Editar transação"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleDeleteTransaction(t.id)}
-            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-            aria-label="Excluir transação"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
-
-<div className="p-8 border-t border-gray-100">
-  {currentInvoice > paidValue ? (
-    <button
-      onClick={onPay}
-      className="w-full py-4 rounded-2xl font-black text-white text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 bg-green-500 hover:bg-green-600"
-    >
-      Pagar Fatura
-    </button>
-  ) : (
-    <div className="w-full py-4 bg-green-100 text-green-600 rounded-2xl font-black text-center text-sm uppercase">
-      Fatura Quitada
-    </div>
-  )}
-</div>
-
-{editingTransaction && (
-  <EditTransactionModal
-    transaction={editingTransaction}
-    onSave={handleUpdateTransaction}
-    onCancel={() => setEditingTransaction(null)}
-  />
-)}
-
+                <div className="p-8 border-t border-gray-100">
+                    {currentInvoice > paidValue ? (
+                        <button 
+                            onClick={onPay}
+                            className="w-full py-4 rounded-2xl font-black text-white text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 bg-green-500 hover:bg-green-600"
+                        >
+                            Pagar Fatura
+                        </button>
+                    ) : (
+                        <div className="w-full py-4 bg-green-100 text-green-600 rounded-2xl font-black text-center text-sm uppercase">Fatura Quitada</div>
+                    )}
+                </div>
+                
+                {editingTransaction && (
+                    <EditTransactionModal transaction={editingTransaction} onSave={handleUpdateTransaction} onCancel={() => setEditingTransaction(null)} />
+                )}
             </div>
         </div>
     );
