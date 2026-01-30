@@ -359,7 +359,7 @@ const ChatInterface: React.FC = () => {
               onChange={(e) => setInputText(e.target.value)} 
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Digite ou use áudio/câmera..."
-              className="flex-1 bg-transparent px-2 py-3 outline-none text-gray-900 text-sm font-medium" 
+              className="flex-1 bg-transparent px-2 py-3 outline-none text-gray-900 text-base font-medium" 
             />
             <div className="flex items-center space-x-1 text-gray-400">
                 <button 
