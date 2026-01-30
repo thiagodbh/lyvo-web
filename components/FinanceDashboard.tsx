@@ -825,37 +825,42 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
                     <div className="space-y-4">
                         <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest ml-2">Lançamentos do Mês</h3>
                         {transactions?.map(t => (
-                            <div key={t.id} className="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm group">
-                                <div className="text-gray-900">
-                                    <p className="text-sm font-bold">{t.description}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
-                                </div>
-                                <div className="flex items-center space-x-3">
-                                    <span className="text-sm font-black text-gray-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}</span>
-                                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-  type="button"
-  onClick={() => setEditingGeneralTransaction(t)}
-  className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-  aria-label="Editar transação"
->
-  <Edit2 className="w-4 h-4" />
-</button>
+  <div key={t.id} className="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm group">
+    <div className="text-gray-900">
+      <p className="text-sm font-bold">{t.description}</p>
+      <p className="text-[10px] text-gray-400 font-bold">
+        {new Date(t.date).toLocaleDateString('pt-BR')}
+      </p>
+    </div>
 
-                                        <button
-                                          type="button"
-                                          onClick={() => handleDeleteTransaction(t.id)}
-                                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                          aria-label="Excluir transação"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
+    <div className="flex items-center space-x-3">
+      <span className="text-sm font-black text-gray-900">
+        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}
+      </span>
 
-                                      </div> {/* fecha div dos botões (#4) */}
-                                    </div> {/* fecha div valor + botões (#3) */}
-                                  </div> {/* fecha container text-gray (#2) */}
-                                </div> {/* fecha item principal (#1) */}
-                              ))}
+      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={() => setEditingGeneralTransaction(t)}
+          className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+          aria-label="Editar transação"
+        >
+          <Edit2 className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleDeleteTransaction(t.id)}
+          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+          aria-label="Excluir transação"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  </div>
+))}
+
 
 
                 <div className="p-8 border-t border-gray-100">
