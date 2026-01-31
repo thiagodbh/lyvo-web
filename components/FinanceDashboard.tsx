@@ -603,6 +603,17 @@ useEffect(() => {
             {showAddCardModal && <AddCreditCardModal initialData={editingCard} onClose={() => { setShowAddCardModal(false); setEditingCard(null); }} onSave={() => { triggerUpdate(); setShowAddCardModal(false); setEditingCard(null); }} />}
             {showAddForecastModal && <AddForecastModal selectedMonth={selectedMonth} selectedYear={selectedYear} initialData={editingForecast} onClose={() => { setShowAddForecastModal(false); setEditingForecast(null); }} onSave={() => { triggerUpdate(); setShowAddForecastModal(false); setEditingForecast(null); }} />}
             {showCategoryModal && <CategoryModal initialData={editingCategory} onClose={() => { setShowCategoryModal(false); setEditingCategory(null); }} onSave={() => { triggerUpdate(); setShowCategoryModal(false); setEditingCategory(null); }} />}
+            {editingGeneralTransaction && (
+  <EditTransactionModal
+    transaction={editingGeneralTransaction}
+    onSave={(id, date, value) => {
+      store.updateTransaction(id, { date, value });
+      setEditingGeneralTransaction(null);
+      triggerUpdate();
+    }}
+    onCancel={() => setEditingGeneralTransaction(null)}
+  />
+)}
 
            {itemToDelete && itemToDelete.type !== 'FORECAST' && (
   <ConfirmationModal 
