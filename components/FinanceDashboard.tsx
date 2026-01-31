@@ -196,6 +196,10 @@ useEffect(() => {
     const incomeForecasts = forecasts.filter(f => f.type === 'EXPECTED_INCOME' && f.status === 'PENDING');
     const sortedIncomeForecasts = [...incomeForecasts].sort((a, b) => new Date(a.expectedDate).getTime() - new Date(b.expectedDate).getTime());
     const forecastsToShow = expandForecasts ? sortedIncomeForecasts : sortedIncomeForecasts.slice(0, 4);
+    const sortedTransactions = [...transactions].sort(
+  (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+);
+const transactionsToShow = expandTransactions ? sortedTransactions : sortedTransactions.slice(0, 4);
 
     const pieData = limits.map((l, index) => ({
         name: l.category,
