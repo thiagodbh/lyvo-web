@@ -382,73 +382,43 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
                         </div>
 
                          <div className="bg-white p-5 rounded-3xl shadow-sm mb-8">
-  <h2 className="text-lg font-bold text-lyvo-text">Transações Gerais</h2>
+                            <h2 className="text-lg font-bold text-lyvo-text">Transações Gerais</h2>
+                            <div className="space-y-4 mt-4">
+                                {transactions.slice(0, expandTransactions ? undefined : 4).map(t => (
+                                    <div key={t.id} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0 group">
+                                        <div className="flex items-center space-x-3">
+                                            <div className={`p-2 rounded-full ${t.type === 'INCOME' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
+                                                {t.type === 'INCOME' ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900 text-sm">{t.description}</p>
+                                                <p className="text-[10px] text-gray-400">{new Date(t.date).toLocaleDateString('pt-BR')} • {t.category}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+  <button
+    onClick={() => setEditingGeneralTransaction(t)}
+    className="p-1 text-gray-300 hover:text-blue-500"
+    aria-label="Editar transação"
+  >
+    <Edit2 className="w-3.5 h-3.5" />
+  </button>
 
-  <div className="space-y-4 mt-4">
-    {transactionsToShow.map(t => (
-      <div
-        key={t.id}
-        className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0 group"
-      >
-        <div className="flex items-center space-x-3">
-          <div
-            className={`p-2 rounded-full ${
-              t.type === 'INCOME'
-                ? 'bg-green-100 text-green-600'
-                : 'bg-red-100 text-red-500'
-            }`}
-          >
-            {t.type === 'INCOME' ? (
-              <ArrowUpCircle className="w-5 h-5" />
-            ) : (
-              <ArrowDownCircle className="w-5 h-5" />
-            )}
-          </div>
-
-          <div>
-            <p className="font-semibold text-gray-900 text-sm">{t.description}</p>
-            <p className="text-[10px] text-gray-400">
-              {new Date(t.date).toLocaleDateString('pt-BR')} • {t.category}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => setEditingGeneralTransaction(t)}
-            className="p-1 text-gray-300 hover:text-blue-500"
-            aria-label="Editar transação"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => setItemToDelete({ type: 'TRANSACTION', id: t.id })}
-            className="p-1 text-gray-300 hover:text-red-500"
-            aria-label="Excluir transação"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-    ))}
-
-    {transactions.length === 0 && (
-      <p className="text-center text-gray-400 text-xs py-4">Sem lançamentos avulsos.</p>
-    )}
-
-    {sortedTransactions.length > 4 && (
-      <button
-        onClick={() => setExpandTransactions(!expandTransactions)}
-        className="w-full py-2 text-lyvo-primary text-xs font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all"
-      >
-        {expandTransactions ? 'Ver menos' : 'Ver mais'}
-      </button>
-    )}
-  </div>
+  <button
+    onClick={() => setItemToDelete({ type: 'TRANSACTION', id: t.id })}
+    className="p-1 text-gray-300 hover:text-red-500"
+    aria-label="Excluir transação"
+  >
+    <Trash2 className="w-3.5 h-3.5" />
+  </button>
 </div>
 
-
+                                    </div>
+                                ))}
+                                {transactions.length === 0 && <p className="text-center text-gray-400 text-xs py-4">Sem lançamentos avulsos.</p>}
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="lg:col-span-4 space-y-6">
                         <div className="bg-white p-5 rounded-3xl shadow-sm">
