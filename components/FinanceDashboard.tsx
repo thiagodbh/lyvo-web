@@ -384,7 +384,7 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
                          <div className="bg-white p-5 rounded-3xl shadow-sm mb-8">
                             <h2 className="text-lg font-bold text-lyvo-text">Transações Gerais</h2>
                             <div className="space-y-4 mt-4">
-                                {transactions.slice(0, expandTransactions ? undefined : 4).map(t => (
+                                {transactionsToShow.map(t => (
                                     <div key={t.id} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0 group">
                                         <div className="flex items-center space-x-3">
                                             <div className={`p-2 rounded-full ${t.type === 'INCOME' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
@@ -415,6 +415,15 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
 
                                     </div>
                                 ))}
+                                {sortedTransactions.length > 4 && (
+    <button
+      onClick={() => setExpandTransactions(!expandTransactions)}
+      className="w-full py-2 text-lyvo-primary text-xs font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all"
+    >
+      {expandTransactions ? 'Ver menos' : 'Ver mais'}
+    </button>
+  )}
+</div>
                                 {transactions.length === 0 && <p className="text-center text-gray-400 text-xs py-4">Sem lançamentos avulsos.</p>}
                             </div>
                         </div>
