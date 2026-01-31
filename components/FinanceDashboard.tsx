@@ -395,12 +395,24 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
                                                 <p className="text-[10px] text-gray-400">{new Date(t.date).toLocaleDateString('pt-BR')} • {t.category}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-3">
-                                            <span className={`font-bold text-sm ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
-                                                {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.value)}
-                                            </span>
-                                            <button onClick={() => setItemToDelete({type: 'TRANSACTION', id: t.id})} className="p-1 text-gray-300 hover:text-red-500 transition-opacity opacity-0 group-hover:opacity-100"><Trash2 className="w-3.5 h-3.5" /></button>
-                                        </div>
+                                        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+  <button
+    onClick={() => setEditingGeneralTransaction(t)}
+    className="p-1 text-gray-300 hover:text-blue-500"
+    aria-label="Editar transação"
+  >
+    <Edit2 className="w-3.5 h-3.5" />
+  </button>
+
+  <button
+    onClick={() => setItemToDelete({ type: 'TRANSACTION', id: t.id })}
+    className="p-1 text-gray-300 hover:text-red-500"
+    aria-label="Excluir transação"
+  >
+    <Trash2 className="w-3.5 h-3.5" />
+  </button>
+</div>
+
                                     </div>
                                 ))}
                                 {transactions.length === 0 && <p className="text-center text-gray-400 text-xs py-4">Sem lançamentos avulsos.</p>}
