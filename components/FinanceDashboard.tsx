@@ -61,6 +61,7 @@ const FinanceDashboard: React.FC = () => {
     const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
     const [editingCategory, setEditingCategory] = useState<BudgetLimit | null>(null);
     const [editingCard, setEditingCard] = useState<CreditCard | null>(null);
+    const [editingGeneralTransaction, setEditingGeneralTransaction] = useState<Transaction | null>(null);
     const [itemToDelete, setItemToDelete] = useState<{type: 'CARD' | 'TRANSACTION' | 'FORECAST', id: string} | null>(null);
     const [billToDelete, setBillToDelete] = useState<FixedBill | null>(null);
 
@@ -85,17 +86,7 @@ const FinanceDashboard: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        refreshData();
-    }, [viewDate, refreshTrigger]);
-    useEffect(() => {
-  const handler = () => setRefreshTrigger((prev) => prev + 1);
-  window.addEventListener("lyvo:data-changed", handler);
-  return () => window.removeEventListener("lyvo:data-changed", handler);
-}, []);
-
-
-    const triggerUpdate = () => setRefreshTrigger(prev => prev + 1);
+   const triggerUpdate = () => setRefreshTrigger(prev => prev + 1);
 
 useEffect(() => {
   refreshData();
