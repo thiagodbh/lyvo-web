@@ -386,14 +386,30 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
 
   <div className="space-y-4 mt-4">
     {transactionsToShow.map(t => (
-      <div key={t.id} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0 group">
+      <div
+        key={t.id}
+        className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0 group"
+      >
         <div className="flex items-center space-x-3">
-          <div className={`p-2 rounded-full ${t.type === 'INCOME' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
-            {t.type === 'INCOME' ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
+          <div
+            className={`p-2 rounded-full ${
+              t.type === 'INCOME'
+                ? 'bg-green-100 text-green-600'
+                : 'bg-red-100 text-red-500'
+            }`}
+          >
+            {t.type === 'INCOME' ? (
+              <ArrowUpCircle className="w-5 h-5" />
+            ) : (
+              <ArrowDownCircle className="w-5 h-5" />
+            )}
           </div>
+
           <div>
             <p className="font-semibold text-gray-900 text-sm">{t.description}</p>
-            <p className="text-[10px] text-gray-400">{new Date(t.date).toLocaleDateString('pt-BR')} • {t.category}</p>
+            <p className="text-[10px] text-gray-400">
+              {new Date(t.date).toLocaleDateString('pt-BR')} • {t.category}
+            </p>
           </div>
         </div>
 
@@ -417,6 +433,10 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
       </div>
     ))}
 
+    {transactions.length === 0 && (
+      <p className="text-center text-gray-400 text-xs py-4">Sem lançamentos avulsos.</p>
+    )}
+
     {sortedTransactions.length > 4 && (
       <button
         onClick={() => setExpandTransactions(!expandTransactions)}
@@ -425,12 +445,9 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
         {expandTransactions ? 'Ver menos' : 'Ver mais'}
       </button>
     )}
-
-    {transactions.length === 0 && (
-      <p className="text-center text-gray-400 text-xs py-4">Sem lançamentos avulsos.</p>
-    )}
   </div>
 </div>
+
 
 
                     <div className="lg:col-span-4 space-y-6">
