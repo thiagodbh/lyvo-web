@@ -68,7 +68,9 @@ const FinanceDashboard: React.FC = () => {
     const [expandBills, setExpandBills] = useState(false);
     const [expandTransactions, setExpandTransactions] = useState(false);
     const [expandForecasts, setExpandForecasts] = useState(false);
+    const [expandCategories, setExpandCategories] = useState(false);
 
+    
     const selectedMonth = viewDate.getMonth();
     const selectedYear = viewDate.getFullYear();
 
@@ -512,69 +514,82 @@ useEffect(() => {
                             </div>
                         </div>
 
-                         <div className="bg-white p-5 rounded-3xl shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-bold text-lyvo-text">Categorias</h2>
-                                <button onClick={() => setShowCategoryModal(true)} className="p-1 text-lyvo-primary hover:bg-blue-50 rounded-lg transition-colors"><Plus className="w-5 h-5" /></button>
-                            </div>
-                            <div className="space-y-4">
-                                {limits.map(l => {
-    const percent = l.monthlyLimit > 0 ? Math.min((l.spent / l.monthlyLimit) * 100, 100) : 0;
+<div className="bg-white p-5 rounded-3xl shadow-sm">
+    <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold text-lyvo-text">Categorias</h2>
+        <button 
+            onClick={() => { setEditingCategory(null); setShowCategoryModal(true); }} 
+            className="p-1 text-lyvo-primary hover:bg-blue-50 rounded-lg transition-colors"
+        >
+            <Plus className="w-5 h-5" />
+        </button>
+    </div>
     
-    const getBarColor = (p: number) => {
-        if (p >= 85) return 'bg-red-500';
-        if (p >= 50) return 'bg-yellow-500';
-        return 'bg-green-500';
-    };
-
-    return (
-        <div key={l.id} className="group p-2 hover:bg-gray-50 rounded-2xl transition-all">
-            <div className="flex justify-between items-start text-xs mb-1">
-                <div className="flex flex-col">
-                    <span className="font-bold text-gray-700">{l.category}</span>
-                    <span className={`font-black text-[10px] ${percent >= 100 ? 'text-red-600' : 'text-gray-400'}`}>
-                        {formatCurrency(l.spent)} / {formatCurrency(l.monthlyLimit)}
-                    </span>
-                </div>
-                
-                {/* Botões de Ação: Editar e Excluir */}
-                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                        onClick={() => { setEditingCategory(l); setShowCategoryModal(true); }}
-                        className="p-1.5 text-blue-500 hover:bg-blue-100 rounded-lg transition-colors"
-                        title="Editar Limite"
-                    >
-                        <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button 
-                        onClick={() => {
-                            if(window.confirm(`Deseja excluir a categoria ${l.category}?`)) {
-                                // Se você tiver uma função deleteBudgetLimit no store, chame-a aqui
-                                // store.deleteBudgetLimit(l.id); 
-                                triggerUpdate();
-                            }
-                        }}
-                        className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Excluir Categoria"
-                    >
-                        <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                </div>
-            </div>
+    <div className="space-y-4">
+        {limits.slice(0, expandCategories ? limits.length : 4).map(l => {
+            const percent = l.monthlyLimit > 0 ? Math.min((l.spent / l.monthlyLimit) * 100, 100) : 0;
             
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner mt-1">
-                <div 
-                    style={{ width: `${percent}%` }} 
-                    className={`h-full transition-all duration-500 ease-out ${getBarColor(percent)}`}
-                ></div>
-            </div>
-        </div>
-    );
-})}
-                            </div>
+            const getBarColor = (p: number) => {
+                if (p >= 85) return 'bg-red-500';
+                if (p >= 50) return 'bg-yellow-500';
+                return 'bg-green-500';
+            };
+
+            return (
+                <div key={l.id} className="group p-1 hover:bg-gray-50 rounded-xl transition-all">
+                    <div className="flex justify-between items-start text-xs mb-1">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-gray-700">{l.category}</span>
+                            <span className={`font-black text-[10px] ${percent >= 100 ? 'text-red-600' : 'text-gray-400'}`}>
+                                {formatCurrency(l.spent)} / {formatCurrency(l.monthlyLimit)}
+                            </span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                                onClick={() => { setEditingCategory(l); setShowCategoryModal(true); }}
+                                className="p-1 text-blue-500 hover:bg-blue-100 rounded-md transition-colors"
+                            >
+                                <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                                onClick={async () => {
+                                    if(window.confirm(`Deseja excluir a categoria ${l.category}?`)) {
+                                        await store.deleteBudgetLimit(l.id);
+                                        triggerUpdate();
+                                    }
+                                }}
+                                className="p-1 text-red-400 hover:bg-red-50 rounded-md transition-colors"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                         </div>
                     </div>
+                    
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner mt-1">
+                        <div 
+                            style={{ width: `${percent}%` }} 
+                            className={`h-full transition-all duration-500 ease-out ${getBarColor(percent)}`}
+                        ></div>
+                    </div>
                 </div>
+            );
+        })}
+
+        {limits.length > 4 && (
+            <button 
+                onClick={() => setExpandCategories(!expandCategories)} 
+                className="w-full py-2 text-lyvo-primary text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all mt-2"
+            >
+                {expandCategories ? 'Ver Menos' : `Ver Mais (${limits.length - 4})`}
+            </button>
+        )}
+
+        {limits.length === 0 && (
+            <p className="text-[10px] text-gray-400 text-center py-4">Nenhuma categoria cadastrada.</p>
+        )}
+    </div>
+</div>
 
                 <div className="space-y-6 mt-6 pb-12">
                     <div className="flex items-center justify-between">
