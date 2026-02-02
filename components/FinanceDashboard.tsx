@@ -797,11 +797,7 @@ useEffect(() => {
         >
           Cancelar
         </button>
-      </div>
-    </div>
-  </div>
-)}
-
+ </div>
         </div>
     );
 };
