@@ -40,7 +40,6 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#F43F5E'
 
 const FinanceDashboard: React.FC = () => {
     const today = new Date();
-    // Use a single Date state to ensure atomic updates of Month/Year and prevent chronological disorder
     const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -70,7 +69,6 @@ const FinanceDashboard: React.FC = () => {
     const [expandForecasts, setExpandForecasts] = useState(false);
     const [expandCategories, setExpandCategories] = useState(false);
 
-    
     const selectedMonth = viewDate.getMonth();
     const selectedYear = viewDate.getFullYear();
 
@@ -80,13 +78,13 @@ const FinanceDashboard: React.FC = () => {
             setFixedBills(store.getFixedBillsByMonth(selectedMonth, selectedYear)); 
             setForecasts(store.getForecastsByMonth(selectedMonth, selectedYear));
             setCreditCards([...store.creditCards]);
-            setLimits([...store.budgetLimits]);
+            
             const updatedLimits = store.budgetLimits.map(limit => {
-            const spentInMonth = store.calculateTotalSpentByCategory(limit.category, selectedMonth, selectedYear);
-            return { ...limit, spent: spentInMonth };
-        });
-        
-        setLimits(updatedLimits);
+                const spentInMonth = store.calculateTotalSpentByCategory(limit.category, selectedMonth, selectedYear);
+                return { ...limit, spent: spentInMonth };
+            });
+            
+            setLimits(updatedLimits);
             const currentBal = store.calculateBalances(selectedMonth, selectedYear);
             setBalanceData(currentBal);
         } catch (error) {
@@ -94,17 +92,17 @@ const FinanceDashboard: React.FC = () => {
         }
     };
 
-   const triggerUpdate = () => setRefreshTrigger(prev => prev + 1);
+    const triggerUpdate = () => setRefreshTrigger(prev => prev + 1);
 
-useEffect(() => {
-  refreshData();
-}, [viewDate, refreshTrigger]);
+    useEffect(() => {
+        refreshData();
+    }, [viewDate, refreshTrigger]);
 
-useEffect(() => {
-  const handler = () => triggerUpdate();
-  window.addEventListener("lyvo:data-changed", handler);
-  return () => window.removeEventListener("lyvo:data-changed", handler);
-}, []);
+    useEffect(() => {
+        const handler = () => triggerUpdate();
+        window.addEventListener("lyvo:data-changed", handler);
+        return () => window.removeEventListener("lyvo:data-changed", handler);
+    }, []);
 
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -137,22 +135,18 @@ useEffect(() => {
     };
 
     const handleDelete = async () => {
-  if (!itemToDelete) return;
-
-  if (itemToDelete.type === 'CARD') {
-    await store.deleteCreditCard(itemToDelete.id);
-    setSelectedCardForDetails(null);
-
-  } else if (itemToDelete.type === 'TRANSACTION') {
-    await store.deleteTransaction(itemToDelete.id);
-
-  } else if (itemToDelete.type === 'FORECAST') {
-    await store.deleteForecast(itemToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
-  }
-
-  triggerUpdate();
-  setItemToDelete(null);
-};
+        if (!itemToDelete) return;
+        if (itemToDelete.type === 'CARD') {
+            await store.deleteCreditCard(itemToDelete.id);
+            setSelectedCardForDetails(null);
+        } else if (itemToDelete.type === 'TRANSACTION') {
+            await store.deleteTransaction(itemToDelete.id);
+        } else if (itemToDelete.type === 'FORECAST') {
+            await store.deleteForecast(itemToDelete.id, 'FROM_THIS_MONTH', selectedMonth, selectedYear);
+        }
+        triggerUpdate();
+        setItemToDelete(null);
+    };
 
     const confirmPayment = (amount: number) => {
         if (payInvoiceModal) {
@@ -205,7 +199,6 @@ useEffect(() => {
     const sortedIncomeForecasts = [...incomeForecasts].sort((a, b) => new Date(a.expectedDate).getTime() - new Date(b.expectedDate).getTime());
     const forecastsToShow = expandForecasts ? sortedIncomeForecasts : sortedIncomeForecasts.slice(0, 4);
     
-    // REQUIREMENT: Ordering and visibility logic for General Transactions
     const sortedTransactions = [...transactions].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
@@ -425,7 +418,6 @@ useEffect(() => {
                                     </div>
                                 ))}
                                 
-                                {/* REQUIREMENT: Added "Ver Mais" / "Ver Menos" button for General Transactions */}
                                 {transactions.length > 4 && (
                                     <button 
                                         onClick={() => setExpandTransactions(!expandTransactions)} 
@@ -514,82 +506,81 @@ useEffect(() => {
                             </div>
                         </div>
 
-<div className="bg-white p-5 rounded-3xl shadow-sm">
-    <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-lyvo-text">Categorias</h2>
-        <button 
-            onClick={() => { setEditingCategory(null); setShowCategoryModal(true); }} 
-            className="p-1 text-lyvo-primary hover:bg-blue-50 rounded-lg transition-colors"
-        >
-            <Plus className="w-5 h-5" />
-        </button>
-    </div>
-    
-    <div className="space-y-4">
-        {limits.slice(0, expandCategories ? limits.length : 4).map(l => {
-            const percent = l.monthlyLimit > 0 ? Math.min((l.spent / l.monthlyLimit) * 100, 100) : 0;
-            
-            const getBarColor = (p: number) => {
-                if (p >= 85) return 'bg-red-500';
-                if (p >= 50) return 'bg-yellow-500';
-                return 'bg-green-500';
-            };
+                        <div className="bg-white p-5 rounded-3xl shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-bold text-lyvo-text">Categorias</h2>
+                                <button onClick={() => { setEditingCategory(null); setShowCategoryModal(true); }} className="p-1 text-lyvo-primary hover:bg-blue-50 rounded-lg transition-colors">
+                                    <Plus className="w-5 h-5" />
+                                </button>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                {limits.slice(0, expandCategories ? limits.length : 4).map(l => {
+                                    const percent = l.monthlyLimit > 0 ? Math.min((l.spent / l.monthlyLimit) * 100, 100) : 0;
+                                    
+                                    const getBarColor = (p: number) => {
+                                        if (p >= 85) return 'bg-red-500';
+                                        if (p >= 50) return 'bg-yellow-500';
+                                        return 'bg-green-500';
+                                    };
 
-            return (
-                <div key={l.id} className="group p-1 hover:bg-gray-50 rounded-xl transition-all">
-                    <div className="flex justify-between items-start text-xs mb-1">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-gray-700">{l.category}</span>
-                            <span className={`font-black text-[10px] ${percent >= 100 ? 'text-red-600' : 'text-gray-400'}`}>
-                                {formatCurrency(l.spent)} / {formatCurrency(l.monthlyLimit)}
-                            </span>
+                                    return (
+                                        <div key={l.id} className="group p-1 hover:bg-gray-50 rounded-xl transition-all">
+                                            <div className="flex justify-between items-start text-xs mb-1">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-gray-700">{l.category}</span>
+                                                    <span className={`font-black text-[10px] ${percent >= 100 ? 'text-red-600' : 'text-gray-400'}`}>
+                                                        {formatCurrency(l.spent)} / {formatCurrency(l.monthlyLimit)}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button 
+                                                        onClick={() => { setEditingCategory(l); setShowCategoryModal(true); }}
+                                                        className="p-1 text-blue-500 hover:bg-blue-100 rounded-md transition-colors"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={async () => {
+                                                            if(window.confirm(`Deseja excluir a categoria ${l.category}?`)) {
+                                                                await store.deleteBudgetLimit(l.id);
+                                                                triggerUpdate();
+                                                            }
+                                                        }}
+                                                        className="p-1 text-red-400 hover:bg-red-50 rounded-md transition-colors"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner mt-1">
+                                                <div 
+                                                    style={{ width: `${percent}%` }} 
+                                                    className={`h-full transition-all duration-500 ease-out ${getBarColor(percent)}`}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {limits.length > 4 && (
+                                    <button 
+                                        onClick={() => setExpandCategories(!expandCategories)} 
+                                        className="w-full py-2 text-lyvo-primary text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all mt-2"
+                                    >
+                                        {expandCategories ? 'Ver Menos' : `Ver Mais (${limits.length - 4})`}
+                                    </button>
+                                )}
+
+                                {limits.length === 0 && (
+                                    <p className="text-[10px] text-gray-400 text-center py-4">Nenhuma categoria cadastrada.</p>
+                                )}
+                            </div>
                         </div>
-                        
-                        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                                onClick={() => { setEditingCategory(l); setShowCategoryModal(true); }}
-                                className="p-1 text-blue-500 hover:bg-blue-100 rounded-md transition-colors"
-                            >
-                                <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button 
-                                onClick={async () => {
-                                    if(window.confirm(`Deseja excluir a categoria ${l.category}?`)) {
-                                        await store.deleteBudgetLimit(l.id);
-                                        triggerUpdate();
-                                    }
-                                }}
-                                className="p-1 text-red-400 hover:bg-red-50 rounded-md transition-colors"
-                            >
-                                <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner mt-1">
-                        <div 
-                            style={{ width: `${percent}%` }} 
-                            className={`h-full transition-all duration-500 ease-out ${getBarColor(percent)}`}
-                        ></div>
                     </div>
                 </div>
-            );
-        })}
-
-        {limits.length > 4 && (
-            <button 
-                onClick={() => setExpandCategories(!expandCategories)} 
-                className="w-full py-2 text-lyvo-primary text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all mt-2"
-            >
-                {expandCategories ? 'Ver Menos' : `Ver Mais (${limits.length - 4})`}
-            </button>
-        )}
-
-        {limits.length === 0 && (
-            <p className="text-[10px] text-gray-400 text-center py-4">Nenhuma categoria cadastrada.</p>
-        )}
-    </div>
-</div>
 
                 <div className="space-y-6 mt-6 pb-12">
                     <div className="flex items-center justify-between">
@@ -692,117 +683,111 @@ useEffect(() => {
             {showAddForecastModal && <AddForecastModal selectedMonth={selectedMonth} selectedYear={selectedYear} initialData={editingForecast} onClose={() => { setShowAddForecastModal(false); setEditingForecast(null); }} onSave={() => { triggerUpdate(); setShowAddForecastModal(false); setEditingForecast(null); }} />}
             {showCategoryModal && <CategoryModal initialData={editingCategory} onClose={() => { setShowCategoryModal(false); setEditingCategory(null); }} onSave={() => { triggerUpdate(); setShowCategoryModal(false); setEditingCategory(null); }} />}
             {editingGeneralTransaction && (
-  <EditTransactionModal
-    transaction={editingGeneralTransaction}
-    onSave={(id, date, value) => {
-      store.updateTransaction(id, { date, value });
-      setEditingGeneralTransaction(null);
-      triggerUpdate();
-    }}
-    onCancel={() => setEditingGeneralTransaction(null)}
-  />
-)}
+              <EditTransactionModal
+                transaction={editingGeneralTransaction}
+                onSave={(id, date, value) => {
+                  store.updateTransaction(id, { date, value });
+                  setEditingGeneralTransaction(null);
+                  triggerUpdate();
+                }}
+                onCancel={() => setEditingGeneralTransaction(null)}
+              />
+            )}
 
-           {itemToDelete && itemToDelete.type !== 'FORECAST' && (
-  <ConfirmationModal 
-    message={itemToDelete.type === 'CARD'
-      ? "Excluir cartão e todos os seus lançamentos?"
-      : itemToDelete.type === 'TRANSACTION'
-      ? "Excluir este lançamento?"
-      : "Remover item?"
-    }
-    onConfirm={handleDelete}
-    onCancel={() => setItemToDelete(null)}
-  />
-)}
+            {itemToDelete && itemToDelete.type !== 'FORECAST' && (
+              <ConfirmationModal 
+                message={itemToDelete.type === 'CARD'
+                  ? "Excluir cartão e todos os seus lançamentos?"
+                  : itemToDelete.type === 'TRANSACTION'
+                  ? "Excluir este lançamento?"
+                  : "Remover item?"
+                }
+                onConfirm={handleDelete}
+                onCancel={() => setItemToDelete(null)}
+              />
+            )}
 
-{itemToDelete && itemToDelete.type === 'FORECAST' && (
-  <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
-    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
-      <h3 className="text-lg font-bold text-gray-900">Excluir receita prevista</h3>
-      <p className="text-sm text-gray-600 mt-1">
-        Você quer excluir só deste mês ou também todos os meses futuros?
-      </p>
-
-      <div className="mt-4 space-y-2">
-        <button
-          className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
-          onClick={async () => {
-            await store.deleteForecast(itemToDelete.id, 'ONLY_THIS', selectedMonth, selectedYear);
-            setItemToDelete(null);
-            triggerUpdate();
-          }}
-        >
-          Excluir somente este mês
-        </button>
-
-        <button
-          className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
-          onClick={async () => {
-            await store.deleteForecast(itemToDelete.id, 'ALL_FUTURE', selectedMonth, selectedYear);
-            setItemToDelete(null);
-            triggerUpdate();
-          }}
-        >
-          Excluir este mês e os futuros
-        </button>
-
-        <button
-          className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
-          onClick={() => setItemToDelete(null)}
-        >
-          Cancelar
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+            {itemToDelete && itemToDelete.type === 'FORECAST' && (
+              <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
+                <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+                  <h3 className="text-lg font-bold text-gray-900">Excluir receita prevista</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Você quer excluir só deste mês ou também todos os meses futuros?
+                  </p>
+                  <div className="mt-4 space-y-2">
+                    <button
+                      className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
+                      onClick={async () => {
+                        await store.deleteForecast(itemToDelete.id, 'ONLY_THIS', selectedMonth, selectedYear);
+                        setItemToDelete(null);
+                        triggerUpdate();
+                      }}
+                    >
+                      Excluir somente este mês
+                    </button>
+                    <button
+                      className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
+                      onClick={async () => {
+                        await store.deleteForecast(itemToDelete.id, 'ALL_FUTURE', selectedMonth, selectedYear);
+                        setItemToDelete(null);
+                        triggerUpdate();
+                      }}
+                    >
+                      Excluir este mês e os futuros
+                    </button>
+                    <button
+                      className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
+                      onClick={() => setItemToDelete(null)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {billToDelete && (
-                <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
-                    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
-                        <h3 className="text-lg font-bold text-gray-900">Excluir conta fixa</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Você quer excluir só deste mês ou também todos os meses futuros?
-                        </p>
-                        <div className="mt-4 space-y-2">
-                            <button
-                                className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
-                                onClick={() => {
-                                    store.deleteFixedBill(billToDelete.id, 'ONLY_THIS', selectedMonth, selectedYear);
-                                    setBillToDelete(null);
-                                    triggerUpdate();
-                                }}
-                            >
-                                Excluir somente este mês
-                            </button>
-                            <button
-                                className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
-                                onClick={() => {
-                                    store.deleteFixedBill(billToDelete.id, 'ALL_FUTURE', selectedMonth, selectedYear);
-                                    setBillToDelete(null);
-                                    triggerUpdate();
-                                }}
-                            >
-                                Excluir este mês e os futuros
-                            </button>
-                           <button
-                                className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
-                                onClick={() => setBillToDelete(null)}
-                            >
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
+              <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
+                <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+                  <h3 className="text-lg font-bold text-gray-900">Excluir conta fixa</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Você quer excluir só deste mês ou também todos os meses futuros?
+                  </p>
+                  <div className="mt-4 space-y-2">
+                    <button
+                        className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
+                        onClick={() => {
+                            store.deleteFixedBill(billToDelete.id, 'ONLY_THIS', selectedMonth, selectedYear);
+                            setBillToDelete(null);
+                            triggerUpdate();
+                        }}
+                    >
+                        Excluir somente este mês
+                    </button>
+                    <button
+                        className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
+                        onClick={() => {
+                            store.deleteFixedBill(billToDelete.id, 'ALL_FUTURE', selectedMonth, selectedYear);
+                            setBillToDelete(null);
+                            triggerUpdate();
+                        }}
+                    >
+                        Excluir este mês e os futuros
+                    </button>
+                    <button
+                        className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
+                        onClick={() => setBillToDelete(null)}
+                    >
+                        Cancelar
+                    </button>
+                  </div>
                 </div>
+              </div>
             )}
         </div>
-    </div>
-</div>
     );
 };
 
-const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number, onClose: () => void, onRefresh: () => void, onPay: () => void }> = ({ card, month, year, onClose, onRefresh, onPay }) => {
 const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number, onClose: () => void, onRefresh: () => void, onPay: () => void }> = ({ card, month, year, onClose, onRefresh, onPay }) => {
     const [localUpdate, setLocalUpdate] = useState(0);
     const forceLocalUpdate = () => setLocalUpdate(prev => prev + 1);
@@ -942,10 +927,10 @@ const PayInvoiceValueModal: React.FC<{ fullValue: number, alreadyPaid: number, o
             <div className="flex gap-3">
               <button onClick={onCancel} className="flex-1 py-3 text-gray-400 font-bold">Cancelar</button>
               <button onClick={() => onConfirm(parseFloat(amount))}
-  className="flex-1 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold transition-all active:scale-95"
->
-  Confirmar
-</button>
+                className="flex-1 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold transition-all active:scale-95"
+              >
+                Confirmar
+              </button>
             </div>
           </div>
         </div>
@@ -956,11 +941,7 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
     const [dueDay, setDueDay] = useState('5');
-    
-    // Sincronização: Busca as categorias reais do seu bloco de fluxo geral
     const availableCategories = store.budgetLimits.map(l => l.category);
-    
-    // Define a primeira categoria da lista como padrão, ou 'Geral' se estiver vazio
     const [category, setCategory] = useState(availableCategories[0] || 'Geral');
 
     return (
@@ -1038,6 +1019,7 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
         </div>
     );
 };
+
 const AddForecastModal: React.FC<{ selectedMonth: number, selectedYear: number, initialData?: Forecast | null, onClose: () => void, onSave: () => void }> = ({ selectedMonth, selectedYear, initialData, onClose, onSave }) => {
     const [description, setDescription] = useState(initialData?.description || '');
     const [value, setValue] = useState(initialData?.value?.toString() || '');
