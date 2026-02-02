@@ -899,27 +899,88 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
     const [dueDay, setDueDay] = useState('5');
+    
+    // Sincronização: Busca as categorias reais do seu bloco de fluxo geral
+    const availableCategories = store.budgetLimits.map(l => l.category);
+    
+    // Define a primeira categoria da lista como padrão, ou 'Geral' se estiver vazio
+    const [category, setCategory] = useState(availableCategories[0] || 'Geral');
+
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
             <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
                 <h3 className="text-lg font-black uppercase mb-6 tracking-tight">Nova Conta Fixa</h3>
                 <div className="space-y-4">
-                    <input type="text" placeholder="Descrição" value={name} onChange={e => setName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 placeholder:text-gray-300" />
-                    <input type="number" placeholder="Valor" value={value} onChange={e => setValue(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 placeholder:text-gray-300" />
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Dia do Vencimento</label>
-                        <input type="number" value={dueDay} onChange={e => setDueDay(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900" />
+                    <input 
+                        type="text" 
+                        placeholder="Descrição (ex: Aluguel)" 
+                        value={name} 
+                        onChange={e => setName(e.target.value)} 
+                        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 placeholder:text-gray-300" 
+                    />
+                    <input 
+                        type="number" 
+                        placeholder="Valor" 
+                        value={value} 
+                        onChange={e => setValue(e.target.value)} 
+                        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 placeholder:text-gray-300" 
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Vencimento (Dia)</label>
+                            <input 
+                                type="number" 
+                                value={dueDay} 
+                                onChange={e => setDueDay(e.target.value)} 
+                                className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900" 
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Categoria</label>
+                            <div className="relative">
+                                <select 
+                                    value={category} 
+                                    onChange={e => setCategory(e.target.value)} 
+                                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 appearance-none pr-10"
+                                >
+                                    {availableCategories.length > 0 ? (
+                                        availableCategories.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))
+                                    ) : (
+                                        <option value="Geral">Geral</option>
+                                    )}
+                                </select>
+                                <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div className="flex gap-3 mt-8">
                     <button onClick={onClose} className="flex-1 py-3 text-gray-400 font-bold">Voltar</button>
-                    <button onClick={() => { if(name && value) { store.addFixedBill({ name, baseValue: parseFloat(value), dueDay: parseInt(dueDay), category: 'Moradia', isRecurring: true }, selectedMonth, selectedYear); onSave(); } }} className="flex-1 py-3 bg-[#3A86FF] text-white rounded-xl font-bold">Adicionar</button>
+                    <button 
+                        onClick={() => { 
+                            if(name && value) { 
+                                store.addFixedBill({ 
+                                    name, 
+                                    baseValue: parseFloat(value), 
+                                    dueDay: parseInt(dueDay), 
+                                    category, 
+                                    isRecurring: true 
+                                }, selectedMonth, selectedYear); 
+                                onSave(); 
+                            } 
+                        }} 
+                        className="flex-1 py-3 bg-[#3A86FF] text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all"
+                    >
+                        Adicionar
+                    </button>
                 </div>
             </div>
         </div>
     );
 };
-
 const AddForecastModal: React.FC<{ selectedMonth: number, selectedYear: number, initialData?: Forecast | null, onClose: () => void, onSave: () => void }> = ({ selectedMonth, selectedYear, initialData, onClose, onSave }) => {
     const [description, setDescription] = useState(initialData?.description || '');
     const [value, setValue] = useState(initialData?.value?.toString() || '');
