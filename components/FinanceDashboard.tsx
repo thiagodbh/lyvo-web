@@ -521,7 +521,6 @@ useEffect(() => {
                                 {limits.map(l => {
     const percent = l.monthlyLimit > 0 ? Math.min((l.spent / l.monthlyLimit) * 100, 100) : 0;
     
-    // Lógica de cor dinâmica
     const getBarColor = (p: number) => {
         if (p >= 85) return 'bg-red-500';
         if (p >= 50) return 'bg-yellow-500';
@@ -529,14 +528,41 @@ useEffect(() => {
     };
 
     return (
-        <div key={l.id} className="group">
-            <div className="flex justify-between items-center text-xs mb-1">
-                <span className="font-bold text-gray-700">{l.category}</span>
-                <span className={`font-black ${percent >= 100 ? 'text-red-600' : 'text-gray-400'}`}>
-                    {formatCurrency(l.spent)} / {Math.round(percent)}%
-                </span>
+        <div key={l.id} className="group p-2 hover:bg-gray-50 rounded-2xl transition-all">
+            <div className="flex justify-between items-start text-xs mb-1">
+                <div className="flex flex-col">
+                    <span className="font-bold text-gray-700">{l.category}</span>
+                    <span className={`font-black text-[10px] ${percent >= 100 ? 'text-red-600' : 'text-gray-400'}`}>
+                        {formatCurrency(l.spent)} / {formatCurrency(l.monthlyLimit)}
+                    </span>
+                </div>
+                
+                {/* Botões de Ação: Editar e Excluir */}
+                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                        onClick={() => { setEditingCategory(l); setShowCategoryModal(true); }}
+                        className="p-1.5 text-blue-500 hover:bg-blue-100 rounded-lg transition-colors"
+                        title="Editar Limite"
+                    >
+                        <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                        onClick={() => {
+                            if(window.confirm(`Deseja excluir a categoria ${l.category}?`)) {
+                                // Se você tiver uma função deleteBudgetLimit no store, chame-a aqui
+                                // store.deleteBudgetLimit(l.id); 
+                                triggerUpdate();
+                            }
+                        }}
+                        className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Excluir Categoria"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+            
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner mt-1">
                 <div 
                     style={{ width: `${percent}%` }} 
                     className={`h-full transition-all duration-500 ease-out ${getBarColor(percent)}`}
