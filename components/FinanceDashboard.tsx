@@ -797,8 +797,8 @@ useEffect(() => {
         >
           Cancelar
         </button>
- </div>
-        </div>
+ </div> {/* Fechamento do container p-4 space-y-6 (Geral) */}
+        </div> {/* Fechamento do container flex flex-col h-full (Raiz) */}
     );
 };
 
