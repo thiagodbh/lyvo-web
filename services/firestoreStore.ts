@@ -434,7 +434,39 @@ this.fixedBills = [{ ...(newBill as any), id: ref.id } as any, ...this.fixedBill
   }
 
   // ---------------- BUDGET LIMITS ----------------
+// ---------------- BUDGET LIMITS ----------------
 
+  /**
+   * Calcula o gasto total de uma categoria somando:
+   * 1. Transações de despesa (EXPENSE) que não são de cartão.
+   * 2. Transações vinculadas a cartões de crédito.
+   * Nota: Contas fixas pagas geram uma transação de despesa automaticamente, 
+   * então já estão incluídas no item 1.
+   */
+  calculateTotalSpentByCategory(category: string, month: number, year: number) {
+    const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+    return this.transactions
+      .filter((t) => {
+        const d = new Date(t.date);
+        
+        // Critério 1: Mesma categoria
+        const isSameCategory = t.category === category;
+
+        // Critério 2: É uma despesa
+        const isExpense = t.type === "EXPENSE";
+
+        // Critério 3: Pertence ao mês selecionado
+        // Para transações de cartão, usamos o billingMonth (fatura)
+        // Para transações normais, usamos a data real
+        const isInMonth = (t as any).relatedCardId 
+          ? (t as any).billingMonth === monthStr
+          : d.getMonth() === month && d.getFullYear() === year;
+
+        return isSameCategory && isExpense && isInMonth;
+      })
+      .reduce((acc, t) => acc + t.value, 0);
+  }
   async addBudgetLimit(category: string, monthlyLimit: number) {
     if (!this.uid) return null;
     const newLimit: Omit<BudgetLimit, "id"> = { category, monthlyLimit, spent: 0 };
