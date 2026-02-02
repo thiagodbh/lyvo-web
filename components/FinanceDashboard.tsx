@@ -786,7 +786,7 @@ useEffect(() => {
                             >
                                 Excluir este mês e os futuros
                             </button>
-                            <button
+                           <button
                                 className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
                                 onClick={() => setBillToDelete(null)}
                             >
@@ -796,10 +796,13 @@ useEffect(() => {
                     </div>
                 </div>
             )}
-        </div> {/* Fechamento do container p-4 space-y-6 (Geral) */}
-    </div> {/* Fechamento do container flex flex-col h-full (Raiz) */}
-  );
+        </div>
+    </div>
+</div>
+    );
 };
+
+const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number, onClose: () => void, onRefresh: () => void, onPay: () => void }> = ({ card, month, year, onClose, onRefresh, onPay }) => {
 const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number, onClose: () => void, onRefresh: () => void, onPay: () => void }> = ({ card, month, year, onClose, onRefresh, onPay }) => {
     const [localUpdate, setLocalUpdate] = useState(0);
     const forceLocalUpdate = () => setLocalUpdate(prev => prev + 1);
