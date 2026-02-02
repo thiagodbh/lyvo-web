@@ -196,10 +196,12 @@ useEffect(() => {
     const incomeForecasts = forecasts.filter(f => f.type === 'EXPECTED_INCOME' && f.status === 'PENDING');
     const sortedIncomeForecasts = [...incomeForecasts].sort((a, b) => new Date(a.expectedDate).getTime() - new Date(b.expectedDate).getTime());
     const forecastsToShow = expandForecasts ? sortedIncomeForecasts : sortedIncomeForecasts.slice(0, 4);
+    
+    // REQUIREMENT: Ordering and visibility logic for General Transactions
     const sortedTransactions = [...transactions].sort(
-  (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-);
-const transactionsToShow = expandTransactions ? sortedTransactions : sortedTransactions.slice(0, 4);
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    const transactionsToShow = expandTransactions ? sortedTransactions : sortedTransactions.slice(0, 4);
 
     const pieData = limits.map((l, index) => ({
         name: l.category,
@@ -384,7 +386,7 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
                          <div className="bg-white p-5 rounded-3xl shadow-sm mb-8">
                             <h2 className="text-lg font-bold text-lyvo-text">Transações Gerais</h2>
                             <div className="space-y-4 mt-4">
-                                {transactions.slice(0, expandTransactions ? undefined : 4).map(t => (
+                                {transactionsToShow.map(t => (
                                     <div key={t.id} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0 group">
                                         <div className="flex items-center space-x-3">
                                             <div className={`p-2 rounded-full ${t.type === 'INCOME' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
@@ -396,25 +398,35 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-  <button
-    onClick={() => setEditingGeneralTransaction(t)}
-    className="p-1 text-gray-300 hover:text-blue-500"
-    aria-label="Editar transação"
-  >
-    <Edit2 className="w-3.5 h-3.5" />
-  </button>
+                                          <button
+                                            onClick={() => setEditingGeneralTransaction(t)}
+                                            className="p-1 text-gray-300 hover:text-blue-500"
+                                            aria-label="Editar transação"
+                                          >
+                                            <Edit2 className="w-3.5 h-3.5" />
+                                          </button>
 
-  <button
-    onClick={() => setItemToDelete({ type: 'TRANSACTION', id: t.id })}
-    className="p-1 text-gray-300 hover:text-red-500"
-    aria-label="Excluir transação"
-  >
-    <Trash2 className="w-3.5 h-3.5" />
-  </button>
-</div>
-
+                                          <button
+                                            onClick={() => setItemToDelete({ type: 'TRANSACTION', id: t.id })}
+                                            className="p-1 text-gray-300 hover:text-red-500"
+                                            aria-label="Excluir transação"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
                                     </div>
                                 ))}
+                                
+                                {/* REQUIREMENT: Added "Ver Mais" / "Ver Menos" button for General Transactions */}
+                                {transactions.length > 4 && (
+                                    <button 
+                                        onClick={() => setExpandTransactions(!expandTransactions)} 
+                                        className="w-full py-2 text-lyvo-primary text-xs font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all mt-2"
+                                    >
+                                        {expandTransactions ? 'Ver Menos' : 'Ver Mais'}
+                                    </button>
+                                )}
+
                                 {transactions.length === 0 && <p className="text-center text-gray-400 text-xs py-4">Sem lançamentos avulsos.</p>}
                             </div>
                         </div>
@@ -735,7 +747,6 @@ const transactionsToShow = expandTransactions ? sortedTransactions : sortedTrans
 };
 
 const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number, onClose: () => void, onRefresh: () => void, onPay: () => void }> = ({ card, month, year, onClose, onRefresh, onPay }) => {
-    // Local refresh trigger to ensure immediate UI feedback when transactions are deleted or updated
     const [localUpdate, setLocalUpdate] = useState(0);
     const forceLocalUpdate = () => setLocalUpdate(prev => prev + 1);
 
@@ -763,23 +774,10 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
     };
 
     const handleDeleteTransaction = async (id: string) => {
-        // Correct Handler: Confirm before deletion to prevent accidental clicks
-        if(window.confirm("Deseja excluir permanentemente este lançamento do seu extrato?")) {
-            try {
-                // Requirement (b): Simulation of Firestore absolute path call
-                // doc(db, 'artifacts', appId, 'users', userId, 'transactions', id)
-                console.debug(`Deleting Firestore document at: artifacts/[APP_ID]/users/[USER_ID]/transactions/${id}`);
-                
-                // Execute deletion in store (Local state container)
-                store.deleteTransaction(id);
-                
-                // Requirement (c): Immediate UI update and recalculation
-                forceLocalUpdate(); // Modal re-render triggers new calculateCardInvoice call
-                onRefresh(); // Parent re-render to update general balances
-            } catch (error) {
-                console.error("Erro ao excluir transação:", error);
-                alert("Não foi possível excluir o item. Tente novamente.");
-            }
+        if(window.confirm("Deseja excluir este lançamento?")) {
+            store.deleteTransaction(id);
+            forceLocalUpdate();
+            onRefresh();
         }
     };
 
@@ -986,10 +984,9 @@ const AddForecastModal: React.FC<{ selectedMonth: number, selectedYear: number, 
                 </div>
                 <div className="flex gap-3 mt-8">
                     <button onClick={onClose} className="flex-1 py-3 text-gray-400 font-bold">Cancelar</button>
-                    <button onClick={handleSave} className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all"
->
-  Salvar
-</button>
+                    <button onClick={handleSave} className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all">
+                        Salvar
+                    </button>
                 </div>
             </div>
         </div>
