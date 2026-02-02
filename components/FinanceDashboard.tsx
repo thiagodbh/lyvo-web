@@ -79,6 +79,12 @@ const FinanceDashboard: React.FC = () => {
             setForecasts(store.getForecastsByMonth(selectedMonth, selectedYear));
             setCreditCards([...store.creditCards]);
             setLimits([...store.budgetLimits]);
+            const updatedLimits = store.budgetLimits.map(limit => {
+            const spentInMonth = store.calculateTotalSpentByCategory(limit.category, selectedMonth, selectedYear);
+            return { ...limit, spent: spentInMonth };
+        });
+        
+        setLimits(updatedLimits);
             const currentBal = store.calculateBalances(selectedMonth, selectedYear);
             setBalanceData(currentBal);
         } catch (error) {
@@ -513,19 +519,32 @@ useEffect(() => {
                             </div>
                             <div className="space-y-4">
                                 {limits.map(l => {
-                                     const percent = l.monthlyLimit > 0 ? Math.min((l.spent / l.monthlyLimit) * 100, 100) : 0;
-                                     return (
-                                        <div key={l.id}>
-                                            <div className="flex justify-between items-center text-xs mb-1">
-                                                <span className="font-bold text-gray-700">{l.category}</span>
-                                                <span className="text-gray-400 font-bold">{Math.round(percent)}%</span>
-                                            </div>
-                                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                <div style={{ width: `${percent}%` }} className={`h-full ${percent > 90 ? 'bg-red-500' : 'bg-lyvo-secondary'}`}></div>
-                                            </div>
-                                        </div>
-                                     );
-                                })}
+    const percent = l.monthlyLimit > 0 ? Math.min((l.spent / l.monthlyLimit) * 100, 100) : 0;
+    
+    // Lógica de cor dinâmica
+    const getBarColor = (p: number) => {
+        if (p >= 85) return 'bg-red-500';
+        if (p >= 50) return 'bg-yellow-500';
+        return 'bg-green-500';
+    };
+
+    return (
+        <div key={l.id} className="group">
+            <div className="flex justify-between items-center text-xs mb-1">
+                <span className="font-bold text-gray-700">{l.category}</span>
+                <span className={`font-black ${percent >= 100 ? 'text-red-600' : 'text-gray-400'}`}>
+                    {formatCurrency(l.spent)} / {Math.round(percent)}%
+                </span>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                <div 
+                    style={{ width: `${percent}%` }} 
+                    className={`h-full transition-all duration-500 ease-out ${getBarColor(percent)}`}
+                ></div>
+            </div>
+        </div>
+    );
+})}
                             </div>
                         </div>
                     </div>
