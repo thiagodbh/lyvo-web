@@ -759,49 +759,47 @@ useEffect(() => {
 )}
 
             {billToDelete && (
-  <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
-    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
-      <h3 className="text-lg font-bold text-gray-900">Excluir conta fixa</h3>
-      <p className="text-sm text-gray-600 mt-1">
-        Você quer excluir só deste mês ou também todos os meses futuros?
-      </p>
-
-      <div className="mt-4 space-y-2">
-        {/* Opção 1: só este mês */}
-        <button
-  className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
-  onClick={() => {
-    store.deleteFixedBill(billToDelete.id, 'ONLY_THIS', selectedMonth, selectedYear);
-    setBillToDelete(null);
-    triggerUpdate();
-  }}
->
-  Excluir somente este mês
-</button>
-
-<button
-  className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
-  onClick={() => {
-    store.deleteFixedBill(billToDelete.id, 'ALL_FUTURE', selectedMonth, selectedYear);
-    setBillToDelete(null);
-    triggerUpdate();
-  }}
->
-  Excluir este mês e os futuros
-</button>
-
-
-        <button
-          className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
-          onClick={() => setBillToDelete(null)}
-        >
-          Cancelar
-        </button>
- </div> {/* Fechamento do container p-4 space-y-6 (Geral) */}
-        </div> {/* Fechamento do container flex flex-col h-full (Raiz) */}
-    );
+                <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+                        <h3 className="text-lg font-bold text-gray-900">Excluir conta fixa</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Você quer excluir só deste mês ou também todos os meses futuros?
+                        </p>
+                        <div className="mt-4 space-y-2">
+                            <button
+                                className="w-full rounded-xl bg-gray-900 text-white font-bold py-3 hover:bg-gray-800 transition"
+                                onClick={() => {
+                                    store.deleteFixedBill(billToDelete.id, 'ONLY_THIS', selectedMonth, selectedYear);
+                                    setBillToDelete(null);
+                                    triggerUpdate();
+                                }}
+                            >
+                                Excluir somente este mês
+                            </button>
+                            <button
+                                className="w-full rounded-xl bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition"
+                                onClick={() => {
+                                    store.deleteFixedBill(billToDelete.id, 'ALL_FUTURE', selectedMonth, selectedYear);
+                                    setBillToDelete(null);
+                                    triggerUpdate();
+                                }}
+                            >
+                                Excluir este mês e os futuros
+                            </button>
+                            <button
+                                className="w-full rounded-xl bg-gray-100 text-gray-800 font-semibold py-3 hover:bg-gray-200 transition"
+                                onClick={() => setBillToDelete(null)}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div> {/* Fechamento do container p-4 space-y-6 (Geral) */}
+    </div> {/* Fechamento do container flex flex-col h-full (Raiz) */}
+  );
 };
-
 const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number, onClose: () => void, onRefresh: () => void, onPay: () => void }> = ({ card, month, year, onClose, onRefresh, onPay }) => {
     const [localUpdate, setLocalUpdate] = useState(0);
     const forceLocalUpdate = () => setLocalUpdate(prev => prev + 1);
