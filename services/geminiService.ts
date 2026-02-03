@@ -1,8 +1,16 @@
 export async function processUserCommand(text: string, imageBase64?: string) {
+  // AJUSTE: Captura a data exata de hoje para enviar à IA
+  const today = new Date();
+  const dateContext = `Hoje é ${today.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. `;
+
   const res = await fetch("/api/gemini", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, imageBase64 }),
+    // Adicionamos o dateContext antes do texto do usuário
+    body: JSON.stringify({ 
+      text: dateContext + text, 
+      imageBase64 
+    }),
   });
 
   const payload = await res.json();
