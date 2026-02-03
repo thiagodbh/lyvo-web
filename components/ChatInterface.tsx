@@ -298,6 +298,13 @@ const ChatInterface: React.FC = () => {
           let type: EntryType = 'EXPENSE';
           if (action === 'ADD_EVENT') type = 'EVENT';
           else if (details.type === 'INCOME') type = 'INCOME';
+        // Correção para garantir que a IA use o ano de 2026
+        if (details.date) {
+          const dateParts = details.date.split('-'); 
+          if (parseInt(dateParts[0]) < 2026) {
+            details.date = `2026-${dateParts[1]}-${dateParts[2]}`;
+          }
+        }
 
           setModalInitialData({
               ...details,
