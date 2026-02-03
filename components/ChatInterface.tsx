@@ -252,8 +252,13 @@ const ChatInterface: React.FC = () => {
         alert("Erro ao capturar áudio.");
     };
     
-    recognition.onresult = (event: any) => {
+   recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
+      
+      // DESLIGA O MICROFONE AUTOMATICAMENTE
+      recognition.stop();
+      setIsListening(false);
+
       setInputText(transcript);
       handleSendMessage(transcript);
     };
