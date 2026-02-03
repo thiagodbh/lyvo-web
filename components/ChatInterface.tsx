@@ -19,17 +19,34 @@ const DynamicManualEntryModal: React.FC<{
   onClose: () => void;
   onSave: (data: any) => void;
 }> = ({ type, initialData, onClose, onSave }) => {
+  // AJUSTE: Captura o horário real de Brasília no momento da abertura
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toTimeString().slice(0, 5); // Retorna "HH:MM"
+  };
+
   const [value, setValue] = useState(initialData?.value?.toString() || '');
+  
+  // AJUSTE: Puxa o título identificado pela IA para a descrição
   const [description, setDescription] = useState(initialData?.description || initialData?.title || '');
-  const [category, setCategory] = useState(initialData?.category || (type === 'INCOME' ? 'Salário' : 'Alimentação'));
+  
+  // AJUSTE: Sincroniza categorias com o Fluxo Geral (store.budgetLimits)
+  const availableCategories = store.budgetLimits.map(l => l.category);
+  const defaultCategory = type === 'INCOME' ? 'Salário' : (availableCategories[0] || 'Outros');
+
+  const [category, setCategory] = useState(initialData?.category || defaultCategory);
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
-  const [time, setTime] = useState(initialData?.time || '09:00');
+  
+  // AJUSTE: Define o horário dinâmico em vez de "09:00"
+  const [time, setTime] = useState(initialData?.time || getCurrentTime());
+  
   const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'Dinheiro');
   const [cardId, setCardId] = useState(initialData?.cardId || store.creditCards[0]?.id || '');
   const [installments, setInstallments] = useState(initialData?.installments?.toString() || '1');
 
   const isCredit = type === 'EXPENSE' && paymentMethod === 'Cartão de Crédito';
-  const expenseCategories = ['Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Lazer', 'Outros'];
+  
+  // Lista reserva para receitas (Income)
   const incomeCategories = ['Salário', 'Freela', 'Comissão', 'Outros'];
 
   const primaryColor = type === 'EXPENSE' ? '#3A86FF' : type === 'INCOME' ? '#7AE582' : '#3A86FF';
@@ -90,14 +107,15 @@ const DynamicManualEntryModal: React.FC<{
               <div className="flex items-center justify-between">
                 <label className="text-[10px] font-black text-gray-900 uppercase tracking-widest opacity-60">Categoria</label>
                 <select
-                  value={category}
-                  onChange={e => setCategory(e.target.value)}
-                  className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-[11px] font-black text-gray-900 outline-none"
-                >
-                  {(type === 'EXPENSE' ? expenseCategories : incomeCategories).map(cat => (
-                    <option key={cat}>{cat}</option>
-                  ))}
-                </select>
+  value={category}
+  onChange={e => setCategory(e.target.value)}
+  className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-[11px] font-black text-gray-900 outline-none"
+>
+  {/* AJUSTE: Mapeando categorias dinâmicas da sua store */}
+  {(type === 'EXPENSE' ? availableCategories : incomeCategories).map(cat => (
+    <option key={cat} value={cat}>{cat}</option>
+  ))}
+</select>
               </div>
             )}
 
