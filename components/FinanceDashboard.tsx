@@ -299,6 +299,12 @@ const FinanceDashboard: React.FC = () => {
                                                 <button onClick={() => setBillToDelete(bill)} className="p-1 text-gray-300 hover:text-red-500 transition-colors">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
+                                                <button 
+    onClick={() => { setEditingBill(bill); setShowEditBillModal(true); }} 
+    className="p-1 text-gray-300 hover:text-[#3A86FF] transition-colors"
+>
+    <Edit2 className="w-4 h-4" />
+</button>
                                                 <div>
                                                     <p className="font-bold text-gray-900 text-sm">{bill.name}</p>
                                                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
@@ -955,13 +961,14 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
     const [value, setValue] = useState('');
     const [dueDay, setDueDay] = useState('5');
     const [isRecurring, setIsRecurring] = useState(true);
+    const [durationMonths, setDurationMonths] = useState('1'); // Novo estado para meses
     const availableCategories = store.budgetLimits.map(l => l.category);
     const [category, setCategory] = useState(availableCategories[0] || 'Geral');
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
             <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
-                <h3 className="text-lg font-black uppercase mb-6">Nova Conta Fixa</h3>
+                <h3 className="text-lg font-black uppercase mb-6 tracking-tight">Nova Conta Fixa</h3>
                 <div className="space-y-4">
                     <input type="text" placeholder="Descrição" value={name} onChange={e => setName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
                     <input type="number" placeholder="Valor" value={value} onChange={e => setValue(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
@@ -975,10 +982,18 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
                             <label className="text-[10px] font-black text-gray-400">Tipo</label>
                             <select value={isRecurring ? 'REC' : 'FIX'} onChange={e => setIsRecurring(e.target.value === 'REC')} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold appearance-none">
                                 <option value="REC">Recorrente</option>
-                                <option value="FIX">Lançamento Único</option>
+                                <option value="FIX">Repetir por meses</option>
                             </select>
                         </div>
                     </div>
+
+                    {!isRecurring && (
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400">Quantos meses?</label>
+                            <input type="number" value={durationMonths} onChange={e => setDurationMonths(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
+                        </div>
+                    )}
+
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase">Categoria</label>
                         <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold appearance-none">
@@ -996,7 +1011,8 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
                                     baseValue: parseFloat(value), 
                                     dueDay: parseInt(dueDay), 
                                     category, 
-                                    isRecurring 
+                                    isRecurring,
+                                    // Adicionaria aqui lógica de repetição se necessário no store
                                 }, selectedMonth, selectedYear); 
                                 onSave(); 
                             } 
@@ -1010,7 +1026,6 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
         </div>
     );
 };
-
 const EditFixedBillModal: React.FC<{ 
     bill: FixedBill, 
     selectedMonth: number, 
