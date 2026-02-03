@@ -63,7 +63,10 @@ const FinanceDashboard: React.FC = () => {
     const [editingGeneralTransaction, setEditingGeneralTransaction] = useState<Transaction | null>(null);
     const [itemToDelete, setItemToDelete] = useState<{type: 'CARD' | 'TRANSACTION' | 'FORECAST', id: string} | null>(null);
     const [billToDelete, setBillToDelete] = useState<FixedBill | null>(null);
+    const [editingBill, setEditingBill] = useState<FixedBill | null>(null);
+    const [showEditBillModal, setShowEditBillModal] = useState(false);
 
+    
     const [expandBills, setExpandBills] = useState(false);
     const [expandTransactions, setExpandTransactions] = useState(false);
     const [expandForecasts, setExpandForecasts] = useState(false);
@@ -682,6 +685,16 @@ const FinanceDashboard: React.FC = () => {
             {showAddCardModal && <AddCreditCardModal initialData={editingCard} onClose={() => { setShowAddCardModal(false); setEditingCard(null); }} onSave={() => { triggerUpdate(); setShowAddCardModal(false); setEditingCard(null); }} />}
             {showAddForecastModal && <AddForecastModal selectedMonth={selectedMonth} selectedYear={selectedYear} initialData={editingForecast} onClose={() => { setShowAddForecastModal(false); setEditingForecast(null); }} onSave={() => { triggerUpdate(); setShowAddForecastModal(false); setEditingForecast(null); }} />}
             {showCategoryModal && <CategoryModal initialData={editingCategory} onClose={() => { setShowCategoryModal(false); setEditingCategory(null); }} onSave={() => { triggerUpdate(); setShowCategoryModal(false); setEditingCategory(null); }} />}
+            {/* MODAL DE EDIÇÃO */}
+{showEditBillModal && editingBill && (
+    <EditFixedBillModal 
+        bill={editingBill} 
+        selectedMonth={selectedMonth} 
+        selectedYear={selectedYear} 
+        onClose={() => { setShowEditBillModal(false); setEditingBill(null); }} 
+        onSave={() => { triggerUpdate(); setShowEditBillModal(false); setEditingBill(null); }} 
+    />
+)}
             {editingGeneralTransaction && (
               <EditTransactionModal
                 transaction={editingGeneralTransaction}
@@ -941,58 +954,36 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
     const [name, setName] = useState('');
     const [value, setValue] = useState('');
     const [dueDay, setDueDay] = useState('5');
+    const [isRecurring, setIsRecurring] = useState(true);
     const availableCategories = store.budgetLimits.map(l => l.category);
     const [category, setCategory] = useState(availableCategories[0] || 'Geral');
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
             <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
-                <h3 className="text-lg font-black uppercase mb-6 tracking-tight">Nova Conta Fixa</h3>
+                <h3 className="text-lg font-black uppercase mb-6">Nova Conta Fixa</h3>
                 <div className="space-y-4">
-                    <input 
-                        type="text" 
-                        placeholder="Descrição (ex: Aluguel)" 
-                        value={name} 
-                        onChange={e => setName(e.target.value)} 
-                        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 placeholder:text-gray-300" 
-                    />
-                    <input 
-                        type="number" 
-                        placeholder="Valor" 
-                        value={value} 
-                        onChange={e => setValue(e.target.value)} 
-                        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 placeholder:text-gray-300" 
-                    />
+                    <input type="text" placeholder="Descrição" value={name} onChange={e => setName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
+                    <input type="number" placeholder="Valor" value={value} onChange={e => setValue(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
                     
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Vencimento (Dia)</label>
-                            <input 
-                                type="number" 
-                                value={dueDay} 
-                                onChange={e => setDueDay(e.target.value)} 
-                                className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900" 
-                            />
+                            <label className="text-[10px] font-black text-gray-400">Vencimento (Dia)</label>
+                            <input type="number" value={dueDay} onChange={e => setDueDay(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Categoria</label>
-                            <div className="relative">
-                                <select 
-                                    value={category} 
-                                    onChange={e => setCategory(e.target.value)} 
-                                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 appearance-none pr-10"
-                                >
-                                    {availableCategories.length > 0 ? (
-                                        availableCategories.map(cat => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))
-                                    ) : (
-                                        <option value="Geral">Geral</option>
-                                    )}
-                                </select>
-                                <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                            </div>
+                            <label className="text-[10px] font-black text-gray-400">Tipo</label>
+                            <select value={isRecurring ? 'REC' : 'FIX'} onChange={e => setIsRecurring(e.target.value === 'REC')} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold appearance-none">
+                                <option value="REC">Recorrente</option>
+                                <option value="FIX">Lançamento Único</option>
+                            </select>
                         </div>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase">Categoria</label>
+                        <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold appearance-none">
+                            {availableCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
                     </div>
                 </div>
                 <div className="flex gap-3 mt-8">
@@ -1005,15 +996,83 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
                                     baseValue: parseFloat(value), 
                                     dueDay: parseInt(dueDay), 
                                     category, 
-                                    isRecurring: true 
+                                    isRecurring 
                                 }, selectedMonth, selectedYear); 
                                 onSave(); 
                             } 
                         }} 
-                        className="flex-1 py-3 bg-[#3A86FF] text-white rounded-xl font-bold shadow-lg active:scale-95 transition-all"
+                        className="flex-1 py-3 bg-[#3A86FF] text-white rounded-xl font-bold"
                     >
                         Adicionar
                     </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const EditFixedBillModal: React.FC<{ 
+    bill: FixedBill, 
+    selectedMonth: number, 
+    selectedYear: number, 
+    onClose: () => void, 
+    onSave: () => void 
+}> = ({ bill, selectedMonth, selectedYear, onClose, onSave }) => {
+    const [name, setName] = useState(bill.name);
+    const [value, setValue] = useState(bill.baseValue.toString());
+    const [dueDay, setDueDay] = useState(bill.dueDay.toString());
+    const [category, setCategory] = useState(bill.category);
+    const availableCategories = store.budgetLimits.map(l => l.category);
+
+    const handleUpdate = async (mode: 'ONLY_THIS' | 'ALL_FUTURE') => {
+        if (name && value) {
+            await store.updateFixedBill(
+                bill.id, 
+                { name, baseValue: parseFloat(value), dueDay: parseInt(dueDay), category }, 
+                mode, 
+                selectedMonth, 
+                selectedYear
+            );
+            onSave();
+        }
+    };
+
+    return (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+            <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
+                <h3 className="text-lg font-black uppercase mb-6 tracking-tight">Editar Conta Fixa</h3>
+                <div className="space-y-4">
+                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
+                    <input type="number" value={value} onChange={e => setValue(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase">Vencimento</label>
+                            <input type="number" value={dueDay} onChange={e => setDueDay(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase">Categoria</label>
+                            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold appearance-none">
+                                {availableCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-8 space-y-2">
+                    <button 
+                        onClick={() => handleUpdate('ONLY_THIS')}
+                        className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-all"
+                    >
+                        Alterar somente este mês
+                    </button>
+                    <button 
+                        onClick={() => handleUpdate('ALL_FUTURE')}
+                        className="w-full py-3 bg-[#3A86FF] text-white rounded-xl font-bold hover:bg-blue-600 transition-all"
+                    >
+                        Alterar este e os futuros
+                    </button>
+                    <button onClick={onClose} className="w-full py-3 text-gray-400 font-bold">Cancelar</button>
                 </div>
             </div>
         </div>
