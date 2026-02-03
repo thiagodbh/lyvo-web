@@ -1150,7 +1150,7 @@ const CategoryModal: React.FC<{ initialData?: BudgetLimit | null, onClose: () =>
                 </div>
                 <div className="flex gap-3 mt-8">
                     <button onClick={onClose} className="flex-1 py-3 text-gray-400 font-bold">Cancelar</button>
-                    <button onClick={() => { if(name && limit) { if(initialData) store.updateBudgetLimit(initialData.id, name, parseFloat(limit)); else store.addBudgetLimit(name, parseFloat(limit)); onSave(); } }} className="flex-1 py-3 bg-blue-50 text-white rounded-xl font-bold">Salvar</button>
+                    <button onClick={() => { if(name && limit) { if(initialData) store.updateBudgetLimit(initialData.id, name, parseFloat(limit)); else store.addBudgetLimit(name, parseFloat(limit)); onSave(); } }} className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold">Salvar</button>
                 </div>
             </div>
         </div>
