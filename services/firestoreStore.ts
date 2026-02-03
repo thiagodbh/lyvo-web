@@ -293,7 +293,7 @@ class FirestoreStore {
       createdAt: Timestamp.now(),
     });
 // update otimista (evita “só aparece na segunda”)
-this.fixedBills = [{ ...(newBill as any), id: ref.id } as any, ...this.fixedBills];
+
 
     return { ...(newBill as any), id: ref.id } as FixedBill;
   }
@@ -476,6 +476,35 @@ this.fixedBills = [{ ...(newBill as any), id: ref.id } as any, ...this.fixedBill
 
   async updateBudgetLimit(id: string, category: string, monthlyLimit: number) {
     await updateDoc(doc(db, "budgetLimits", id), { category, monthlyLimit } as any);
+  }
+  // Método para excluir categoria (necessário para o novo botão da lixeira)
+  async deleteBudgetLimit(id: string) {
+    if (!this.uid) return;
+    await deleteDoc(doc(db, "budgetLimits", id));
+  }
+
+  // Método para edição cirúrgica de Contas Fixas
+  async updateFixedBill(id: string, data: any, mode: 'ONLY_THIS' | 'ALL_FUTURE', month: number, year: number) {
+    if (!this.uid) return;
+    const bill = this.fixedBills.find(b => b.id === id);
+    if (!bill) return;
+
+    if (mode === 'ONLY_THIS') {
+      // 1. "Deleta" apenas neste mês (adiciona aos meses pulados)
+      await this.deleteFixedBill(id, 'ONLY_THIS', month, year);
+      
+      // 2. Cria uma transação avulsa editada para este mês específico
+      await this.addTransaction({
+        type: "EXPENSE",
+        value: data.baseValue,
+        description: data.name,
+        category: data.category,
+        date: new Date(year, month, data.dueDay).toISOString(),
+      } as any);
+    } else {
+      // Atualiza o documento original para todos os meses futuros
+      await updateDoc(doc(db, "fixedBills", id), data);
+    }
   }
 
   // ---------------- CREDIT CARDS ----------------
