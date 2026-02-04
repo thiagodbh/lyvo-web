@@ -671,6 +671,43 @@ class FirestoreStore {
       }
     }
   }
+  // --- FUNÇÃO PARA EXCLUIR EVENTO ---
+  async deleteEvent(eventId: string) {
+    if (!this.currentUser) return;
+    
+    // Remove localmente para feedback imediato
+    this.events = this.events.filter(e => e.id !== eventId);
+    this.notifyListeners();
+
+    try {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
+      await deleteDoc(eventRef);
+    } catch (error) {
+      console.error("Erro ao excluir evento:", error);
+    }
+  }
+
+  // --- FUNÇÃO PARA EDITAR EVENTO ---
+  async updateEvent(eventId: string, updates: Partial<CalendarEvent>) {
+    if (!this.currentUser) return;
+
+    const eventIndex = this.events.findIndex(e => e.id === eventId);
+    if (eventIndex > -1) {
+      this.events[eventIndex] = { ...this.events[eventIndex], ...updates };
+      this.notifyListeners();
+
+      try {
+        const { doc, updateDoc } = await import('firebase/firestore');
+        const { db } = await import('./firebase');
+        const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
+        await updateDoc(eventRef, updates);
+      } catch (error) {
+        console.error("Erro ao atualizar evento:", error);
+      }
+    }
+  }
   // --- FIM DA FUNÇÃO ---
   
   toggleConnection(id: string) {
