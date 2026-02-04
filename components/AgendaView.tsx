@@ -320,6 +320,78 @@ const AgendaView: React.FC = () => {
                 </div>
             </div>
 
+            {/* FAB para novo evento manual */}
+            <button 
+                onClick={() => setShowAddModal(true)}
+                className="absolute bottom-24 right-6 bg-lyvo-primary text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-20"
+            >
+                <Plus className="w-6 h-6" />
+            </button>
+
+            {/* NOVO: Modal de Novo Compromisso (Compromissos Fixos) */}
+            {showAddModal && (
+                <div className="absolute inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-slide-up">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Novo Agendamento</h2>
+                            <button onClick={() => setShowAddModal(false)} className="p-2 bg-gray-100 rounded-full text-gray-400">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Repetir semanalmente:</label>
+                                <div className="flex justify-between">
+                                    {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => {
+                                        const isSelected = selectedDays.includes(index);
+                                        return (
+                                            <button
+                                                key={index}
+                                                onClick={() => {
+                                                    setSelectedDays(prev => 
+                                                        isSelected ? prev.filter(d => d !== index) : [...prev, index]
+                                                    );
+                                                }}
+                                                className={`w-9 h-9 rounded-xl font-black text-[11px] transition-all border-2 ${
+                                                    isSelected 
+                                                    ? 'bg-[#3A86FF] border-[#3A86FF] text-white shadow-md' 
+                                                    : 'bg-white border-gray-100 text-gray-300 hover:border-gray-200'
+                                                }`}
+                                            >
+                                                {day}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onClick={() => {
+                                    setShowAddModal(false);
+                                    setSelectedDays([]);
+                                }}
+                                className="w-full bg-lyvo-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                            >
+                                Salvar Agenda
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Sync Modal (Mantenha como está abaixo) */}
+            {showSyncModal && (
+                <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+                    {/* ... conteúdo do sync modal que você já tem ... */}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default AgendaView;
+
             {/* FAB for new event */}
             <button className="absolute bottom-24 right-6 bg-lyvo-primary text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-20">
                 <Plus className="w-6 h-6" />
