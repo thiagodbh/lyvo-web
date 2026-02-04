@@ -320,7 +320,7 @@ const AgendaView: React.FC = () => {
                 </div>
             </div>
 
-            {/* FAB para novo evento manual */}
+           {/* FAB para novo evento manual */}
             <button 
                 onClick={() => setShowAddModal(true)}
                 className="absolute bottom-24 right-6 bg-lyvo-primary text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-20"
@@ -328,7 +328,7 @@ const AgendaView: React.FC = () => {
                 <Plus className="w-6 h-6" />
             </button>
 
-            {/* NOVO: Modal de Novo Compromisso (Compromissos Fixos) */}
+            {/* Modal de Novo Compromisso (Compromissos Fixos) */}
             {showAddModal && (
                 <div className="absolute inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-slide-up">
@@ -380,23 +380,6 @@ const AgendaView: React.FC = () => {
                 </div>
             )}
 
-            {/* Sync Modal (Mantenha como está abaixo) */}
-            {showSyncModal && (
-                <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-                    {/* ... conteúdo do sync modal que você já tem ... */}
-                </div>
-            )}
-        </div>
-    );
-};
-
-export default AgendaView;
-
-            {/* FAB for new event */}
-            <button className="absolute bottom-24 right-6 bg-lyvo-primary text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-20">
-                <Plus className="w-6 h-6" />
-            </button>
-
             {/* Sync Modal */}
             {showSyncModal && (
                 <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
@@ -413,7 +396,6 @@ export default AgendaView;
                                 <div key={conn.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl bg-gray-50">
                                     <div className="flex items-center space-x-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${conn.source === 'GOOGLE' ? 'bg-white shadow-sm' : 'bg-blue-100'}`}>
-                                            {/* Simple Icon placeholder for Google G */}
                                             {conn.source === 'GOOGLE' 
                                                 ? <span className="font-bold text-blue-500 text-lg">G</span>
                                                 : <CalendarIcon className="w-5 h-5 text-blue-600" />
