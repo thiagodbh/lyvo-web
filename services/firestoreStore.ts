@@ -669,6 +669,7 @@ class FirestoreStore {
     }
   }
 // --- INÍCIO DA FUNÇÃO DE CONCLUIR EVENTO ---
+
   // --- FUNÇÃO PARA CONCLUIR EVENTO ---
   async toggleEventCompletion(eventId: string) {
     const eventIndex = this.events.findIndex(e => e.id === eventId);
@@ -690,48 +691,11 @@ class FirestoreStore {
     }
   }
 
-  // --- FUNÇÃO ÚNICA PARA EXCLUIR EVENTO ---
+  // --- FUNÇÃO PARA EXCLUIR EVENTO ---
   async deleteEvent(eventId: string) {
     if (!this.currentUser) return;
     
-    // Remove localmente para resposta imediata
-    this.events = this.events.filter(e => e.id !== eventId);
-    this.notifyListeners();
-
-    try {
-      const { doc, deleteDoc } = await import('firebase/firestore');
-      const { db } = await import('./firebase');
-      const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
-      await deleteDoc(eventRef);
-    } catch (error) {
-      console.error("Erro ao excluir evento:", error);
-    }
-  }// --- FUNÇÃO PARA CONCLUIR EVENTO ---
-  async toggleEventCompletion(eventId: string) {
-    const eventIndex = this.events.findIndex(e => e.id === eventId);
-    if (eventIndex > -1) {
-      const newStatus = !this.events[eventIndex].completed;
-      this.events[eventIndex].completed = newStatus;
-      this.notifyListeners();
-
-      try {
-        if (this.currentUser) {
-          const { doc, updateDoc } = await import('firebase/firestore');
-          const { db } = await import('./firebase');
-          const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
-          await updateDoc(eventRef, { completed: newStatus });
-        }
-      } catch (error) {
-        console.error("Erro ao atualizar status:", error);
-      }
-    }
-  }
-
-  // --- FUNÇÃO ÚNICA PARA EXCLUIR EVENTO ---
-  async deleteEvent(eventId: string) {
-    if (!this.currentUser) return;
-    
-    // Remove localmente para resposta imediata
+    // Feedback local imediato
     this.events = this.events.filter(e => e.id !== eventId);
     this.notifyListeners();
 
@@ -744,6 +708,7 @@ class FirestoreStore {
       console.error("Erro ao excluir evento:", error);
     }
   }
+
   // --- FUNÇÃO PARA EDITAR EVENTO ---
   async updateEvent(eventId: string, updates: Partial<CalendarEvent>) {
     if (!this.currentUser) return;
