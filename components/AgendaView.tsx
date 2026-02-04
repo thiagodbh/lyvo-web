@@ -425,7 +425,7 @@ const AgendaView: React.FC = () => {
                                     setSelectedDays([]);
                                     setForceUpdate(prev => prev + 1);
                                 }}
-                                className="w-full bg-lyvo-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                                className="w-full bg-blue-500 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
                             >
                                 Salvar Agenda
                             </button>
