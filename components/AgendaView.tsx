@@ -379,38 +379,38 @@ const AgendaView: React.FC = () => {
     </div>
 
     <button 
-        onClick={async () => {
-            // Validação simples
-            if (!newTitle.trim()) {
-                alert("Por favor, digite um título para o compromisso.");
-                return;
-            }
+                                onClick={async () => {
+                                    if (!newTitle.trim()) {
+                                        alert("Por favor, digite um título para o compromisso.");
+                                        return;
+                                    }
 
-            // Define o horário baseado na escolha do usuário
-            const [hours, minutes] = newTime.split(':');
-            const eventDateTime = new Date(selectedDate);
-            eventDateTime.setHours(parseInt(hours), parseInt(minutes));
+                                    const [hours, minutes] = newTime.split(':');
+                                    const eventDateTime = new Date(selectedDate);
+                                    eventDateTime.setHours(parseInt(hours), parseInt(minutes));
 
-            // Envia para o Firebase através da função que adicionamos na store
-            await store.addEvent({
-                title: newTitle,
-                dateTime: eventDateTime.toISOString(),
-                recurringDays: selectedDays.length > 0 ? selectedDays : undefined,
-                description: "", 
-                location: ""
-            });
+                                    await store.addEvent({
+                                        title: newTitle,
+                                        dateTime: eventDateTime.toISOString(),
+                                        recurringDays: selectedDays.length > 0 ? selectedDays : undefined,
+                                        description: "", 
+                                        location: ""
+                                    });
 
-            // Limpa os campos e fecha o modal
-            setShowAddModal(false);
-            setNewTitle('');
-            setSelectedDays([]);
-            setForceUpdate(prev => prev + 1);
-        }}
-        className="w-full bg-lyvo-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-    >
-        Salvar Agenda
-    </button>
-</div>
+                                    setShowAddModal(false);
+                                    setNewTitle('');
+                                    setSelectedDays([]);
+                                    setForceUpdate(prev => prev + 1);
+                                }}
+                                className="w-full bg-lyvo-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                            >
+                                Salvar Agenda
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Sync Modal */}
             {showSyncModal && (
                 <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
@@ -450,11 +450,6 @@ const AgendaView: React.FC = () => {
                                     </button>
                                 </div>
                             ))}
-
-                            <button className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium text-sm hover:bg-gray-50 flex items-center justify-center space-x-2">
-                                <Plus className="w-4 h-4" />
-                                <span>Adicionar Nova Conta</span>
-                            </button>
                         </div>
 
                         <button 
