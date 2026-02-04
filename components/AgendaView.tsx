@@ -94,7 +94,18 @@ const AgendaView: React.FC = () => {
     };
 
     const getEventsForDate = (date: Date) => {
-        return events.filter(e => isSameDate(new Date(e.dateTime), date));
+        const dayOfWeek = date.getDay(); // 0 (Dom) a 6 (Sáb)
+        
+        return events.filter(e => {
+            // Regra 1: Eventos com data específica (pontuais)
+            const isSameDay = isSameDate(new Date(e.dateTime), date);
+            
+            // Regra 2: Eventos fixos (recorrência semanal)
+            // Verifica se o dia da semana atual está na lista de dias escolhidos do evento
+            const isRecurringDay = e.recurringDays && e.recurringDays.includes(dayOfWeek);
+            
+            return isSameDay || isRecurringDay;
+        });
     };
 
     const handleNavigate = (direction: 'prev' | 'next') => {
