@@ -428,7 +428,6 @@ const ChatInterface: React.FC = () => {
           onSave={async (data) => {
             try {
               if (data.type === 'EVENT') {
-                // CORREÇÃO: Formatação de data segura para o Firebase
                 const [year, month, day] = data.date.split('-').map(Number);
                 const [hour, minute] = data.time.split(':').map(Number);
                 const eventDate = new Date(year, month - 1, day, hour, minute);
@@ -437,11 +436,10 @@ const ChatInterface: React.FC = () => {
                   title: data.description || data.title || "Novo Evento",
                   dateTime: eventDate.toISOString(),
                   description: data.notes || '',
-                  location: '' // Campo necessário para a nova estrutura da Store
+                  location: '' 
                 });
               } else {
                 const isCredit = data.paymentMethod === 'Cartão de Crédito';
-
                 await store.addTransaction(
                   {
                     type: data.type as any,
@@ -455,7 +453,6 @@ const ChatInterface: React.FC = () => {
                 );
               }
 
-              // NOTIFICAÇÃO: Essencial para a AgendaView atualizar na hora
               window.dispatchEvent(new Event('lyvo:data-changed'));
 
               setActiveModal(null);
@@ -468,7 +465,7 @@ const ChatInterface: React.FC = () => {
               console.error('SAVE ERROR:', e);
               setMessages((prev) => [
                 ...prev,
-                { id: Date.now().toString(), role: 'assistant', content: '❌ Não consegui salvar no banco. Tente novamente.' },
+                { id: Date.now().toString(), role: 'assistant', content: '❌ Erro ao salvar. Verifique sua conexão.' },
               ]);
             }
           }}
