@@ -622,13 +622,31 @@ class FirestoreStore {
 
   // ---------------- AGENDA ----------------
 
-  addEvent(e: Omit<CalendarEvent, "id" | "source">) {
+  async addEvent(e: Omit<CalendarEvent, "id" | "source"> & { recurringDays?: number[] }) {
     if (!this.uid) return null;
-    const payload: Omit<CalendarEvent, "id"> = { ...(e as any), source: "INTERNAL" };
-    return addDoc(this.col("events"), { ...payload, uid: this.uid, createdAt: Timestamp.now() }).then((ref) => ({
-      ...(payload as any),
-      id: ref.id,
-    }));
+    
+    // Define o objeto com os novos campos de recorrência e status de conclusão
+    const payload = {
+      ...e,
+      source: "INTERNAL",
+      completed: false,
+      recurringDays: e.recurringDays || null, // Salva o array [1, 3, 5] para 2ª, 4ª e 6ª
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const { collection, addDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      const docRef = await addDoc(collection(db, "users", this.uid, "events"), payload);
+      
+      const newEvent = { id: docRef.id, ...payload } as CalendarEvent;
+      this.events.push(newEvent);
+      this.notifyListeners();
+      return newEvent;
+    } catch (error) {
+      console.error("Erro ao adicionar evento:", error);
+      return null;
+    }
   }
 // --- INÍCIO DA FUNÇÃO DE CONCLUIR EVENTO ---
   async toggleEventCompletion(eventId: string) {
