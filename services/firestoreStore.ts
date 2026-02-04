@@ -620,15 +620,14 @@ class FirestoreStore {
     return card.name;
   }
 
-  // ---------------- AGENDA ----------------
+ // ---------------- AGENDA ----------------
 
-  // CORREÇÃO PARA SALVAR
   async addEvent(e: Omit<CalendarEvent, "id" | "source"> & { recurringDays?: number[] }) {
-    if (!this.currentUser) return null;
+    if (!this.uid) return null;
     
     const payload = {
       ...e,
-      uid: this.currentUser.uid,
+      uid: this.uid,
       source: "INTERNAL",
       completed: false,
       recurringDays: e.recurringDays || null,
@@ -638,7 +637,7 @@ class FirestoreStore {
     try {
       const { collection, addDoc } = await import('firebase/firestore');
       const { db } = await import('./firebase');
-      const docRef = await addDoc(collection(db, "users", this.currentUser.uid, "events"), payload);
+      const docRef = await addDoc(collection(db, "users", this.uid, "events"), payload);
       
       const newEvent = { id: docRef.id, ...payload } as CalendarEvent;
       this.events.push(newEvent);
@@ -649,28 +648,24 @@ class FirestoreStore {
       return null;
     }
   }
-  // CORREÇÃO PARA EXCLUIR
+
   async deleteEvent(eventId: string) {
-    if (!this.currentUser) return;
+    if (!this.uid) return;
 
     try {
       const { doc, deleteDoc } = await import('firebase/firestore');
       const { db } = await import('./firebase');
       
-      // Referência exata do documento para deletar
-      const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
+      const eventRef = doc(db, "users", this.uid, "events", eventId);
       await deleteDoc(eventRef);
 
-      // Remove da lista local para atualizar a tela
       this.events = this.events.filter(e => e.id !== eventId);
       this.notifyListeners();
     } catch (error) {
-      console.error("Erro ao excluir:", error);
+      console.error("Erro ao excluir evento:", error);
     }
   }
-// --- INÍCIO DA FUNÇÃO DE CONCLUIR EVENTO ---
 
-  // --- FUNÇÃO PARA CONCLUIR EVENTO ---
   async toggleEventCompletion(eventId: string) {
     const eventIndex = this.events.findIndex(e => e.id === eventId);
     if (eventIndex > -1) {
@@ -679,10 +674,10 @@ class FirestoreStore {
       this.notifyListeners();
 
       try {
-        if (this.currentUser) {
+        if (this.uid) {
           const { doc, updateDoc } = await import('firebase/firestore');
           const { db } = await import('./firebase');
-          const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
+          const eventRef = doc(db, "users", this.uid, "events", eventId);
           await updateDoc(eventRef, { completed: newStatus });
         }
       } catch (error) {
@@ -691,27 +686,8 @@ class FirestoreStore {
     }
   }
 
-  // --- FUNÇÃO PARA EXCLUIR EVENTO ---
-  async deleteEvent(eventId: string) {
-    if (!this.currentUser) return;
-    
-    // Feedback local imediato
-    this.events = this.events.filter(e => e.id !== eventId);
-    this.notifyListeners();
-
-    try {
-      const { doc, deleteDoc } = await import('firebase/firestore');
-      const { db } = await import('./firebase');
-      const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
-      await deleteDoc(eventRef);
-    } catch (error) {
-      console.error("Erro ao excluir evento:", error);
-    }
-  }
-
-  // --- FUNÇÃO PARA EDITAR EVENTO ---
   async updateEvent(eventId: string, updates: Partial<CalendarEvent>) {
-    if (!this.currentUser) return;
+    if (!this.uid) return;
 
     const eventIndex = this.events.findIndex(e => e.id === eventId);
     if (eventIndex > -1) {
@@ -721,15 +697,18 @@ class FirestoreStore {
       try {
         const { doc, updateDoc } = await import('firebase/firestore');
         const { db } = await import('./firebase');
-        const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
+        const eventRef = doc(db, "users", this.uid, "events", eventId);
         await updateDoc(eventRef, updates);
       } catch (error) {
         console.error("Erro ao atualizar evento:", error);
       }
     }
   }
-  // --- FIM DA FUNÇÃO ---
   
+  private notifyListeners() {
+    window.dispatchEvent(new Event("lyvo:data-changed"));
+  }
+
   toggleConnection(id: string) {
     const conn = this.calendarConnections.find((c) => c.id === id);
     if (!conn) return;
