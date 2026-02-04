@@ -18,12 +18,10 @@ type ViewMode = 'DAY' | 'WEEK' | 'MONTH';
 
 const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
     const isInternal = event.source === 'INTERNAL';
-    const borderColor = isInternal ? 'border-lyvo-primary' : (event.color || 'border-green-500');
     
     return (
         <div className={`group relative flex items-center gap-4 p-4 bg-white rounded-2xl border shadow-sm transition-all mb-3 ${event.completed ? 'opacity-50 border-gray-100' : 'border-gray-100 hover:shadow-md'}`}>
             
-            {/* CHECKBOX PROFISSIONAL */}
             <button
                 onClick={(e) => {
                     e.stopPropagation();
@@ -41,7 +39,16 @@ const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
                     <h3 className={`font-bold text-sm leading-tight truncate ${event.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                         {event.title}
                     </h3>
-                    {event.recurringDays && <RefreshCw className="w-3 h-3 text-[#3A86FF] shrink-0" />}
+                    {/* BOTÃO DE EXCLUIR (Aparece ao passar o mouse) */}
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if(confirm("Deseja excluir este compromisso?")) store.deleteEvent(event.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-600 transition-opacity"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
                 </div>
                 
                 <div className="flex items-center space-x-3 mt-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -49,6 +56,12 @@ const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
                         <Clock className="w-3.5 h-3.5" />
                         <span>{new Date(event.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
+                    {event.recurringDays && (
+                        <div className="flex items-center gap-1 text-[#3A86FF]">
+                            <RefreshCw className="w-3 h-3" />
+                            <span>Fixo</span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -95,20 +108,19 @@ const AgendaView: React.FC = () => {
     };
 
     const getEventsForDate = (date: Date) => {
-        const dayOfWeek = date.getDay(); // 0 (Dom) a 6 (Sáb)
+        const dayOfWeek = date.getDay(); // Pega o dia da semana (0-6)
         
         return events.filter(e => {
-            // Regra 1: Eventos com data específica (pontuais)
+            // Regra 1: Eventos pontuais (que batem exatamente com o dia selecionado)
             const isSameDay = isSameDate(new Date(e.dateTime), date);
             
-            // Regra 2: Eventos fixos (recorrência semanal)
-            // Verifica se o dia da semana atual está na lista de dias escolhidos do evento
+            // Regra 2: Eventos fixos (que batem com o dia da semana)
+            // Verificamos se o array recurringDays existe e contém o dia da semana atual
             const isRecurringDay = e.recurringDays && e.recurringDays.includes(dayOfWeek);
             
             return isSameDay || isRecurringDay;
         });
     };
-
     const handleNavigate = (direction: 'prev' | 'next') => {
         const newDate = new Date(selectedDate);
         if (viewMode === 'MONTH') {
