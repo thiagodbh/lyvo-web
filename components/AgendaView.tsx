@@ -350,47 +350,67 @@ const AgendaView: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="space-y-6">
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Repetir semanalmente:</label>
-                                <div className="flex justify-between">
-                                    {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => {
-                                        const isSelected = selectedDays.includes(index);
-                                        return (
-                                            <button
-                                                key={index}
-                                                onClick={() => {
-                                                    setSelectedDays(prev => 
-                                                        isSelected ? prev.filter(d => d !== index) : [...prev, index]
-                                                    );
-                                                }}
-                                                className={`w-9 h-9 rounded-xl font-black text-[11px] transition-all border-2 ${
-                                                    isSelected 
-                                                    ? 'bg-[#3A86FF] border-[#3A86FF] text-white shadow-md' 
-                                                    : 'bg-white border-gray-100 text-gray-300 hover:border-gray-200'
-                                                }`}
-                                            >
-                                                {day}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            
-                            <button 
-                                onClick={() => {
-                                    setShowAddModal(false);
-                                    setSelectedDays([]);
-                                }}
-                                className="w-full bg-lyvo-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-                            >
-                                Salvar Agenda
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                        {/* Substitua o botão antigo por este bloco completo */}
+<div className="space-y-6">
+    <div className="space-y-3">
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Repetir semanalmente:</label>
+        <div className="flex justify-between">
+            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => {
+                const isSelected = selectedDays.includes(index);
+                return (
+                    <button
+                        key={index}
+                        onClick={() => {
+                            setSelectedDays(prev => 
+                                isSelected ? prev.filter(d => d !== index) : [...prev, index]
+                            );
+                        }}
+                        className={`w-9 h-9 rounded-xl font-black text-[11px] transition-all border-2 ${
+                            isSelected 
+                            ? 'bg-[#3A86FF] border-[#3A86FF] text-white shadow-md' 
+                            : 'bg-white border-gray-100 text-gray-300 hover:border-gray-200'
+                        }`}
+                    >
+                        {day}
+                    </button>
+                );
+            })}
+        </div>
+    </div>
 
+    <button 
+        onClick={async () => {
+            // Validação simples
+            if (!newTitle.trim()) {
+                alert("Por favor, digite um título para o compromisso.");
+                return;
+            }
+
+            // Define o horário baseado na escolha do usuário
+            const [hours, minutes] = newTime.split(':');
+            const eventDateTime = new Date(selectedDate);
+            eventDateTime.setHours(parseInt(hours), parseInt(minutes));
+
+            // Envia para o Firebase através da função que adicionamos na store
+            await store.addEvent({
+                title: newTitle,
+                dateTime: eventDateTime.toISOString(),
+                recurringDays: selectedDays.length > 0 ? selectedDays : undefined,
+                description: "", 
+                location: ""
+            });
+
+            // Limpa os campos e fecha o modal
+            setShowAddModal(false);
+            setNewTitle('');
+            setSelectedDays([]);
+            setForceUpdate(prev => prev + 1);
+        }}
+        className="w-full bg-lyvo-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+    >
+        Salvar Agenda
+    </button>
+</div>
             {/* Sync Modal */}
             {showSyncModal && (
                 <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
