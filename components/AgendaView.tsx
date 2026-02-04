@@ -18,31 +18,38 @@ type ViewMode = 'DAY' | 'WEEK' | 'MONTH';
 
 const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
     const isInternal = event.source === 'INTERNAL';
-    // Visual Style based on source
     const borderColor = isInternal ? 'border-lyvo-primary' : (event.color || 'border-green-500');
-    const bgColor = isInternal ? 'bg-blue-50' : 'bg-gray-50';
-    const sourceLabel = isInternal ? 'Lyvo' : (event.source === 'GOOGLE' ? 'Google' : 'Externo');
-
+    
     return (
-        <div className={`relative bg-white p-4 rounded-xl shadow-sm border-l-[6px] ${borderColor} mb-3 flex flex-col gap-1 transition-all hover:shadow-md`}>
-            <div className="flex justify-between items-start">
-                <h3 className="font-bold text-gray-800 text-sm leading-tight">{event.title}</h3>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider ${bgColor} text-gray-500`}>
-                    {sourceLabel}
-                </span>
-            </div>
+        <div className={`group relative flex items-center gap-4 p-4 bg-white rounded-2xl border shadow-sm transition-all mb-3 ${event.completed ? 'opacity-50 border-gray-100' : 'border-gray-100 hover:shadow-md'}`}>
             
-            <div className="flex items-center space-x-3 mt-1 text-xs text-gray-500">
-                <div className="flex items-center space-x-1">
-                    <Clock className="w-3.5 h-3.5 text-gray-400" />
-                    <span>{new Date(event.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            {/* CHECKBOX PROFISSIONAL */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    store.toggleEventCompletion(event.id);
+                }}
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
+                    event.completed ? 'bg-[#7AE582] border-[#7AE582]' : 'border-gray-200 hover:border-[#3A86FF]'
+                }`}
+            >
+                {event.completed && <Check className="w-4 h-4 text-white" />}
+            </button>
+
+            <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start">
+                    <h3 className={`font-bold text-sm leading-tight truncate ${event.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                        {event.title}
+                    </h3>
+                    {event.recurringDays && <RefreshCw className="w-3 h-3 text-[#3A86FF] shrink-0" />}
                 </div>
-                {event.location && (
-                    <div className="flex items-center space-x-1 overflow-hidden">
-                        <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="truncate max-w-[120px]">{event.location}</span>
+                
+                <div className="flex items-center space-x-3 mt-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    <div className="flex items-center space-x-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{new Date(event.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
@@ -50,11 +57,16 @@ const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
 
 const AgendaView: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>('MONTH');
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    // AJUSTE: Iniciando em Fevereiro de 2026 para sincronia
+    const [selectedDate, setSelectedDate] = useState(new Date(2026, 1, 4)); 
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [connections, setConnections] = useState<CalendarConnection[]>([]);
-    const [forceUpdate, setForceUpdate] = useState(0); // Trigger re-render for store updates
+    const [forceUpdate, setForceUpdate] = useState(0);
+
+    // NOVOS ESTADOS: Para Compromissos Fixos (Recorrência)
+    const [selectedDays, setSelectedDays] = useState<number[]>([]); 
+    const [showAddModal, setShowAddModal] = useState(false);
 
     // --- Data Loading ---
     useEffect(() => {
