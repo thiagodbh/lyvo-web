@@ -624,11 +624,11 @@ class FirestoreStore {
 
   // CORREÇÃO PARA SALVAR
   async addEvent(e: Omit<CalendarEvent, "id" | "source"> & { recurringDays?: number[] }) {
-    if (!this.currentUser) return null; // Garante que há um usuário logado
+    if (!this.currentUser) return null;
     
     const payload = {
       ...e,
-      uid: this.currentUser.uid, // Campo essencial para o Firebase
+      uid: this.currentUser.uid,
       source: "INTERNAL",
       completed: false,
       recurringDays: e.recurringDays || null,
@@ -638,8 +638,6 @@ class FirestoreStore {
     try {
       const { collection, addDoc } = await import('firebase/firestore');
       const { db } = await import('./firebase');
-      
-      // Salva no caminho correto: users > UID > events
       const docRef = await addDoc(collection(db, "users", this.currentUser.uid, "events"), payload);
       
       const newEvent = { id: docRef.id, ...payload } as CalendarEvent;
@@ -647,11 +645,10 @@ class FirestoreStore {
       this.notifyListeners();
       return newEvent;
     } catch (error) {
-      console.error("Erro ao salvar:", error);
+      console.error("Erro ao salvar evento:", error);
       return null;
     }
   }
-
   // CORREÇÃO PARA EXCLUIR
   async deleteEvent(eventId: string) {
     if (!this.currentUser) return;
