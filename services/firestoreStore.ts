@@ -622,30 +622,53 @@ class FirestoreStore {
 
   // ---------------- AGENDA ----------------
 
+  // CORREÇÃO PARA SALVAR
   async addEvent(e: Omit<CalendarEvent, "id" | "source"> & { recurringDays?: number[] }) {
-    if (!this.uid) return null;
+    if (!this.currentUser) return null; // Garante que há um usuário logado
     
-    // Define o objeto com os novos campos de recorrência e status de conclusão
     const payload = {
       ...e,
+      uid: this.currentUser.uid, // Campo essencial para o Firebase
       source: "INTERNAL",
       completed: false,
-      recurringDays: e.recurringDays || null, // Salva o array [1, 3, 5] para 2ª, 4ª e 6ª
+      recurringDays: e.recurringDays || null,
       createdAt: new Date().toISOString()
     };
 
     try {
       const { collection, addDoc } = await import('firebase/firestore');
       const { db } = await import('./firebase');
-      const docRef = await addDoc(collection(db, "users", this.uid, "events"), payload);
+      
+      // Salva no caminho correto: users > UID > events
+      const docRef = await addDoc(collection(db, "users", this.currentUser.uid, "events"), payload);
       
       const newEvent = { id: docRef.id, ...payload } as CalendarEvent;
       this.events.push(newEvent);
       this.notifyListeners();
       return newEvent;
     } catch (error) {
-      console.error("Erro ao adicionar evento:", error);
+      console.error("Erro ao salvar:", error);
       return null;
+    }
+  }
+
+  // CORREÇÃO PARA EXCLUIR
+  async deleteEvent(eventId: string) {
+    if (!this.currentUser) return;
+
+    try {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      
+      // Referência exata do documento para deletar
+      const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
+      await deleteDoc(eventRef);
+
+      // Remove da lista local para atualizar a tela
+      this.events = this.events.filter(e => e.id !== eventId);
+      this.notifyListeners();
+    } catch (error) {
+      console.error("Erro ao excluir:", error);
     }
   }
 // --- INÍCIO DA FUNÇÃO DE CONCLUIR EVENTO ---
