@@ -57,16 +57,17 @@ const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
 
 const AgendaView: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>('MONTH');
-    // AJUSTE: Iniciando em Fevereiro de 2026 para sincronia
     const [selectedDate, setSelectedDate] = useState(new Date(2026, 1, 4)); 
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [connections, setConnections] = useState<CalendarConnection[]>([]);
     const [forceUpdate, setForceUpdate] = useState(0);
 
-    // NOVOS ESTADOS: Para Compromissos Fixos (Recorrência)
+    // ADICIONE ESTAS 3 LINHAS ABAIXO:
     const [selectedDays, setSelectedDays] = useState<number[]>([]); 
     const [showAddModal, setShowAddModal] = useState(false);
+    const [newTitle, setNewTitle] = useState(''); // Estado para o título
+    const [newTime, setNewTime] = useState('10:00'); // Estado para o horário
 
     // --- Data Loading ---
     useEffect(() => {
@@ -350,35 +351,57 @@ const AgendaView: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Substitua o botão antigo por este bloco completo */}
-<div className="space-y-6">
-    <div className="space-y-3">
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Repetir semanalmente:</label>
-        <div className="flex justify-between">
-            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => {
-                const isSelected = selectedDays.includes(index);
-                return (
-                    <button
-                        key={index}
-                        onClick={() => {
-                            setSelectedDays(prev => 
-                                isSelected ? prev.filter(d => d !== index) : [...prev, index]
-                            );
-                        }}
-                        className={`w-9 h-9 rounded-xl font-black text-[11px] transition-all border-2 ${
-                            isSelected 
-                            ? 'bg-[#3A86FF] border-[#3A86FF] text-white shadow-md' 
-                            : 'bg-white border-gray-100 text-gray-300 hover:border-gray-200'
-                        }`}
-                    >
-                        {day}
-                    </button>
-                );
-            })}
-        </div>
-    </div>
+                        <div className="space-y-6">
+                            {/* CAMPO PARA O TÍTULO */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Título do Compromisso</label>
+                                <input 
+                                    type="text"
+                                    value={newTitle}
+                                    onChange={(e) => setNewTitle(e.target.value)}
+                                    placeholder="Ex: Jiu Jitsu, Reunião..."
+                                    className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-lyvo-primary outline-none text-sm font-bold"
+                                />
+                            </div>
 
-    <button 
+                            {/* CAMPO PARA O HORÁRIO */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Horário</label>
+                                <input 
+                                    type="time"
+                                    value={newTime}
+                                    onChange={(e) => setNewTime(e.target.value)}
+                                    className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-lyvo-primary outline-none text-sm font-bold"
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Repetir semanalmente:</label>
+                                <div className="flex justify-between">
+                                    {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => {
+                                        const isSelected = selectedDays.includes(index);
+                                        return (
+                                            <button
+                                                key={index}
+                                                onClick={() => {
+                                                    setSelectedDays(prev => 
+                                                        isSelected ? prev.filter(d => d !== index) : [...prev, index]
+                                                    );
+                                                }}
+                                                className={`w-9 h-9 rounded-xl font-black text-[11px] transition-all border-2 ${
+                                                    isSelected 
+                                                    ? 'bg-[#3A86FF] border-[#3A86FF] text-white shadow-md' 
+                                                    : 'bg-white border-gray-100 text-gray-300 hover:border-gray-200'
+                                                }`}
+                                            >
+                                                {day}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            
+                            <button 
                                 onClick={async () => {
                                     if (!newTitle.trim()) {
                                         alert("Por favor, digite um título para o compromisso.");
