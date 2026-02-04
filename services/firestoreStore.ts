@@ -630,7 +630,31 @@ class FirestoreStore {
       id: ref.id,
     }));
   }
+// --- INÍCIO DA FUNÇÃO DE CONCLUIR EVENTO ---
+  async toggleEventCompletion(eventId: string) {
+    const eventIndex = this.events.findIndex(e => e.id === eventId);
+    if (eventIndex > -1) {
+      const newStatus = !this.events[eventIndex].completed;
+      
+      // Atualiza localmente para resposta instantânea
+      this.events[eventIndex].completed = newStatus;
+      this.notifyListeners();
 
+      // Atualiza no banco de dados Firebase
+      try {
+        if (this.currentUser) {
+          const { doc, updateDoc } = await import('firebase/firestore');
+          const { db } = await import('./firebase');
+          const eventRef = doc(db, "users", this.currentUser.uid, "events", eventId);
+          await updateDoc(eventRef, { completed: newStatus });
+        }
+      } catch (error) {
+        console.error("Erro ao atualizar status do evento:", error);
+      }
+    }
+  }
+  // --- FIM DA FUNÇÃO ---
+  
   toggleConnection(id: string) {
     const conn = this.calendarConnections.find((c) => c.id === id);
     if (!conn) return;
