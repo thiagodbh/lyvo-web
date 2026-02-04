@@ -623,11 +623,17 @@ class FirestoreStore {
  // ---------------- AGENDA ----------------
 
   async addEvent(e: Omit<CalendarEvent, "id" | "source"> & { recurringDays?: number[] }) {
-    if (!this.uid) return null;
+    // IMPORTANTE: O chat pode falhar se this.uid não estiver populado no momento da chamada
+    const userId = this.uid; 
+    
+    if (!userId) {
+      console.error("Erro: Nenhum usuário identificado para salvar o evento.");
+      return null;
+    }
     
     const payload = {
       ...e,
-      uid: this.uid,
+      uid: userId,
       source: "INTERNAL",
       completed: false,
       recurringDays: e.recurringDays || null,
@@ -637,14 +643,18 @@ class FirestoreStore {
     try {
       const { collection, addDoc } = await import('firebase/firestore');
       const { db } = await import('./firebase');
-      const docRef = await addDoc(collection(db, "users", this.uid, "events"), payload);
+      
+      // O chat precisa que este caminho esteja correto para refletir na Agenda
+      const docRef = await addDoc(collection(db, "users", userId, "events"), payload);
       
       const newEvent = { id: docRef.id, ...payload } as CalendarEvent;
       this.events.push(newEvent);
-      this.notifyListeners();
+      
+      // Isso avisa a AgendaView para atualizar a lista na tela
+      this.notifyListeners(); 
       return newEvent;
     } catch (error) {
-      console.error("Erro ao salvar evento:", error);
+      console.error("Erro ao salvar evento vindo do chat:", error);
       return null;
     }
   }
