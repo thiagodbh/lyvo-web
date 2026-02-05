@@ -329,7 +329,7 @@ const FinanceDashboard: React.FC = () => {
                                 {sortedBills.length > 4 && (
                                     <button 
                                         onClick={() => setExpandBills(!expandBills)} 
-                                        className="w-full py-2 text-bg-blue-500 text-xs font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all"
+                                        className="w-full py-2 text-lyvo-primary text-xs font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all"
                                     >
                                         {expandBills ? 'Ver Menos' : 'Ver Mais'}
                                     </button>
