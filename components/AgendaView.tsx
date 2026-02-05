@@ -50,6 +50,13 @@ const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
 };
 
 const AgendaView: React.FC = () => {
+    
+    const [viewMode, setViewMode] = useState<ViewMode>('MONTH');
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [showSyncModal, setShowSyncModal] = useState(false);
+    const [connections, setConnections] = useState<CalendarConnection[]>([]);
+    const [forceUpdate, setForceUpdate] = useState(0); // Trigger re-render for store updates
     const loginComGoogle = useGoogleLogin({
         onSuccess: (tokenResponse) => {
             console.log("Sucesso! Token:", tokenResponse.access_token);
@@ -58,12 +65,6 @@ const AgendaView: React.FC = () => {
         onError: () => console.log('Erro ao conectar com o Google'),
         scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
     });
-    const [viewMode, setViewMode] = useState<ViewMode>('MONTH');
-    const [selectedDate, setSelectedDate] = useState(new Date());
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [showSyncModal, setShowSyncModal] = useState(false);
-    const [connections, setConnections] = useState<CalendarConnection[]>([]);
-    const [forceUpdate, setForceUpdate] = useState(0); // Trigger re-render for store updates
 
     // --- Data Loading ---
     useEffect(() => {
