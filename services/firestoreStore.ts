@@ -104,20 +104,16 @@ class FirestoreStore {
     return query(this.col(name), where("uid", "==", this.uid));
   }
 
-  private startSubscriptions() {
-    if (!this.uid) return;
+  // Localize esta linha dentro de startSubscriptions:
+// bind<CalendarEvent>("events", (items) => (this.events = items));
 
-    const bind = <T>(colName: string, assign: (items: T[]) => void) => {
-      const q = this.qByUid(colName);
-      if (!q) return;
-      const unsub = onSnapshot(q, (snap) => {
-  const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as T[];
-  assign(items);
-
-  // força o React a atualizar quando o Firestore atualizar
-  window.dispatchEvent(new Event("lyvo:data-changed"));
+// SUBSTITUA POR ESTA LÓGICA:
+const eventsQ = query(collection(db, "users", this.uid, "events"));
+const unsubEvents = onSnapshot(eventsQ, (snap) => {
+    this.events = snap.docs.map(d => ({ id: d.id, ...d.data() } as CalendarEvent));
+    window.dispatchEvent(new Event("lyvo:data-changed"));
 });
-      this.unsubs.push(unsub);
+this.unsubs.push(unsubEvents);
     };
 
     bind<Transaction>("transactions", (items) => {
@@ -657,17 +653,13 @@ class FirestoreStore {
 
   async deleteEvent(eventId: string) {
     if (!this.uid) return;
-
     try {
       const { doc, deleteDoc } = await import('firebase/firestore');
-      const { db } = await import('./firebase');
-      const eventRef = doc(db, "users", this.uid, "events", eventId);
+      const eventRef = doc(db, "users", this.uid, "events", eventId); // Caminho corrigido
       await deleteDoc(eventRef);
-
-      this.events = this.events.filter(e => e.id !== eventId);
-      this.notifyListeners();
+      // O onSnapshot acima cuidará de atualizar a tela automaticamente
     } catch (error) {
-      console.error("Erro ao excluir evento:", error);
+      console.error("Erro ao excluir:", error);
     }
   }
 
