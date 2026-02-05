@@ -18,51 +18,31 @@ type ViewMode = 'DAY' | 'WEEK' | 'MONTH';
 
 const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
     const isInternal = event.source === 'INTERNAL';
-    
-    return (
-        <div className={`group relative flex items-center gap-4 p-4 bg-white rounded-2xl border shadow-sm transition-all mb-3 ${event.completed ? 'opacity-50 border-gray-100' : 'border-gray-100 hover:shadow-md'}`}>
-            
-            <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    store.toggleEventCompletion(event.id);
-                }}
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
-                    event.completed ? 'bg-[#7AE582] border-[#7AE582]' : 'border-gray-200 hover:border-[#3A86FF]'
-                }`}
-            >
-                {event.completed && <Check className="w-4 h-4 text-white" />}
-            </button>
+    // Visual Style based on source
+    const borderColor = isInternal ? 'border-lyvo-primary' : (event.color || 'border-green-500');
+    const bgColor = isInternal ? 'bg-blue-50' : 'bg-gray-50';
+    const sourceLabel = isInternal ? 'Lyvo' : (event.source === 'GOOGLE' ? 'Google' : 'Externo');
 
-            <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start">
-                    <h3 className={`font-bold text-sm leading-tight truncate ${event.completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                        {event.title}
-                    </h3>
-                    {/* BOTÃO DE EXCLUIR (Aparece ao passar o mouse) */}
-                    <button 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if(confirm("Deseja excluir este compromisso?")) store.deleteEvent(event.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-600 transition-opacity"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+    return (
+        <div className={`relative bg-white p-4 rounded-xl shadow-sm border-l-[6px] ${borderColor} mb-3 flex flex-col gap-1 transition-all hover:shadow-md`}>
+            <div className="flex justify-between items-start">
+                <h3 className="font-bold text-gray-800 text-sm leading-tight">{event.title}</h3>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider ${bgColor} text-gray-500`}>
+                    {sourceLabel}
+                </span>
+            </div>
+            
+            <div className="flex items-center space-x-3 mt-1 text-xs text-gray-500">
+                <div className="flex items-center space-x-1">
+                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    <span>{new Date(event.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                
-                <div className="flex items-center space-x-3 mt-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    <div className="flex items-center space-x-1">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>{new Date(event.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                {event.location && (
+                    <div className="flex items-center space-x-1 overflow-hidden">
+                        <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="truncate max-w-[120px]">{event.location}</span>
                     </div>
-                    {event.recurringDays && (
-                        <div className="flex items-center gap-1 text-[#3A86FF]">
-                            <RefreshCw className="w-3 h-3" />
-                            <span>Fixo</span>
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
         </div>
     );
@@ -70,17 +50,11 @@ const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
 
 const AgendaView: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>('MONTH');
-    const [selectedDate, setSelectedDate] = useState(new Date(2026, 1, 4)); 
+    const [selectedDate, setSelectedDate] = useState(new Date());
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [connections, setConnections] = useState<CalendarConnection[]>([]);
-    const [forceUpdate, setForceUpdate] = useState(0);
-
-    // ADICIONE ESTAS 3 LINHAS ABAIXO:
-    const [selectedDays, setSelectedDays] = useState<number[]>([]); 
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [newTitle, setNewTitle] = useState(''); // Estado para o título
-    const [newTime, setNewTime] = useState('10:00'); // Estado para o horário
+    const [forceUpdate, setForceUpdate] = useState(0); // Trigger re-render for store updates
 
     // --- Data Loading ---
     useEffect(() => {
@@ -108,19 +82,9 @@ const AgendaView: React.FC = () => {
     };
 
     const getEventsForDate = (date: Date) => {
-        const dayOfWeek = date.getDay(); // Pega o dia da semana (0-6)
-        
-        return events.filter(e => {
-            // Regra 1: Eventos pontuais (que batem exatamente com o dia selecionado)
-            const isSameDay = isSameDate(new Date(e.dateTime), date);
-            
-            // Regra 2: Eventos fixos (que batem com o dia da semana)
-            // Verificamos se o array recurringDays existe e contém o dia da semana atual
-            const isRecurringDay = e.recurringDays && e.recurringDays.includes(dayOfWeek);
-            
-            return isSameDay || isRecurringDay;
-        });
+        return events.filter(e => isSameDate(new Date(e.dateTime), date));
     };
+
     const handleNavigate = (direction: 'prev' | 'next') => {
         const newDate = new Date(selectedDate);
         if (viewMode === 'MONTH') {
@@ -344,105 +308,10 @@ const AgendaView: React.FC = () => {
                 </div>
             </div>
 
-           {/* FAB para novo evento manual */}
-            <button 
-                onClick={() => setShowAddModal(true)}
-                className="absolute bottom-24 right-6 bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-20"
-            >
+            {/* FAB for new event */}
+            <button className="absolute bottom-24 right-6 bg-lyvo-primary text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-20">
                 <Plus className="w-6 h-6" />
             </button>
-
-            {/* Modal de Novo Compromisso (Compromissos Fixos) */}
-            {showAddModal && (
-                <div className="absolute inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-slide-up">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Novo Agendamento</h2>
-                            <button onClick={() => setShowAddModal(false)} className="p-2 bg-gray-100 rounded-full text-gray-400">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-6">
-                            {/* CAMPO PARA O TÍTULO */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Título do Compromisso</label>
-                                <input 
-                                    type="text"
-                                    value={newTitle}
-                                    onChange={(e) => setNewTitle(e.target.value)}
-                                    placeholder="Ex: Jiu Jitsu, Reunião..."
-                                    className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-lyvo-primary outline-none text-sm font-bold"
-                                />
-                            </div>
-
-                            {/* CAMPO PARA O HORÁRIO */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Horário</label>
-                                <input 
-                                    type="time"
-                                    value={newTime}
-                                    onChange={(e) => setNewTime(e.target.value)}
-                                    className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-lyvo-primary outline-none text-sm font-bold"
-                                />
-                            </div>
-
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Repetir semanalmente:</label>
-                                <div className="flex justify-between">
-                                    {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => {
-                                        const isSelected = selectedDays.includes(index);
-                                        return (
-                                            <button
-                                                key={index}
-                                                onClick={() => {
-                                                    setSelectedDays(prev => 
-                                                        isSelected ? prev.filter(d => d !== index) : [...prev, index]
-                                                    );
-                                                }}
-                                                className={`w-9 h-9 rounded-xl font-black text-[11px] transition-all border-2 ${
-                                                    isSelected 
-                                                    ? 'bg-[#3A86FF] border-[#3A86FF] text-white shadow-md' 
-                                                    : 'bg-white border-gray-100 text-gray-300 hover:border-gray-200'
-                                                }`}
-                                            >
-                                                {day}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            
-                            <button 
-                                onClick={async () => {
-    if (!newTitle.trim()) return;
-
-    const [hours, minutes] = newTime.split(':');
-    const eventDateTime = new Date(selectedDate);
-    eventDateTime.setHours(parseInt(hours), parseInt(minutes));
-
-    // CHAMADA CORRIGIDA
-    await store.addEvent({
-        title: newTitle,
-        dateTime: eventDateTime.toISOString(),
-        description: "", // Adicionado campo vazio
-        location: "",    // Adicionado campo vazio
-        recurringDays: selectedDays.length > 0 ? selectedDays : undefined
-    });
-
-    setShowAddModal(false);
-    setNewTitle('');
-    setSelectedDays([]);
-    setForceUpdate(prev => prev + 1); // Força a lista a aparecer na tela
-}}
-                                className="w-full bg-blue-500 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-                            >
-                                Salvar Agenda
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Sync Modal */}
             {showSyncModal && (
@@ -460,6 +329,7 @@ const AgendaView: React.FC = () => {
                                 <div key={conn.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl bg-gray-50">
                                     <div className="flex items-center space-x-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${conn.source === 'GOOGLE' ? 'bg-white shadow-sm' : 'bg-blue-100'}`}>
+                                            {/* Simple Icon placeholder for Google G */}
                                             {conn.source === 'GOOGLE' 
                                                 ? <span className="font-bold text-blue-500 text-lg">G</span>
                                                 : <CalendarIcon className="w-5 h-5 text-blue-600" />
@@ -483,6 +353,11 @@ const AgendaView: React.FC = () => {
                                     </button>
                                 </div>
                             ))}
+
+                            <button className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium text-sm hover:bg-gray-50 flex items-center justify-center space-x-2">
+                                <Plus className="w-4 h-4" />
+                                <span>Adicionar Nova Conta</span>
+                            </button>
                         </div>
 
                         <button 
