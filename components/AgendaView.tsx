@@ -350,7 +350,7 @@ const AgendaView: React.FC = () => {
             </div>
 
             {/* FAB for new event */}
-            <button className="absolute bottom-24 right-6 bg-lyvo-primary text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-20">
+            <button className="absolute bottom-24 right-6 bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-20">
                 <Plus className="w-6 h-6" />
             </button>
 
