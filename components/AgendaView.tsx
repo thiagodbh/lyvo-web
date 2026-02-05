@@ -415,34 +415,26 @@ const AgendaView: React.FC = () => {
                             
                             <button 
                                 onClick={async () => {
-        if (!newTitle.trim()) {
-            alert("Por favor, digite um título.");
-            return;
-        }
+    if (!newTitle.trim()) return;
 
-        const [hours, minutes] = newTime.split(':');
-        const eventDateTime = new Date(selectedDate);
-        eventDateTime.setHours(parseInt(hours), parseInt(minutes));
+    const [hours, minutes] = newTime.split(':');
+    const eventDateTime = new Date(selectedDate);
+    eventDateTime.setHours(parseInt(hours), parseInt(minutes));
 
-        const result = await store.addEvent({
-            title: newTitle,
-            dateTime: eventDateTime.toISOString(),
-            recurringDays: selectedDays.length > 0 ? selectedDays : undefined,
-            description: "", 
-            location: ""
-        });
+    // CHAMADA CORRIGIDA
+    await store.addEvent({
+        title: newTitle,
+        dateTime: eventDateTime.toISOString(),
+        description: "", // Adicionado campo vazio
+        location: "",    // Adicionado campo vazio
+        recurringDays: selectedDays.length > 0 ? selectedDays : undefined
+    });
 
-        if (result) {
-            // Sucesso: Limpa tudo e força o useEffect a rodar
-            setShowAddModal(false);
-            setNewTitle('');
-            setSelectedDays([]);
-            setEvents(store.getConsolidatedEvents()); // Atualiza a lista local na hora
-            setForceUpdate(prev => prev + 1);
-        } else {
-            alert("Erro ao salvar no banco de dados.");
-        }
-    }}
+    setShowAddModal(false);
+    setNewTitle('');
+    setSelectedDays([]);
+    setForceUpdate(prev => prev + 1); // Força a lista a aparecer na tela
+}}
                                 className="w-full bg-blue-500 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all"
                             >
                                 Salvar Agenda
