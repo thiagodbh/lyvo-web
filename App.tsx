@@ -10,6 +10,7 @@ import FinanceDashboard from './components/FinanceDashboard';
 import AgendaView from './components/AgendaView';
 import LandingPage from './components/LandingPage';
 import { AppTab } from './types';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Placeholder for Profile Screen
 const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
@@ -188,4 +189,10 @@ if (isAuthenticated && isAuthorized === false) {
   return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
 }
 
-export default App;
+const RootApp = () => (
+  <GoogleOAuthProvider clientId="501648718670-u7pc1vj25rfudk3nfo4mnmvhc9tcgeud.apps.googleusercontent.com">
+    <App />
+  </GoogleOAuthProvider>
+);
+
+export default RootApp;
