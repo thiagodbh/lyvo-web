@@ -1,3 +1,4 @@
+import { useGoogleLogin } from '@react-oauth/google';
 import React, { useState, useEffect } from 'react';
 import { 
     Calendar as CalendarIcon, 
@@ -49,6 +50,14 @@ const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
 };
 
 const AgendaView: React.FC = () => {
+    const loginComGoogle = useGoogleLogin({
+        onSuccess: (tokenResponse) => {
+            console.log("Sucesso! Token:", tokenResponse.access_token);
+            // Aqui chamaremos a função de sincronizar no futuro
+        },
+        onError: () => console.log('Erro ao conectar com o Google'),
+        scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
+    });
     const [viewMode, setViewMode] = useState<ViewMode>('MONTH');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -354,10 +363,13 @@ const AgendaView: React.FC = () => {
                                 </div>
                             ))}
 
-                            <button className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium text-sm hover:bg-gray-50 flex items-center justify-center space-x-2">
-                                <Plus className="w-4 h-4" />
-                                <span>Adicionar Nova Conta</span>
-                            </button>
+                            <button 
+    onClick={() => loginComGoogle()} // <--- Adicione isso aqui
+    className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium text-sm hover:bg-gray-50 flex items-center justify-center space-x-2"
+>
+    <Plus className="w-4 h-4" />
+    <span>Conectar Google Calendar</span>
+</button>
                         </div>
 
                         <button 
