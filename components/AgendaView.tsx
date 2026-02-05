@@ -58,10 +58,41 @@ const AgendaView: React.FC = () => {
     const [connections, setConnections] = useState<CalendarConnection[]>([]);
     const [forceUpdate, setForceUpdate] = useState(0); // Trigger re-render for store updates
     const loginComGoogle = useGoogleLogin({
-        onSuccess: (tokenResponse) => {
-            console.log("Sucesso! Token:", tokenResponse.access_token);
-            // Aqui chamaremos a função de sincronizar no futuro
-        },
+        onSuccess: async (tokenResponse) => {
+    try {
+        // Busca os eventos diretamente da API do Google usando o token recebido
+        const response = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${new Date().toISOString()}`,
+            {
+                headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+            }
+        );
+        
+        const data = await response.json();
+
+        if (data.items) {
+            // Converte o formato do Google para o formato que seu App Lyvo entende
+            const googleEvents = data.items.map((gEvent: any) => ({
+                id: gEvent.id,
+                title: gEvent.summary || "(Sem título)",
+                dateTime: gEvent.start.dateTime || gEvent.start.date,
+                location: gEvent.location || '',
+                source: 'GOOGLE',
+                color: 'border-blue-500'
+            }));
+
+            // Atualiza a lista na tela e fecha o modal
+            setEvents(prev => [...prev, ...googleEvents]);
+            setForceUpdate(prev => prev + 1);
+            setShowSyncModal(false);
+            
+            alert(`${googleEvents.length} eventos sincronizados com sucesso!`);
+        }
+    } catch (error) {
+        console.error("Erro ao carregar agenda:", error);
+        alert("Não foi possível carregar os eventos do Google.");
+    }
+},
         onError: () => console.log('Erro ao conectar com o Google'),
         scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
     });
