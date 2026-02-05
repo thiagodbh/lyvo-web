@@ -104,16 +104,18 @@ class FirestoreStore {
     return query(this.col(name), where("uid", "==", this.uid));
   }
 
-  // Localize esta linha dentro de startSubscriptions:
-// bind<CalendarEvent>("events", (items) => (this.events = items));
+ private startSubscriptions() {
+    if (!this.uid) return;
 
-// SUBSTITUA POR ESTA LÓGICA:
-const eventsQ = query(collection(db, "users", this.uid, "events"));
-const unsubEvents = onSnapshot(eventsQ, (snap) => {
-    this.events = snap.docs.map(d => ({ id: d.id, ...d.data() } as CalendarEvent));
-    window.dispatchEvent(new Event("lyvo:data-changed"));
-});
-this.unsubs.push(unsubEvents);
+    const bind = <T>(colName: string, assign: (items: T[]) => void) => {
+      const q = this.qByUid(colName);
+      if (!q) return;
+      const unsub = onSnapshot(q, (snap) => {
+        const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as T[];
+        assign(items);
+        window.dispatchEvent(new Event("lyvo:data-changed"));
+      });
+      this.unsubs.push(unsub);
     };
 
     bind<Transaction>("transactions", (items) => {
@@ -126,21 +128,19 @@ this.unsubs.push(unsubEvents);
     bind<CreditCard>("creditCards", (items) => (this.creditCards = items));
     bind<Forecast>("forecasts", (items) => (this.forecasts = items));
     bind<BudgetLimit>("budgetLimits", (items) => (this.budgetLimits = items));
-    bind<CalendarEvent>("events", (items) => (this.events = items));
     bind<CalendarConnection>("calendarConnections", (items) => (this.calendarConnections = items));
+
+    // LÓGICA DE EVENTOS (Corrigida e dentro da função)
+    const eventsCol = collection(db, "users", this.uid, "events");
+    const unsubEvents = onSnapshot(eventsCol, (snap) => {
+      this.events = snap.docs.map(d => ({ 
+        id: d.id, 
+        ...(d.data() as any) 
+      })) as CalendarEvent[];
+      window.dispatchEvent(new Event("lyvo:data-changed"));
+    });
+    this.unsubs.push(unsubEvents);
   }
-
-  private async seedDefaultsOnce() {
-    if (!this.uid || this.seeded) return;
-    this.seeded = true;
-
-    // seed credit cards if empty
-    const ccSnap = await getDocs(this.qByUid("creditCards")!);
-    if (ccSnap.empty) {
-      for (const card of DEFAULT_CREDIT_CARDS) {
-        await addDoc(this.col("creditCards"), { ...card, uid: this.uid, createdAt: Timestamp.now() });
-      }
-    }
 
     // seed budget limits if empty
     const blSnap = await getDocs(this.qByUid("budgetLimits")!);
