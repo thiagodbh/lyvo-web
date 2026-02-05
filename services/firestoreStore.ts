@@ -623,10 +623,16 @@ class FirestoreStore {
  // ---------------- AGENDA ----------------
 
   async addEvent(e: Omit<CalendarEvent, "id" | "source"> & { recurringDays?: number[] }) {
-    if (!this.uid) return null;
+    if (!this.uid) {
+      console.error("UID não encontrado na Store");
+      return null;
+    }
     
     const payload = {
-      ...e,
+      title: e.title || "Sem título",
+      dateTime: e.dateTime,
+      description: e.description || "",
+      location: e.location || "", // Garante que nunca seja undefined
       uid: this.uid,
       source: "INTERNAL",
       completed: false,
@@ -644,7 +650,7 @@ class FirestoreStore {
       this.notifyListeners();
       return newEvent;
     } catch (error) {
-      console.error("Erro ao salvar evento:", error);
+      console.error("Erro ao salvar evento no Firestore:", error);
       return null;
     }
   }
