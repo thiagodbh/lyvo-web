@@ -249,7 +249,7 @@ const AgendaView: React.FC = () => {
                     </div>
                 </main>
 
-                {/* LISTA LATERAL (FOCO MOBILE) */}
+{/* LISTA LATERAL (FOCO MOBILE) */}
                 <aside className={`w-full md:w-[400px] border-t md:border-t-0 md:border-l p-6 overflow-y-auto pb-32 md:pb-6 ${isDarkMode ? 'border-slate-800 bg-[#0f172a]' : 'border-slate-200 bg-white'}`}>
                     <div className="flex items-center justify-between mb-8">
                         <h2 className="text-xl font-black tracking-tight uppercase text-blue-500">Compromissos</h2>
@@ -261,56 +261,51 @@ const AgendaView: React.FC = () => {
                     <div className="space-y-4">
                         {getEventsForDate(selectedDate).length > 0 ? (
                             getEventsForDate(selectedDate).map(event => (
-    <div 
-        key={event.id}
-        onClick={() => { 
-            // 1. Prepara a data para o formato do input (YYYY-MM-DDTHH:mm)
-            const dateObj = new Date(event.dateTime);
-            const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
-                .toISOString()
-                .slice(0, 16);
+                                <div 
+                                    key={event.id}
+                                    onClick={() => { 
+                                        const dateObj = new Date(event.dateTime);
+                                        const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
+                                            .toISOString()
+                                            .slice(0, 16);
 
-            // 2. Define o evento que está sendo editado (Passa o ID real para o modal)
-            setEditingEvent(event); 
+                                        setEditingEvent(event); 
 
-            // 3. Alimenta o formulário com os dados do compromisso
-            setFormData({ 
-                title: event.title,
-                type: event.type || 'EVENT',
-                dateTime: formattedDate,
-                location: event.location || '',
-                isFixed: event.isFixed || false
-            }); 
+                                        setFormData({ 
+                                            title: event.title,
+                                            type: event.type || 'EVENT',
+                                            dateTime: formattedDate,
+                                            location: event.location || '',
+                                            isFixed: event.isFixed || false
+                                        }); 
 
-            // 4. Abre o modal de edição
-            setShowEventModal(true); 
-        }}
-        className={`group p-5 rounded-3xl border transition-all cursor-pointer hover:translate-y-[-2px] active:scale-[0.98]
-            ${isDarkMode ? 'bg-[#1e293b] border-slate-700 hover:border-blue-500/50' : 'bg-slate-50 border-slate-200 hover:bg-white hover:shadow-2xl shadow-slate-200'}
-            ${event.type === 'REMINDER' ? 'border-l-[6px] border-l-amber-500' : 'border-l-[6px] border-l-blue-600'}
-        `}
-    >
-        <div className="flex justify-between items-start">
-            <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                    {event.type === 'REMINDER' ? <CheckCircle2 size={14} className="text-amber-500" /> : <Clock size={14} className="text-blue-500" />}
-                    <span className="text-[10px] font-black uppercase tracking-widest opacity-40">
-                        {new Date(event.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                </div>
-                <h3 className="font-bold text-base leading-tight mb-2">{event.title}</h3>
-                {event.location && (
-                    <div className="flex items-center gap-1.5 text-[11px] opacity-40 font-medium">
-                        <MapPin size={12} /> <span>{event.location}</span>
-                    </div>
-                )}
-            </div>
-            {event.source === 'GOOGLE' && <span className="bg-emerald-500/10 text-emerald-500 text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase border border-emerald-500/20">Google</span>}
-        </div>
-    </div>
-))
+                                        setShowEventModal(true); 
+                                    }}
+                                    className={`group p-5 rounded-3xl border transition-all cursor-pointer hover:translate-y-[-2px] active:scale-[0.98]
+                                        ${isDarkMode ? 'bg-[#1e293b] border-slate-700 hover:border-blue-500/50' : 'bg-slate-50 border-slate-200 hover:bg-white hover:shadow-2xl shadow-slate-200'}
+                                        ${event.type === 'REMINDER' ? 'border-l-[6px] border-l-amber-500' : 'border-l-[6px] border-l-blue-600'}
+                                    `}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                {event.type === 'REMINDER' ? <CheckCircle2 size={14} className="text-amber-500" /> : <Clock size={14} className="text-blue-500" />}
+                                                <span className="text-[10px] font-black uppercase tracking-widest opacity-40">
+                                                    {new Date(event.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <h3 className="font-bold text-base leading-tight mb-2">{event.title}</h3>
+                                            {event.location && (
+                                                <div className="flex items-center gap-1.5 text-[11px] opacity-40 font-medium">
+                                                    <MapPin size={12} /> <span>{event.location}</span>
+                                                </div>
+                                            )}
                                         </div>
-                                        {event.source === 'GOOGLE' && <span className="bg-emerald-500/10 text-emerald-500 text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase border border-emerald-500/20">Google</span>}
+                                        {event.source === 'GOOGLE' && (
+                                            <span className="bg-emerald-500/10 text-emerald-500 text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase border border-emerald-500/20">
+                                                Google
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             ))
