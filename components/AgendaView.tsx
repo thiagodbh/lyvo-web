@@ -92,23 +92,23 @@ const AgendaView: React.FC = () => {
     };
 
     const handleDeleteEvent = async (id: string) => {
+    console.log("Tentando excluir evento com ID:", id); // Verificação técnica
+    if (!id) return alert("Erro: ID do evento não encontrado.");
+
     if (window.confirm("Deseja excluir este compromisso permanentemente?")) {
         try {
-            // 1. Remove do banco de dados (Firestore)
             await store.deleteEvent(id); 
             
-            // 2. Remove do estado local IMEDIATAMENTE (Faz sumir da tela na hora)
+            // Atualiza a lista removendo o item deletado
             setEvents(prev => prev.filter(e => e.id !== id));
             
-            // 3. Fecha o modal e limpa o registro de edição
             setShowEventModal(false);
             setEditingEvent(null);
             
-            // 4. Força o calendário a se redesenhar
-            if (typeof setForceUpdate === 'function') setForceUpdate(prev => prev + 1);
+            // Força a atualização visual do calendário
+            setForceUpdate(prev => prev + 1);
         } catch (error) {
-            console.error("Erro ao deletar:", error);
-            alert("Erro ao excluir. Verifique sua conexão.");
+            console.error("Erro ao deletar no Firestore:", error);
         }
     }
 };
