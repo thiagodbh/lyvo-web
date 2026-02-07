@@ -1,5 +1,5 @@
 import { useGoogleLogin } from '@react-oauth/google';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Calendar as CalendarIcon, 
     Clock, 
@@ -10,405 +10,304 @@ import {
     RefreshCw,
     Plus,
     X,
-    Check
+    Check,
+    MoreHorizontal
 } from 'lucide-react';
 import { store } from "../services/firestoreStore";
 import { CalendarEvent, CalendarConnection } from '../types';
 
 type ViewMode = 'DAY' | 'WEEK' | 'MONTH';
 
-const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
-    const isInternal = event.source === 'INTERNAL';
-    // Visual Style based on source
-    const borderColor = isInternal ? 'border-lyvo-primary' : (event.color || 'border-green-500');
-    const bgColor = isInternal ? 'bg-blue-50' : 'bg-gray-50';
-    const sourceLabel = isInternal ? 'Lyvo' : (event.source === 'GOOGLE' ? 'Google' : 'Externo');
-
-    return (
-        <div className={`relative bg-white p-4 rounded-xl shadow-sm border-l-[6px] ${borderColor} mb-3 flex flex-col gap-1 transition-all hover:shadow-md`}>
-            <div className="flex justify-between items-start">
-                <h3 className="font-bold text-gray-800 text-sm leading-tight">{event.title}</h3>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider ${bgColor} text-gray-500`}>
-                    {sourceLabel}
-                </span>
-            </div>
-            
-            <div className="flex items-center space-x-3 mt-1 text-xs text-gray-500">
-                <div className="flex items-center space-x-1">
-                    <Clock className="w-3.5 h-3.5 text-gray-400" />
-                    <span>{new Date(event.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                {event.location && (
-                    <div className="flex items-center space-x-1 overflow-hidden">
-                        <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="truncate max-w-[120px]">{event.location}</span>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
 const AgendaView: React.FC = () => {
-    
     const [viewMode, setViewMode] = useState<ViewMode>('MONTH');
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [connections, setConnections] = useState<CalendarConnection[]>([]);
-    const [forceUpdate, setForceUpdate] = useState(0); // Trigger re-render for store updates
+    const [isLoading, setIsLoading] = useState(false);
+    const [forceUpdate, setForceUpdate] = useState(0);
+
+    // --- Integração Google Agenda (Melhorada) ---
     const loginComGoogle = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
-    try {
-        // Busca os eventos diretamente da API do Google usando o token recebido
-        const response = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${new Date().toISOString()}`,
-            {
-                headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+            setIsLoading(true);
+            try {
+                // Buscamos o intervalo do mês atual para não vir apenas eventos futuros
+                const firstDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).toISOString();
+                const lastDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).toISOString();
+
+                const response = await fetch(
+                    `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${firstDay}&timeMax=${lastDay}&singleEvents=true&orderBy=startTime`,
+                    { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
+                );
+                
+                const data = await response.json();
+
+                if (data.items) {
+                    const googleEvents = data.items.map((gEvent: any) => ({
+                        id: gEvent.id,
+                        title: gEvent.summary || "(Sem título)",
+                        dateTime: gEvent.start.dateTime || gEvent.start.date, // Trata dia inteiro
+                        location: gEvent.location || '',
+                        source: 'GOOGLE' as const,
+                        color: 'border-emerald-500' // Cor distinta para Google
+                    }));
+
+                    // Mescla com os existentes e atualiza o store se necessário
+                    setEvents(prev => {
+                        const filteredPrev = prev.filter(e => e.source !== 'GOOGLE');
+                        return [...filteredPrev, ...googleEvents];
+                    });
+                    setShowSyncModal(false);
+                }
+            } catch (error) {
+                console.error("Erro na integração:", error);
+            } finally {
+                setIsLoading(false);
             }
-        );
-        
-        const data = await response.json();
-
-        if (data.items) {
-            // Converte o formato do Google para o formato que seu App Lyvo entende
-            const googleEvents = data.items.map((gEvent: any) => ({
-                id: gEvent.id,
-                title: gEvent.summary || "(Sem título)",
-                dateTime: gEvent.start.dateTime || gEvent.start.date,
-                location: gEvent.location || '',
-                source: 'GOOGLE',
-                color: 'border-blue-500'
-            }));
-
-            // Atualiza a lista na tela e fecha o modal
-            setEvents(prev => [...prev, ...googleEvents]);
-            setForceUpdate(prev => prev + 1);
-            setShowSyncModal(false);
-            
-            alert(`${googleEvents.length} eventos sincronizados com sucesso!`);
-        }
-    } catch (error) {
-        console.error("Erro ao carregar agenda:", error);
-        alert("Não foi possível carregar os eventos do Google.");
-    }
-},
-        onError: () => console.log('Erro ao conectar com o Google'),
+        },
         scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
     });
 
-    // --- Data Loading ---
+    // --- Lógica de Datas ---
     useEffect(() => {
-        setEvents(store.getConsolidatedEvents());
+        const localEvents = store.getConsolidatedEvents();
+        setEvents(prev => {
+            const googleOnes = prev.filter(e => e.source === 'GOOGLE');
+            return [...localEvents, ...googleOnes];
+        });
         setConnections([...store.calendarConnections]);
     }, [forceUpdate, showSyncModal]);
 
-    // --- Helpers ---
-    const getDaysInMonth = (date: Date) => {
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        return new Date(year, month + 1, 0).getDate();
-    };
-
-    const getFirstDayOfMonth = (date: Date) => {
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        return new Date(year, month, 1).getDay();
-    };
-
-    const isSameDate = (date1: Date, date2: Date) => {
-        return date1.getDate() === date2.getDate() &&
-               date1.getMonth() === date2.getMonth() &&
-               date1.getFullYear() === date2.getFullYear();
-    };
+    const calendarGrid = useMemo(() => {
+        const year = selectedDate.getFullYear();
+        const month = selectedDate.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const days = [];
+        // Preencher dias do mês anterior
+        const prevMonthLastDay = new Date(year, month, 0).getDate();
+        for (let i = firstDay - 1; i >= 0; i--) {
+            days.push({ day: prevMonthLastDay - i, currentMonth: false, date: new Date(year, month - 1, prevMonthLastDay - i) });
+        }
+        // Dias do mês atual
+        for (let i = 1; i <= daysInMonth; i++) {
+            days.push({ day: i, currentMonth: true, date: new Date(year, month, i) });
+        }
+        // Completar a grid até 42 casas (6 semanas)
+        const remaining = 42 - days.length;
+        for (let i = 1; i <= remaining; i++) {
+            days.push({ day: i, currentMonth: false, date: new Date(year, month + 1, i) });
+        }
+        return days;
+    }, [selectedDate]);
 
     const getEventsForDate = (date: Date) => {
-        return events.filter(e => isSameDate(new Date(e.dateTime), date));
-    };
-
-    const handleNavigate = (direction: 'prev' | 'next') => {
-        const newDate = new Date(selectedDate);
-        if (viewMode === 'MONTH') {
-            newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
-        } else if (viewMode === 'WEEK') {
-            newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
-        } else {
-            newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
-        }
-        setSelectedDate(newDate);
-    };
-
-    const getStartOfWeek = (date: Date) => {
-        const day = date.getDay();
-        const diff = date.getDate() - day; // Adjust so Sunday is day 0
-        return new Date(date.setDate(diff));
-    };
-
-    const toggleConnection = (id: string) => {
-        store.toggleConnection(id);
-        setConnections([...store.calendarConnections]); // Update local state for immediate UI feedback
-        // Data refresh happens on modal close or effect dependency
-    };
-
-    // --- Views ---
-
-    const renderMonthView = () => {
-        const daysInMonth = getDaysInMonth(selectedDate);
-        const firstDay = getFirstDayOfMonth(selectedDate);
-        const blanks = Array(firstDay).fill(null);
-        const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-        return (
-            <div className="bg-white rounded-3xl p-4 shadow-sm animate-fade-in h-fit">
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                    {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => (
-                        <div key={d} className="text-center text-xs font-bold text-gray-400 py-1">{d}</div>
-                    ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                    {blanks.map((_, i) => <div key={`blank-${i}`} className="h-10 sm:h-12 md:h-14 lg:h-16" />)}
-                    {days.map(day => {
-                        const currentDayDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
-                        const dayEvents = getEventsForDate(currentDayDate);
-                        const isSelected = isSameDate(currentDayDate, selectedDate);
-                        const isToday = isSameDate(currentDayDate, new Date());
-
-                        return (
-                            <button 
-                                key={day} 
-                                onClick={() => { setSelectedDate(currentDayDate); /* setViewMode('DAY'); - Don't switch view on desktop */ }}
-                                className={`h-10 sm:h-12 md:h-14 lg:h-16 flex flex-col items-center justify-start pt-1 rounded-xl relative transition-all
-                                    ${isSelected ? 'bg-lyvo-primary/10 ring-1 ring-lyvo-primary' : 'hover:bg-gray-50'}
-                                    ${isToday ? 'font-bold text-lyvo-primary' : 'text-gray-700'}
-                                `}
-                            >
-                                <span className="text-sm">{day}</span>
-                                <div className="flex space-x-0.5 mt-1">
-                                    {dayEvents.slice(0, 3).map((_, i) => (
-                                        <div key={i} className={`w-1 h-1 rounded-full ${isToday ? 'bg-lyvo-primary' : 'bg-gray-400'}`}></div>
-                                    ))}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    };
-
-    const renderListView = (period: 'day' | 'week') => {
-        let eventsToShow: CalendarEvent[] = [];
-        let title = "";
-
-        if (period === 'day') {
-            eventsToShow = getEventsForDate(selectedDate);
-            title = "Compromissos do Dia";
-        } else {
-            // Week Logic - Simplified: Show next 7 days from selected date (or start of week)
-            const start = new Date(selectedDate); // Assume selectedDate is start of view logic for simplicity
-            const end = new Date(start);
-            end.setDate(end.getDate() + 7);
-            
-            eventsToShow = events.filter(e => {
-                const d = new Date(e.dateTime);
-                return d >= start && d < end;
-            });
-            title = "Próximos 7 Dias";
-        }
-
-        if (eventsToShow.length === 0) {
-            return (
-                <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                    <CalendarIcon className="w-12 h-12 text-gray-300 mb-2" />
-                    <p className="text-gray-500 font-medium">Sem compromissos</p>
-                </div>
-            );
-        }
-
-        // Group by day for Week view
-        const groupedEvents: { [key: string]: CalendarEvent[] } = {};
-        eventsToShow.forEach(e => {
-            const dateKey = new Date(e.dateTime).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
-            if (!groupedEvents[dateKey]) groupedEvents[dateKey] = [];
-            groupedEvents[dateKey].push(e);
+        return events.filter(e => {
+            const eDate = new Date(e.dateTime);
+            return eDate.getDate() === date.getDate() && 
+                   eDate.getMonth() === date.getMonth() && 
+                   eDate.getFullYear() === date.getFullYear();
         });
-
-        return (
-            <div className="space-y-6">
-                 {Object.entries(groupedEvents).map(([dateLabel, dateEvents]) => (
-                     <div key={dateLabel}>
-                         <h3 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wide ml-1">{dateLabel}</h3>
-                         <div className="space-y-1">
-                            {dateEvents.map(event => <EventCard key={event.id} event={event} />)}
-                         </div>
-                     </div>
-                 ))}
-            </div>
-        );
     };
 
-    // --- Main Render ---
+    // --- Renderização de Componentes ---
+
     return (
-        <div className="flex flex-col h-full bg-lyvo-bg relative overflow-hidden">
-            
-            {/* Header */}
-            <div className="px-6 pt-6 pb-2 bg-white shadow-sm z-10">
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex justify-between items-center mb-4">
-                        <h1 className="text-2xl font-bold text-lyvo-text">Minha Agenda</h1>
-                        <button 
-                            onClick={() => setShowSyncModal(true)}
-                            className="flex items-center space-x-1 text-lyvo-primary font-medium text-sm bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-colors"
-                        >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            <span>Sincronizar</span>
-                        </button>
+        <div className="flex flex-col h-screen bg-slate-50 overflow-hidden text-slate-900">
+            {/* Header Estilo Google */}
+            <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200">
+                <div className="flex items-center space-x-8">
+                    <div className="flex items-center space-x-3">
+                        <div className="bg-lyvo-primary p-2 rounded-lg">
+                            <CalendarIcon className="text-white w-6 h-6" />
+                        </div>
+                        <h1 className="text-xl font-bold tracking-tight">Agenda Lyvo</h1>
                     </div>
 
-                    {/* View Toggles & Navigation */}
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex bg-gray-100 p-1 rounded-lg">
-                            {(['DAY', 'WEEK', 'MONTH'] as const).map((mode) => (
-                                <button
-                                    key={mode}
-                                    onClick={() => setViewMode(mode)}
-                                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                                        viewMode === mode 
-                                        ? 'bg-white text-lyvo-text shadow-sm' 
-                                        : 'text-gray-400 hover:text-gray-600'
-                                    }`}
-                                >
-                                    {mode === 'DAY' ? 'Dia' : mode === 'WEEK' ? 'Semana' : 'Mês'}
-                                </button>
+                    <div className="flex items-center bg-slate-100 rounded-xl p-1">
+                        <button onClick={() => {
+                            const d = new Date(selectedDate);
+                            d.setMonth(d.getMonth() - 1);
+                            setSelectedDate(d);
+                        }} className="p-2 hover:bg-white rounded-lg transition-all"><ChevronLeft size={18}/></button>
+                        <span className="px-4 font-semibold text-sm min-w-[140px] text-center capitalize">
+                            {selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                        </span>
+                        <button onClick={() => {
+                            const d = new Date(selectedDate);
+                            d.setMonth(d.getMonth() + 1);
+                            setSelectedDate(d);
+                        }} className="p-2 hover:bg-white rounded-lg transition-all"><ChevronRight size={18}/></button>
+                    </div>
+                </div>
+
+                <div className="flex items-center space-x-4">
+                    <button 
+                        onClick={() => setShowSyncModal(true)}
+                        className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        <span>Sincronizar</span>
+                    </button>
+                    <button className="bg-lyvo-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:scale-105 transition-all flex items-center space-x-2">
+                        <Plus size={18} />
+                        <span>Novo Evento</span>
+                    </button>
+                </div>
+            </header>
+
+            <div className="flex flex-1 overflow-hidden">
+                {/* Main Calendar Grid */}
+                <main className="flex-1 overflow-y-auto p-6">
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+                        {/* Dias da Semana */}
+                        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
+                            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
+                                <div key={d} className="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">{d}</div>
                             ))}
                         </div>
 
-                        <div className="flex items-center space-x-2 text-gray-700">
-                            <button onClick={() => handleNavigate('prev')} className="p-1 hover:bg-gray-100 rounded-full">
-                                <ChevronLeft className="w-5 h-5" />
-                            </button>
-                            <span className="text-sm font-bold min-w-[100px] text-center capitalize">
-                                {viewMode === 'MONTH' 
-                                    ? selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) 
-                                    : selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
-                                }
-                            </span>
-                            <button onClick={() => handleNavigate('next')} className="p-1 hover:bg-gray-100 rounded-full">
-                                <ChevronRight className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                        {/* Grade de Dias */}
+                        <div className="grid grid-cols-7 flex-1 auto-rows-fr">
+                            {calendarGrid.map((item, idx) => {
+                                const dayEvents = getEventsForDate(item.date);
+                                const isToday = item.date.toDateString() === new Date().toDateString();
+                                const isSelected = item.date.toDateString() === selectedDate.toDateString();
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4 pb-24">
-                <div className="max-w-7xl mx-auto">
-                    
-                    {/* Desktop Split View for Month Mode */}
-                    <div className="hidden md:flex gap-6 h-full">
-                         {/* Calendar Column */}
-                         <div className="flex-1 lg:flex-[2]">
-                            {viewMode === 'MONTH' && renderMonthView()}
-                            {viewMode !== 'MONTH' && (
-                                <div className="bg-white p-10 rounded-3xl text-center text-gray-400">
-                                    Visualização de lista expandida
-                                </div>
-                            )}
-                         </div>
-
-                         {/* Events Column */}
-                         <div className="flex-1 bg-white/50 rounded-3xl p-4 overflow-y-auto max-h-full">
-                             <h3 className="text-lg font-bold text-lyvo-text mb-4 px-1 sticky top-0 bg-transparent">
-                                 {viewMode === 'MONTH' 
-                                     ? `Eventos de ${selectedDate.toLocaleDateString('pt-BR', { day:'numeric', month: 'long' })}` 
-                                     : 'Lista de Eventos'}
-                             </h3>
-                             {renderListView(viewMode === 'WEEK' ? 'week' : 'day')}
-                         </div>
-                    </div>
-
-                    {/* Mobile View (Stacked) */}
-                    <div className="md:hidden space-y-6">
-                        {viewMode === 'MONTH' && (
-                            <>
-                                {renderMonthView()}
-                                <div>
-                                    <h3 className="text-lg font-bold text-lyvo-text mb-3 px-1">
-                                        Eventos em {selectedDate.toLocaleDateString('pt-BR', { month: 'long' })}
-                                    </h3>
-                                    {renderListView('day')} 
-                                </div>
-                            </>
-                        )}
-
-                        {viewMode === 'WEEK' && renderListView('week')}
-                        
-                        {viewMode === 'DAY' && renderListView('day')}
-                    </div>
-                </div>
-            </div>
-
-            {/* FAB for new event */}
-            <button className="absolute bottom-24 right-6 bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-20">
-                <Plus className="w-6 h-6" />
-            </button>
-
-            {/* Sync Modal */}
-            {showSyncModal && (
-                <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white w-full sm:w-[90%] max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-gray-800">Sincronizar Agendas</h2>
-                            <button onClick={() => setShowSyncModal(false)} className="p-2 bg-gray-100 rounded-full text-gray-600">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4 mb-6">
-                            {connections.map(conn => (
-                                <div key={conn.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl bg-gray-50">
-                                    <div className="flex items-center space-x-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${conn.source === 'GOOGLE' ? 'bg-white shadow-sm' : 'bg-blue-100'}`}>
-                                            {/* Simple Icon placeholder for Google G */}
-                                            {conn.source === 'GOOGLE' 
-                                                ? <span className="font-bold text-blue-500 text-lg">G</span>
-                                                : <CalendarIcon className="w-5 h-5 text-blue-600" />
-                                            }
+                                return (
+                                    <div 
+                                        key={idx} 
+                                        onClick={() => setSelectedDate(item.date)}
+                                        className={`min-h-[100px] p-2 border-r border-b border-slate-50 transition-all cursor-pointer
+                                            ${!item.currentMonth ? 'bg-slate-50/30' : 'bg-white'}
+                                            ${isSelected ? 'ring-2 ring-inset ring-lyvo-primary/20 bg-blue-50/20' : 'hover:bg-slate-50'}
+                                        `}
+                                    >
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className={`text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full
+                                                ${isToday ? 'bg-lyvo-primary text-white shadow-md shadow-blue-200' : 'text-slate-500'}
+                                                ${!item.currentMonth && 'opacity-30'}
+                                            `}>
+                                                {item.day}
+                                            </span>
                                         </div>
-                                        <div>
-                                            <p className="font-bold text-gray-800 text-sm">{conn.accountName}</p>
-                                            <p className="text-[10px] text-gray-400">
-                                                {conn.connectionStatus === 'CONNECTED' 
-                                                    ? `Sincronizado: ${new Date(conn.lastSyncDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` 
-                                                    : 'Desconectado'}
-                                            </p>
+
+                                        {/* Lista de Eventos no Dia */}
+                                        <div className="space-y-1">
+                                            {dayEvents.slice(0, 3).map(event => (
+                                                <div 
+                                                    key={event.id}
+                                                    className={`text-[10px] px-2 py-1 rounded-md border-l-4 truncate font-medium
+                                                        ${event.source === 'INTERNAL' 
+                                                            ? 'bg-blue-50 border-blue-500 text-blue-700' 
+                                                            : 'bg-emerald-50 border-emerald-500 text-emerald-700'}`}
+                                                >
+                                                    {event.title}
+                                                </div>
+                                            ))}
+                                            {dayEvents.length > 3 && (
+                                                <div className="text-[9px] text-slate-400 font-bold pl-1">
+                                                    + {dayEvents.length - 3} mais
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    
-                                    <button 
-                                        onClick={() => toggleConnection(conn.id)}
-                                        className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 ${conn.connectionStatus === 'CONNECTED' ? 'bg-green-500' : 'bg-gray-300'}`}
-                                    >
-                                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${conn.connectionStatus === 'CONNECTED' ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </main>
+
+                {/* Sidebar de Detalhes (Desktop) */}
+                <aside className="w-80 bg-white border-l border-slate-200 p-6 overflow-y-auto hidden lg:block">
+                    <h2 className="text-lg font-bold mb-6 flex items-center space-x-2">
+                        <span>Compromissos</span>
+                        <span className="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-full">
+                            {getEventsForDate(selectedDate).length}
+                        </span>
+                    </h2>
+                    
+                    <div className="space-y-4">
+                        {getEventsForDate(selectedDate).length > 0 ? (
+                            getEventsForDate(selectedDate).map(event => (
+                                <div key={event.id} className="group p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all border-l-4 border-l-lyvo-primary">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-bold text-sm text-slate-800 leading-tight">{event.title}</h3>
+                                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase
+                                            ${event.source === 'INTERNAL' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                            {event.source}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center text-[11px] text-slate-500 space-x-3">
+                                        <div className="flex items-center space-x-1">
+                                            <Clock size={12} />
+                                            <span>{new Date(event.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                        </div>
+                                        {event.location && (
+                                            <div className="flex items-center space-x-1 truncate">
+                                                <MapPin size={12} />
+                                                <span className="truncate">{event.location}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-20 opacity-40">
+                                <CalendarIcon className="mx-auto mb-4 w-12 h-12" />
+                                <p className="text-sm font-medium">Nenhum evento para este dia</p>
+                            </div>
+                        )}
+                    </div>
+                </aside>
+            </div>
+
+            {/* Modal de Sincronização */}
+            {showSyncModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-300">
+                        <div className="flex justify-between items-center mb-8">
+                            <div>
+                                <h2 className="text-2xl font-bold">Conectar Agendas</h2>
+                                <p className="text-slate-500 text-sm">Centralize seus compromissos no Lyvo</p>
+                            </div>
+                            <button onClick={() => setShowSyncModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 mb-8">
+                            {connections.map(conn => (
+                                <div key={conn.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="flex items-center space-x-4">
+                                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center">
+                                            {conn.source === 'GOOGLE' ? <span className="font-black text-blue-500 text-xl">G</span> : <CalendarIcon className="text-lyvo-primary" />}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm">{conn.accountName}</p>
+                                            <p className="text-[10px] text-slate-400 font-medium">Status: {conn.connectionStatus}</p>
+                                        </div>
+                                    </div>
+                                    <div className={`w-3 h-3 rounded-full ${conn.connectionStatus === 'CONNECTED' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
                                 </div>
                             ))}
 
                             <button 
-    onClick={() => loginComGoogle()} // <--- Adicione isso aqui
-    className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium text-sm hover:bg-gray-50 flex items-center justify-center space-x-2"
->
-    <Plus className="w-4 h-4" />
-    <span>Conectar Google Calendar</span>
-</button>
+                                onClick={() => loginComGoogle()}
+                                className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 font-bold text-sm hover:border-lyvo-primary hover:text-lyvo-primary hover:bg-blue-50/50 transition-all flex items-center justify-center space-x-3"
+                            >
+                                <Plus size={20} />
+                                <span>Conectar Nova Conta Google</span>
+                            </button>
                         </div>
 
                         <button 
-                            onClick={() => { setShowSyncModal(false); setForceUpdate(prev => prev + 1); }}
-                            className="w-full bg-lyvo-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-600 transition"
+                            onClick={() => setShowSyncModal(false)}
+                            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg"
                         >
-                            Concluído
+                            Fechar e Atualizar
                         </button>
                     </div>
                 </div>
