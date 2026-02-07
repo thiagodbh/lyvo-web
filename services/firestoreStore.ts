@@ -641,8 +641,7 @@ class FirestoreStore {
   getConsolidatedEvents(): CalendarEvent[] {
     return [...this.events].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
   }
-}
-// --- NOVAS FUNÇÕES DE AGENDA ---
+  // --- NOVAS FUNÇÕES DE AGENDA ---
 
   async updateEvent(event: CalendarEvent) {
     if (!this.uid || !event.id) return;
@@ -656,5 +655,7 @@ class FirestoreStore {
     if (!this.uid) return;
     await deleteDoc(doc(db, "events", id));
   }
+}
+
 
 export const store = new FirestoreStore();
