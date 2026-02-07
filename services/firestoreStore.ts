@@ -642,5 +642,19 @@ class FirestoreStore {
     return [...this.events].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
   }
 }
+// --- NOVAS FUNÇÕES DE AGENDA ---
+
+  async updateEvent(event: CalendarEvent) {
+    if (!this.uid || !event.id) return;
+    const docRef = doc(db, "events", event.id);
+    // Removemos o id do objeto para não gravar o ID dentro do documento do Firebase
+    const { id, ...data } = event; 
+    await updateDoc(docRef, data as any);
+  }
+
+  async deleteEvent(id: string) {
+    if (!this.uid) return;
+    await deleteDoc(doc(db, "events", id));
+  }
 
 export const store = new FirestoreStore();
