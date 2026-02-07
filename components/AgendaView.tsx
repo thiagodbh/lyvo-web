@@ -218,7 +218,7 @@ const AgendaView: React.FC = () => {
                 </main>
 
                 {/* LISTA LATERAL (FOCO MOBILE) */}
-                <aside className={`w-full md:w-[400px] border-t md:border-t-0 md:border-l p-6 overflow-y-auto ${isDarkMode ? 'border-slate-800 bg-[#0f172a]' : 'border-slate-200 bg-white'}`}>
+                <aside className={`w-full md:w-[400px] border-t md:border-t-0 md:border-l p-6 overflow-y-auto pb-32 md:pb-6 ${isDarkMode ? 'border-slate-800 bg-[#0f172a]' : 'border-slate-200 bg-white'}`}>
                     <div className="flex items-center justify-between mb-8">
                         <h2 className="text-xl font-black tracking-tight uppercase text-blue-500">Compromissos</h2>
                         <span className="text-[10px] bg-blue-600/10 text-blue-500 font-black px-3 py-1 rounded-full uppercase tracking-tighter">
