@@ -1,217 +1,168 @@
 import { useGoogleLogin } from '@react-oauth/google';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-    Calendar as CalendarIcon, 
-    Clock, 
-    MapPin, 
-    ChevronLeft, 
-    ChevronRight, 
-    Settings, 
-    RefreshCw,
-    Plus,
-    X,
-    Check,
-    MoreHorizontal
+    Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, 
+    RefreshCw, Plus, X, Check, Trash2, Edit3, Bell, Moon, Sun, MoreVertical 
 } from 'lucide-react';
 import { store } from "../services/firestoreStore";
 import { CalendarEvent, CalendarConnection } from '../types';
 
-type ViewMode = 'DAY' | 'WEEK' | 'MONTH';
-
 const AgendaView: React.FC = () => {
-    const [viewMode, setViewMode] = useState<ViewMode>('MONTH');
+    // Estados Principais
+    const [isDarkMode, setIsDarkMode] = useState(true);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [showSyncModal, setShowSyncModal] = useState(false);
-    const [connections, setConnections] = useState<CalendarConnection[]>([]);
+    const [showEventModal, setShowEventModal] = useState(false);
+    const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [forceUpdate, setForceUpdate] = useState(0);
 
-    // --- Integração Google Agenda (Melhorada) ---
-    const loginComGoogle = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
-            setIsLoading(true);
-            try {
-                // Buscamos o intervalo do mês atual para não vir apenas eventos futuros
-                const firstDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).toISOString();
-                const lastDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).toISOString();
-
-                const response = await fetch(
-                    `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${firstDay}&timeMax=${lastDay}&singleEvents=true&orderBy=startTime`,
-                    { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
-                );
-                
-                const data = await response.json();
-
-                if (data.items) {
-                    const googleEvents = data.items.map((gEvent: any) => ({
-                        id: gEvent.id,
-                        title: gEvent.summary || "(Sem título)",
-                        dateTime: gEvent.start.dateTime || gEvent.start.date, // Trata dia inteiro
-                        location: gEvent.location || '',
-                        source: 'GOOGLE' as const,
-                        color: 'border-emerald-500' // Cor distinta para Google
-                    }));
-
-                    // Mescla com os existentes e atualiza o store se necessário
-                    setEvents(prev => {
-                        const filteredPrev = prev.filter(e => e.source !== 'GOOGLE');
-                        return [...filteredPrev, ...googleEvents];
-                    });
-                    setShowSyncModal(false);
-                }
-            } catch (error) {
-                console.error("Erro na integração:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        },
-        scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
+    // Estado do Formulário
+    const [formData, setFormData] = useState({
+        title: '',
+        type: 'EVENT' as 'EVENT' | 'REMINDER',
+        dateTime: '',
+        location: '',
+        isFixed: false
     });
 
-    // --- Lógica de Datas ---
+    // --- Lógica de Dados ---
     useEffect(() => {
-        const localEvents = store.getConsolidatedEvents();
-        setEvents(prev => {
-            const googleOnes = prev.filter(e => e.source === 'GOOGLE');
-            return [...localEvents, ...googleOnes];
-        });
-        setConnections([...store.calendarConnections]);
-    }, [forceUpdate, showSyncModal]);
+        loadEvents();
+    }, [selectedDate]);
 
-    const calendarGrid = useMemo(() => {
+    const loadEvents = () => {
+        const data = store.getConsolidatedEvents();
+        setEvents(data);
+    };
+
+    const handleSaveEvent = () => {
+        if (!formData.title || !formData.dateTime) return;
+
+        const newEvent: CalendarEvent = {
+            id: editingEvent?.id || Math.random().toString(36).substr(2, 9),
+            title: formData.title,
+            dateTime: formData.dateTime,
+            location: formData.location,
+            source: 'INTERNAL',
+            type: formData.type,
+            isFixed: formData.isFixed
+        };
+
+        if (editingEvent) {
+            store.updateEvent(newEvent);
+        } else {
+            store.addEvent(newEvent);
+        }
+        
+        setShowEventModal(false);
+        setEditingEvent(null);
+        resetForm();
+        loadEvents();
+    };
+
+    const handleDeleteEvent = (id: string) => {
+        if (window.confirm("Excluir este compromisso?")) {
+            store.deleteEvent(id);
+            loadEvents();
+            setShowEventModal(false);
+        }
+    };
+
+    const resetForm = () => {
+        setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false });
+    };
+
+    // --- Auxiliares de Calendário ---
+    const daysInMonth = useMemo(() => {
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth();
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        const days = [];
-        // Preencher dias do mês anterior
-        const prevMonthLastDay = new Date(year, month, 0).getDate();
-        for (let i = firstDay - 1; i >= 0; i--) {
-            days.push({ day: prevMonthLastDay - i, currentMonth: false, date: new Date(year, month - 1, prevMonthLastDay - i) });
-        }
-        // Dias do mês atual
-        for (let i = 1; i <= daysInMonth; i++) {
-            days.push({ day: i, currentMonth: true, date: new Date(year, month, i) });
-        }
-        // Completar a grid até 42 casas (6 semanas)
-        const remaining = 42 - days.length;
-        for (let i = 1; i <= remaining; i++) {
-            days.push({ day: i, currentMonth: false, date: new Date(year, month + 1, i) });
-        }
-        return days;
+        const start = new Date(year, month, 1).getDay();
+        const days = new Date(year, month + 1, 0).getDate();
+        return { start, days };
     }, [selectedDate]);
 
     const getEventsForDate = (date: Date) => {
-        return events.filter(e => {
-            const eDate = new Date(e.dateTime);
-            return eDate.getDate() === date.getDate() && 
-                   eDate.getMonth() === date.getMonth() && 
-                   eDate.getFullYear() === date.getFullYear();
-        });
+        return events.filter(e => new Date(e.dateTime).toDateString() === date.toDateString());
     };
 
-    // --- Renderização de Componentes ---
-
+    // --- Renderização ---
     return (
-        <div className="flex flex-col h-screen bg-slate-50 overflow-hidden text-slate-900">
-            {/* Header Estilo Google */}
-            <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200">
-                <div className="flex items-center space-x-8">
-                    <div className="flex items-center space-x-3">
-                        <div className="bg-lyvo-primary p-2 rounded-lg">
-                            <CalendarIcon className="text-white w-6 h-6" />
-                        </div>
-                        <h1 className="text-xl font-bold tracking-tight">Agenda Lyvo</h1>
-                    </div>
-
-                    <div className="flex items-center bg-slate-100 rounded-xl p-1">
-                        <button onClick={() => {
-                            const d = new Date(selectedDate);
-                            d.setMonth(d.getMonth() - 1);
-                            setSelectedDate(d);
-                        }} className="p-2 hover:bg-white rounded-lg transition-all"><ChevronLeft size={18}/></button>
-                        <span className="px-4 font-semibold text-sm min-w-[140px] text-center capitalize">
-                            {selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+        <div className={`${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'} min-h-screen flex flex-col transition-colors duration-300`}>
+            
+            {/* Header Responsivo */}
+            <header className={`flex items-center justify-between px-4 md:px-8 py-4 border-b ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+                <div className="flex items-center gap-4">
+                    <h1 className="text-lg md:text-xl font-bold flex items-center gap-2">
+                        <CalendarIcon className="text-blue-500" />
+                        <span className="hidden sm:inline">Lyvo Calendar</span>
+                    </h1>
+                    <div className="flex items-center bg-slate-800/50 rounded-lg p-1">
+                        <button onClick={() => setSelectedDate(new Date(selectedDate.setMonth(selectedDate.getMonth() - 1)))} className="p-1 hover:text-blue-400"><ChevronLeft size={20}/></button>
+                        <span className="px-2 text-xs md:text-sm font-medium min-w-[100px] text-center capitalize">
+                            {selectedDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
                         </span>
-                        <button onClick={() => {
-                            const d = new Date(selectedDate);
-                            d.setMonth(d.getMonth() + 1);
-                            setSelectedDate(d);
-                        }} className="p-2 hover:bg-white rounded-lg transition-all"><ChevronRight size={18}/></button>
+                        <button onClick={() => setSelectedDate(new Date(selectedDate.setMonth(selectedDate.getMonth() + 1)))} className="p-1 hover:text-blue-400"><ChevronRight size={20}/></button>
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-4">
-                    <button 
-                        onClick={() => setShowSyncModal(true)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-all shadow-sm"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                        <span>Sincronizar</span>
+                <div className="flex items-center gap-2 md:gap-4">
+                    <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full hover:bg-slate-800 transition-colors">
+                        {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
                     </button>
-                    <button className="bg-lyvo-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:scale-105 transition-all flex items-center space-x-2">
-                        <Plus size={18} />
-                        <span>Novo Evento</span>
+                    <button 
+                        onClick={() => { resetForm(); setShowEventModal(true); }}
+                        className="bg-blue-600 hover:bg-blue-500 text-white p-2 md:px-4 md:py-2 rounded-xl flex items-center gap-2 font-bold transition-transform active:scale-95 shadow-lg shadow-blue-900/20"
+                    >
+                        <Plus size={20} />
+                        <span className="hidden md:inline">Novo</span>
                     </button>
                 </div>
             </header>
 
-            <div className="flex flex-1 overflow-hidden">
-                {/* Main Calendar Grid */}
-                <main className="flex-1 overflow-y-auto p-6">
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-                        {/* Dias da Semana */}
-                        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
-                            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
-                                <div key={d} className="py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">{d}</div>
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                
+                {/* LADO ESQUERDO: Grade do Calendário (Otimizada para Mobile) */}
+                <main className="flex-1 p-2 md:p-6 overflow-y-auto">
+                    <div className={`rounded-2xl border ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-sm'}`}>
+                        <div className="grid grid-cols-7 text-center border-b border-slate-800 py-2">
+                            {['D','S','T','Q','Q','S','S'].map(d => (
+                                <div key={d} className="text-[10px] font-bold text-slate-500 uppercase">{d}</div>
                             ))}
                         </div>
-
-                        {/* Grade de Dias */}
-                        <div className="grid grid-cols-7 flex-1 auto-rows-fr">
-                            {calendarGrid.map((item, idx) => {
-                                const dayEvents = getEventsForDate(item.date);
-                                const isToday = item.date.toDateString() === new Date().toDateString();
-                                const isSelected = item.date.toDateString() === selectedDate.toDateString();
+                        <div className="grid grid-cols-7 auto-rows-fr">
+                            {Array.from({ length: 42 }).map((_, i) => {
+                                const dayNumber = i - daysInMonth.start + 1;
+                                const isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth.days;
+                                const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), dayNumber);
+                                const hasEvents = isCurrentMonth && getEventsForDate(date).length > 0;
+                                const isToday = date.toDateString() === new Date().toDateString();
+                                const isSelected = date.toDateString() === selectedDate.toDateString();
 
                                 return (
                                     <div 
-                                        key={idx} 
-                                        onClick={() => setSelectedDate(item.date)}
-                                        className={`min-h-[100px] p-2 border-r border-b border-slate-50 transition-all cursor-pointer
-                                            ${!item.currentMonth ? 'bg-slate-50/30' : 'bg-white'}
-                                            ${isSelected ? 'ring-2 ring-inset ring-lyvo-primary/20 bg-blue-50/20' : 'hover:bg-slate-50'}
+                                        key={i}
+                                        onClick={() => isCurrentMonth && setSelectedDate(date)}
+                                        className={`relative min-h-[50px] md:min-h-[100px] border-r border-b border-slate-800 p-1 transition-all cursor-pointer
+                                            ${!isCurrentMonth ? 'opacity-0 pointer-events-none' : ''}
+                                            ${isSelected ? 'bg-blue-600/10' : 'hover:bg-slate-800/30'}
                                         `}
                                     >
-                                        <div className="flex justify-between items-start mb-1">
-                                            <span className={`text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full
-                                                ${isToday ? 'bg-lyvo-primary text-white shadow-md shadow-blue-200' : 'text-slate-500'}
-                                                ${!item.currentMonth && 'opacity-30'}
-                                            `}>
-                                                {item.day}
-                                            </span>
-                                        </div>
-
-                                        {/* Lista de Eventos no Dia */}
-                                        <div className="space-y-1">
-                                            {dayEvents.slice(0, 3).map(event => (
-                                                <div 
-                                                    key={event.id}
-                                                    className={`text-[10px] px-2 py-1 rounded-md border-l-4 truncate font-medium
-                                                        ${event.source === 'INTERNAL' 
-                                                            ? 'bg-blue-50 border-blue-500 text-blue-700' 
-                                                            : 'bg-emerald-50 border-emerald-500 text-emerald-700'}`}
-                                                >
-                                                    {event.title}
+                                        <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1
+                                            ${isToday ? 'bg-blue-600 text-white' : isDarkMode ? 'text-slate-400' : 'text-slate-600'}
+                                            ${isSelected && !isToday ? 'border border-blue-500' : ''}
+                                        `}>
+                                            {dayNumber}
+                                        </span>
+                                        {/* Pontinhos no Mobile, Barrinhas no Desktop */}
+                                        <div className="hidden md:block space-y-1">
+                                            {getEventsForDate(date).slice(0, 2).map(e => (
+                                                <div key={e.id} className={`text-[9px] px-1 truncate rounded border-l-2 ${e.type === 'REMINDER' ? 'bg-amber-500/10 border-amber-500 text-amber-500' : 'bg-blue-500/10 border-blue-500 text-blue-400'}`}>
+                                                    {e.title}
                                                 </div>
                                             ))}
-                                            {dayEvents.length > 3 && (
-                                                <div className="text-[9px] text-slate-400 font-bold pl-1">
-                                                    + {dayEvents.length - 3} mais
-                                                </div>
-                                            )}
+                                        </div>
+                                        <div className="md:hidden flex justify-center gap-0.5 mt-1">
+                                            {hasEvents && <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />}
                                         </div>
                                     </div>
                                 );
@@ -220,95 +171,127 @@ const AgendaView: React.FC = () => {
                     </div>
                 </main>
 
-                {/* Sidebar de Detalhes (Desktop) */}
-                <aside className="w-80 bg-white border-l border-slate-200 p-6 overflow-y-auto hidden lg:block">
-                    <h2 className="text-lg font-bold mb-6 flex items-center space-x-2">
-                        <span>Compromissos</span>
-                        <span className="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-full">
-                            {getEventsForDate(selectedDate).length}
+                {/* LADO DIREITO: Lista de Compromissos (Foco no Mobile) */}
+                <aside className={`w-full md:w-96 border-t md:border-t-0 md:border-l p-4 md:p-6 overflow-y-auto ${isDarkMode ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-white'}`}>
+                    <h2 className="text-lg font-bold mb-4 flex items-center justify-between">
+                        <span>{selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</span>
+                        <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">
+                            {getEventsForDate(selectedDate).length} atividades
                         </span>
                     </h2>
-                    
-                    <div className="space-y-4">
+
+                    <div className="space-y-3">
                         {getEventsForDate(selectedDate).length > 0 ? (
                             getEventsForDate(selectedDate).map(event => (
-                                <div key={event.id} className="group p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all border-l-4 border-l-lyvo-primary">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-bold text-sm text-slate-800 leading-tight">{event.title}</h3>
-                                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase
-                                            ${event.source === 'INTERNAL' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                            {event.source}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center text-[11px] text-slate-500 space-x-3">
-                                        <div className="flex items-center space-x-1">
-                                            <Clock size={12} />
-                                            <span>{new Date(event.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                        </div>
-                                        {event.location && (
-                                            <div className="flex items-center space-x-1 truncate">
-                                                <MapPin size={12} />
-                                                <span className="truncate">{event.location}</span>
+                                <div 
+                                    key={event.id}
+                                    onClick={() => { setEditingEvent(event); setFormData({ ...event }); setShowEventModal(true); }}
+                                    className={`group p-4 rounded-2xl border transition-all cursor-pointer hover:scale-[1.02] active:scale-95
+                                        ${isDarkMode ? 'bg-slate-800/50 border-slate-700 hover:bg-slate-800' : 'bg-slate-50 border-slate-200 hover:bg-white hover:shadow-lg'}
+                                        ${event.type === 'REMINDER' ? 'border-l-4 border-l-amber-500' : 'border-l-4 border-l-blue-500'}
+                                    `}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                {event.type === 'REMINDER' ? <Bell size={14} className="text-amber-500" /> : <Clock size={14} className="text-blue-500" />}
+                                                <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">
+                                                    {new Date(event.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
                                             </div>
-                                        )}
+                                            <h3 className="font-bold text-sm leading-tight">{event.title}</h3>
+                                            {event.location && (
+                                                <div className="flex items-center gap-1 text-[11px] opacity-50 mt-1">
+                                                    <MapPin size={10} /> <span>{event.location}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {event.isFixed && <span className="bg-blue-500/10 text-blue-500 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase">Fixo</span>}
                                     </div>
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center py-20 opacity-40">
-                                <CalendarIcon className="mx-auto mb-4 w-12 h-12" />
-                                <p className="text-sm font-medium">Nenhum evento para este dia</p>
+                            <div className="text-center py-10 opacity-30 flex flex-col items-center">
+                                <CalendarIcon size={40} className="mb-2" />
+                                <p className="text-sm">Nada agendado</p>
                             </div>
                         )}
                     </div>
                 </aside>
             </div>
 
-            {/* Modal de Sincronização */}
-            {showSyncModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-300">
-                        <div className="flex justify-between items-center mb-8">
-                            <div>
-                                <h2 className="text-2xl font-bold">Conectar Agendas</h2>
-                                <p className="text-slate-500 text-sm">Centralize seus compromissos no Lyvo</p>
+            {/* MODAL DE EVENTO / LEMBRETE (EDITAR E CRIAR) */}
+            {showEventModal && (
+                <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className={`w-full max-w-lg rounded-t-3xl md:rounded-3xl p-6 md:p-8 shadow-2xl animate-in slide-in-from-bottom duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-white text-slate-900'}`}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold">{editingEvent ? 'Editar Atividade' : 'Nova Atividade'}</h2>
+                            <button onClick={() => setShowEventModal(false)} className="p-2 hover:bg-slate-800 rounded-full"><X /></button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Toggle Tipo */}
+                            <div className="flex bg-slate-800 p-1 rounded-xl">
+                                <button 
+                                    onClick={() => setFormData({...formData, type: 'EVENT'})}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${formData.type === 'EVENT' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
+                                >Compromisso</button>
+                                <button 
+                                    onClick={() => setFormData({...formData, type: 'REMINDER'})}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${formData.type === 'REMINDER' ? 'bg-amber-600 text-white' : 'text-slate-400'}`}
+                                >Lembrete</button>
                             </div>
-                            <button onClick={() => setShowSyncModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
 
-                        <div className="space-y-4 mb-8">
-                            {connections.map(conn => (
-                                <div key={conn.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center">
-                                            {conn.source === 'GOOGLE' ? <span className="font-black text-blue-500 text-xl">G</span> : <CalendarIcon className="text-lyvo-primary" />}
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-sm">{conn.accountName}</p>
-                                            <p className="text-[10px] text-slate-400 font-medium">Status: {conn.connectionStatus}</p>
-                                        </div>
-                                    </div>
-                                    <div className={`w-3 h-3 rounded-full ${conn.connectionStatus === 'CONNECTED' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                            <input 
+                                type="text" placeholder="Título do compromisso..." 
+                                value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
+                                className={`w-full bg-transparent border-b-2 py-3 text-lg font-bold focus:outline-none transition-colors ${isDarkMode ? 'border-slate-800 focus:border-blue-500' : 'border-slate-200 focus:border-blue-500'}`}
+                            />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase opacity-50">Data e Hora</label>
+                                    <input 
+                                        type="datetime-local" 
+                                        value={formData.dateTime} onChange={e => setFormData({...formData, dateTime: e.target.value})}
+                                        className="w-full bg-slate-800 border-none rounded-xl p-3 text-sm"
+                                    />
                                 </div>
-                            ))}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase opacity-50">Local (Opcional)</label>
+                                    <input 
+                                        type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})}
+                                        className="w-full bg-slate-800 border-none rounded-xl p-3 text-sm"
+                                    />
+                                </div>
+                            </div>
 
-                            <button 
-                                onClick={() => loginComGoogle()}
-                                className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 font-bold text-sm hover:border-lyvo-primary hover:text-lyvo-primary hover:bg-blue-50/50 transition-all flex items-center justify-center space-x-3"
-                            >
-                                <Plus size={20} />
-                                <span>Conectar Nova Conta Google</span>
-                            </button>
+                            <label className="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-800 rounded-xl transition-colors">
+                                <input 
+                                    type="checkbox" checked={formData.isFixed} 
+                                    onChange={e => setFormData({...formData, isFixed: e.target.checked})}
+                                    className="w-5 h-5 rounded-md border-slate-700 bg-slate-800 text-blue-600 focus:ring-0"
+                                />
+                                <span className="text-sm font-medium">Evento Fixo (Recorrente)</span>
+                            </label>
+
+                            <div className="flex gap-3 pt-6">
+                                {editingEvent && (
+                                    <button 
+                                        onClick={() => handleDeleteEvent(editingEvent.id)}
+                                        className="flex-1 bg-red-500/10 text-red-500 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all"
+                                    >
+                                        <Trash2 size={18} /> Excluir
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={handleSaveEvent}
+                                    className="flex-[2] bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/40"
+                                >
+                                    {editingEvent ? 'Salvar Alterações' : 'Criar Atividade'}
+                                </button>
+                            </div>
                         </div>
-
-                        <button 
-                            onClick={() => setShowSyncModal(false)}
-                            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg"
-                        >
-                            Fechar e Atualizar
-                        </button>
                     </div>
                 </div>
             )}
