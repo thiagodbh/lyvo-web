@@ -77,6 +77,7 @@ const AgendaView: React.FC = () => {
     const handleSaveEvent = async () => {
         if (!formData.title || !formData.dateTime) return;
 
+        // Se houver editingEvent, mantemos o ID dele para atualizar no Firestore
         const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
 
         const eventToSave: CalendarEvent = {
@@ -86,16 +87,17 @@ const AgendaView: React.FC = () => {
         };
 
         try {
-            if (editingEvent) {
+            if (editingEvent?.id) {
+                // Atualiza documento existente
                 await store.updateEvent(eventToSave);
             } else {
+                // Cria novo documento
                 await store.addEvent(eventToSave);
             }
             
             setShowEventModal(false);
             setEditingEvent(null);
             setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false });
-            
             setForceUpdate(prev => prev + 1);
         } catch (error) {
             console.error("Erro ao salvar:", error);
@@ -107,12 +109,13 @@ const AgendaView: React.FC = () => {
         if (window.confirm("Deseja excluir este compromisso permanentemente?")) {
             try {
                 await store.deleteEvent(id); 
+                // Remove do estado local imediatamente
                 setEvents(prev => prev.filter(e => e.id !== id));
                 setShowEventModal(false);
                 setEditingEvent(null);
                 setForceUpdate(prev => prev + 1);
             } catch (error) {
-                console.error("Erro ao deletar:", error);
+                console.error("Erro ao deletar no Firestore:", error);
             }
         }
     };
@@ -173,6 +176,7 @@ const AgendaView: React.FC = () => {
             </header>
 
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                {/* GRADE CALENDÁRIO */}
                 <main className="flex-1 p-2 md:p-6 overflow-y-auto">
                     <div className={`rounded-3xl border overflow-hidden ${isDarkMode ? 'border-slate-800 bg-[#1e293b]' : 'border-slate-200 bg-white shadow-xl shadow-slate-200'}`}>
                         <div className="grid grid-cols-7 text-center py-4 bg-slate-800/20">
@@ -223,6 +227,7 @@ const AgendaView: React.FC = () => {
                     </div>
                 </main>
 
+                {/* LISTA LATERAL */}
                 <aside className={`w-full md:w-[400px] border-t md:border-t-0 md:border-l p-6 overflow-y-auto pb-32 md:pb-6 ${isDarkMode ? 'border-slate-800 bg-[#0f172a]' : 'border-slate-200 bg-white'}`}>
                     <div className="flex items-center justify-between mb-8">
                         <h2 className="text-xl font-black tracking-tight uppercase text-blue-500">Compromissos</h2>
@@ -240,6 +245,7 @@ const AgendaView: React.FC = () => {
                                         const dateObj = new Date(event.dateTime);
                                         const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
                                             .toISOString().slice(0, 16);
+                                        
                                         setEditingEvent(event); 
                                         setFormData({ 
                                             title: event.title,
@@ -284,10 +290,10 @@ const AgendaView: React.FC = () => {
                 </aside>
             </div>
 
-            {/* MODAL */}
+            {/* MODAL DE EVENTO */}
             {showEventModal && (
                 <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-950/90 backdrop-blur-md">
-                    <div className={`w-full max-w-xl rounded-t-[40px] md:rounded-[40px] p-8 shadow-2xl animate-in slide-in-from-bottom duration-500 ${isDarkMode ? 'bg-[#1e293b]' : 'bg-white text-slate-900'}`}>
+                    <div className={`w-full max-w-xl rounded-t-[40px] md:rounded-[40px] p-8 shadow-2xl animate-in slide-in-from-bottom duration-300 ${isDarkMode ? 'bg-[#1e293b]' : 'bg-white text-slate-900'}`}>
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-2xl font-black uppercase tracking-tight">{editingEvent ? 'Editar' : 'Novo Registro'}</h2>
                             <button onClick={() => setShowEventModal(false)} className="p-2 hover:bg-slate-700/50 rounded-full transition-colors"><X /></button>
@@ -312,15 +318,24 @@ const AgendaView: React.FC = () => {
 
                             <div className="flex gap-4 pt-4">
                                 {editingEvent && (
-                                    <button onClick={() => handleDeleteEvent(editingEvent.id)} className="flex-1 bg-red-500/10 text-red-500 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Excluir</button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => handleDeleteEvent(editingEvent.id)} 
+                                        className="flex-1 bg-red-500/10 text-red-500 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                                    >
+                                        Excluir
+                                    </button>
                                 )}
-                                <button onClick={handleSaveEvent} className="flex-[2] bg-blue-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-blue-500/40 hover:bg-blue-500 transition-all">Salvar</button>
+                                <button onClick={handleSaveEvent} className="flex-[2] bg-blue-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-blue-500/40 hover:bg-blue-500 transition-all">
+                                    Salvar
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* BOTÃO FLUTUANTE MOBILE */}
             <button 
                 onClick={() => { setEditingEvent(null); setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false }); setShowEventModal(true); }}
                 className="md:hidden fixed bottom-8 right-6 w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-2xl z-[60] active:scale-95 transition-transform"
