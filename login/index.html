@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Meu Lyvo - Gestão e Produtividade</title>
+    
+    <meta name="description" content="Acesse sua conta no Meu Lyvo para gerenciar suas tarefas, finanças e compromissos em um só lugar.">
+    <meta name="robots" content="noindex, follow">
+    <link rel="canonical" href="https://meulyvo.com/login">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --input-border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .login-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-placeholder {
+            font-weight: 800;
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--input-border);
+            border-radius: 8px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+            font-size: 1rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-login:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .btn-login:hover:not(:disabled) {
+            background-color: #1d4ed8;
+        }
+
+        .footer-links {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+
+        .footer-links p {
+            margin: 0.5rem 0;
+        }
+
+        .footer-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <div class="header">
+        <span class="logo-placeholder">LYVO</span>
+        <h1>Bem-vindo de volta</h1>
+        <p>Acesse sua conta para gerenciar seu negócio.</p>
+    </div>
+
+    <form id="loginForm">
+        <div class="form-group">
+            <label for="email">E-mail</label>
+            <input type="email" id="email" placeholder="nome@exemplo.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn-login" id="submitBtn">Entrar no LYVO</button>
+    </form>
+
+    <div class="footer-links">
+        <p><a href="#">Esqueceu sua senha?</a></p>
+        <p>Não tem uma conta? <a href="https://meulyvo.com">Voltar para a home</a></p>
+    </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  // ATENÇÃO: Substitua pelos dados do seu projeto no Firebase Console
+  const firebaseConfig = {
+    apiKey: "SUA_API_KEY_AQUI",
+    authDomain: "lyvo-web.firebaseapp.com",
+    projectId: "lyvo-web",
+    storageBucket: "lyvo-web.appspot.com",
+    messagingSenderId: "SEU_MESSAGING_ID",
+    appId: "SEU_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const loginForm = document.getElementById('loginForm');
+  const submitBtn = document.getElementById('submitBtn');
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    submitBtn.innerText = "Verificando...";
+    submitBtn.disabled = true;
+
+    try {
+      // 1. Autentica o usuário
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. Verifica se o documento do usuário tem 'active: true'
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+
+        if (userData.active === true) {
+          // REDIRECIONAMENTO DE SUCESSO
+          // Altere 'index.html' abaixo se a sua página principal do app tiver outro nome
+          window.location.href = "../index.html"; 
+        } else {
+          // Bloqueio por falta de pagamento
+          alert("Acesso restrito: Sua assinatura não está ativa. Conclua o pagamento na LastLink.");
+          await signOut(auth);
+          window.location.href = "https://meulyvo.com"; 
+        }
+      } else {
+        alert("Erro: Perfil de usuário não encontrado no sistema.");
+        await signOut(auth);
+      }
+
+    } catch (error) {
+      console.error("Erro de login:", error);
+      alert("E-mail ou senha inválidos. Tente novamente.");
+    } finally {
+      submitBtn.innerText = "Entrar no LYVO";
+      submitBtn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
