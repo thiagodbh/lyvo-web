@@ -372,10 +372,11 @@ const AgendaView: React.FC = () => {
                     </div>
                 </div>
             )}
-            {/* Botão Flutuante - Visível apenas no Celular */}
+           {/* Botão Flutuante - Visível apenas no Celular */}
             <button 
                 onClick={() => { 
                     setEditingEvent(null); 
+                    setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false });
                     setShowEventModal(true); 
                 }}
                 className="md:hidden fixed bottom-8 right-6 w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-2xl z-[60] active:scale-95 transition-transform"
