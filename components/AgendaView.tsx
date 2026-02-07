@@ -74,8 +74,36 @@ const AgendaView: React.FC = () => {
         });
     }, [selectedDate, showEventModal]);
 
-    const handleSaveEvent = () => {
-        if (!formData.title || !formData.dateTime) return;
+    const handleSaveEvent = async () => {
+    if (!formData.title || !formData.dateTime) return;
+
+    // Se estiver editando, usa o ID existente. Se for novo, gera um.
+    const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
+
+    const eventToSave: CalendarEvent = {
+        ...formData,
+        id: eventId,
+        source: 'INTERNAL'
+    };
+
+    try {
+        if (editingEvent) {
+            await store.updateEvent(eventToSave);
+        } else {
+            await store.addEvent(eventToSave);
+        }
+        
+        setShowEventModal(false);
+        setEditingEvent(null);
+        setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false });
+        
+        // Atualiza a lista local
+        const updatedEvents = store.getConsolidatedEvents();
+        setEvents(prev => [...updatedEvents, ...prev.filter(e => e.source === 'GOOGLE')]);
+    } catch (error) {
+        console.error("Erro ao salvar:", error);
+    }
+};
 
         const eventToSave: CalendarEvent = {
             id: editingEvent?.id || Math.random().toString(36).substr(2, 9),
