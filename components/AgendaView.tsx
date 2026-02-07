@@ -15,6 +15,7 @@ const AgendaView: React.FC = () => {
     const [showEventModal, setShowEventModal] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [forceUpdate, setForceUpdate] = useState(0);
 
     // Estado do Formulário
     const [formData, setFormData] = useState({
@@ -50,7 +51,6 @@ const AgendaView: React.FC = () => {
                         isFixed: false
                     }));
 
-                    // Atualiza o estado mesclando com os internos
                     setEvents(prev => {
                         const filteredPrev = prev.filter(e => e.source !== 'GOOGLE');
                         return [...filteredPrev, ...googleEvents];
@@ -72,58 +72,51 @@ const AgendaView: React.FC = () => {
             const googleEvents = prev.filter(e => e.source === 'GOOGLE');
             return [...localEvents, ...googleEvents];
         });
-    }, [selectedDate, showEventModal]);
+    }, [selectedDate, showEventModal, forceUpdate]);
 
     const handleSaveEvent = async () => {
-    if (!formData.title || !formData.dateTime) return;
+        if (!formData.title || !formData.dateTime) return;
 
-    // Se estiver editando, usa o ID existente. Se for novo, gera um.
-    const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
-
-        
-        // Atualiza a lista local
-        const updatedEvents = store.getConsolidatedEvents();
-        setEvents(prev => [...updatedEvents, ...prev.filter(e => e.source === 'GOOGLE')]);
-    } catch (error) {
-        console.error("Erro ao salvar:", error);
-    }
-};
+        const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
 
         const eventToSave: CalendarEvent = {
-            id: editingEvent?.id || Math.random().toString(36).substr(2, 9),
             ...formData,
+            id: eventId,
             source: 'INTERNAL'
         };
 
-        if (editingEvent) store.updateEvent(eventToSave);
-        else store.addEvent(eventToSave);
-        
-        setShowEventModal(false);
-        setEditingEvent(null);
-        setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false });
-    };
-
-    const handleDeleteEvent = async (id: string) => {
-    console.log("Tentando excluir evento com ID:", id); // Verificação técnica
-    if (!id) return alert("Erro: ID do evento não encontrado.");
-
-    if (window.confirm("Deseja excluir este compromisso permanentemente?")) {
         try {
-            await store.deleteEvent(id); 
-            
-            // Atualiza a lista removendo o item deletado
-            setEvents(prev => prev.filter(e => e.id !== id));
+            if (editingEvent) {
+                await store.updateEvent(eventToSave);
+            } else {
+                await store.addEvent(eventToSave);
+            }
             
             setShowEventModal(false);
             setEditingEvent(null);
+            setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false });
             
-            // Força a atualização visual do calendário
             setForceUpdate(prev => prev + 1);
         } catch (error) {
-            console.error("Erro ao deletar no Firestore:", error);
+            console.error("Erro ao salvar:", error);
         }
-    }
-};
+    };
+
+    const handleDeleteEvent = async (id: string) => {
+        if (!id) return;
+        if (window.confirm("Deseja excluir este compromisso permanentemente?")) {
+            try {
+                await store.deleteEvent(id); 
+                setEvents(prev => prev.filter(e => e.id !== id));
+                setShowEventModal(false);
+                setEditingEvent(null);
+                setForceUpdate(prev => prev + 1);
+            } catch (error) {
+                console.error("Erro ao deletar:", error);
+            }
+        }
+    };
+
     // --- LÓGICA DE CALENDÁRIO ---
     const calendarGrid = useMemo(() => {
         const year = selectedDate.getFullYear();
@@ -144,7 +137,7 @@ const AgendaView: React.FC = () => {
     return (
         <div className={`${isDarkMode ? 'bg-[#0f172a] text-slate-200' : 'bg-slate-50 text-slate-900'} min-h-screen flex flex-col font-sans transition-colors duration-500`}>
             
-            {/* Header Profissional */}
+            {/* Header */}
             <header className={`flex items-center justify-between px-4 md:px-8 py-4 border-b ${isDarkMode ? 'border-slate-800 bg-[#1e293b]' : 'border-slate-200 bg-white'}`}>
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
@@ -171,7 +164,7 @@ const AgendaView: React.FC = () => {
                         {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
                     </button>
                     <button 
-                        onClick={() => { setEditingEvent(null); setShowEventModal(true); }}
+                        onClick={() => { setEditingEvent(null); setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false }); setShowEventModal(true); }}
                         className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-xl shadow-blue-600/20 active:scale-95 transition-all"
                     >
                         <Plus size={20} /> <span className="hidden md:block">Adicionar</span>
@@ -180,8 +173,6 @@ const AgendaView: React.FC = () => {
             </header>
 
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-                
-                {/* CALENDÁRIO GRADE */}
                 <main className="flex-1 p-2 md:p-6 overflow-y-auto">
                     <div className={`rounded-3xl border overflow-hidden ${isDarkMode ? 'border-slate-800 bg-[#1e293b]' : 'border-slate-200 bg-white shadow-xl shadow-slate-200'}`}>
                         <div className="grid grid-cols-7 text-center py-4 bg-slate-800/20">
@@ -219,7 +210,6 @@ const AgendaView: React.FC = () => {
                                                             {e.title}
                                                         </div>
                                                     ))}
-                                                    {dayEvents.length > 2 && <div className="text-[8px] text-slate-500 font-bold">+{dayEvents.length - 2} mais</div>}
                                                 </div>
                                                 <div className="md:hidden flex justify-center mt-1">
                                                     {dayEvents.length > 0 && <div className="w-1.5 h-1.5 bg-blue-500 rounded-full shadow-glow" />}
@@ -233,7 +223,6 @@ const AgendaView: React.FC = () => {
                     </div>
                 </main>
 
-{/* LISTA LATERAL (FOCO MOBILE) */}
                 <aside className={`w-full md:w-[400px] border-t md:border-t-0 md:border-l p-6 overflow-y-auto pb-32 md:pb-6 ${isDarkMode ? 'border-slate-800 bg-[#0f172a]' : 'border-slate-200 bg-white'}`}>
                     <div className="flex items-center justify-between mb-8">
                         <h2 className="text-xl font-black tracking-tight uppercase text-blue-500">Compromissos</h2>
@@ -250,11 +239,8 @@ const AgendaView: React.FC = () => {
                                     onClick={() => { 
                                         const dateObj = new Date(event.dateTime);
                                         const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
-                                            .toISOString()
-                                            .slice(0, 16);
-
+                                            .toISOString().slice(0, 16);
                                         setEditingEvent(event); 
-
                                         setFormData({ 
                                             title: event.title,
                                             type: event.type || 'EVENT',
@@ -262,7 +248,6 @@ const AgendaView: React.FC = () => {
                                             location: event.location || '',
                                             isFixed: event.isFixed || false
                                         }); 
-
                                         setShowEventModal(true); 
                                     }}
                                     className={`group p-5 rounded-3xl border transition-all cursor-pointer hover:translate-y-[-2px] active:scale-[0.98]
@@ -285,11 +270,7 @@ const AgendaView: React.FC = () => {
                                                 </div>
                                             )}
                                         </div>
-                                        {event.source === 'GOOGLE' && (
-                                            <span className="bg-emerald-500/10 text-emerald-500 text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase border border-emerald-500/20">
-                                                Google
-                                            </span>
-                                        )}
+                                        {event.source === 'GOOGLE' && <span className="bg-emerald-500/10 text-emerald-500 text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase border border-emerald-500/20">Google</span>}
                                     </div>
                                 </div>
                             ))
@@ -303,7 +284,7 @@ const AgendaView: React.FC = () => {
                 </aside>
             </div>
 
-            {/* MODAL DE EVENTO / LEMBRETE */}
+            {/* MODAL */}
             {showEventModal && (
                 <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-950/90 backdrop-blur-md">
                     <div className={`w-full max-w-xl rounded-t-[40px] md:rounded-[40px] p-8 shadow-2xl animate-in slide-in-from-bottom duration-500 ${isDarkMode ? 'bg-[#1e293b]' : 'bg-white text-slate-900'}`}>
@@ -318,51 +299,30 @@ const AgendaView: React.FC = () => {
                                 <button onClick={() => setFormData({...formData, type: 'REMINDER'})} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.type === 'REMINDER' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'text-slate-500'}`}>Lembrete</button>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">O que vamos fazer?</label>
-                                <input 
-                                    type="text" placeholder="Nome da atividade..." 
-                                    value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
-                                    className={`w-full bg-slate-900/50 border-2 rounded-2xl p-4 text-sm font-bold focus:outline-none transition-all ${isDarkMode ? 'border-slate-700 focus:border-blue-500' : 'border-slate-100 focus:border-blue-500'}`}
-                                />
-                            </div>
+                            <input 
+                                type="text" placeholder="Nome da atividade..." 
+                                value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
+                                className={`w-full bg-slate-900/50 border-2 rounded-2xl p-4 text-sm font-bold focus:outline-none transition-all ${isDarkMode ? 'border-slate-700 focus:border-blue-500' : 'border-slate-100 focus:border-blue-500'}`}
+                            />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Quando?</label>
-                                    <input 
-                                        type="datetime-local" 
-                                        value={formData.dateTime} onChange={e => setFormData({...formData, dateTime: e.target.value})}
-                                        className="w-full bg-slate-900/50 border-none rounded-2xl p-4 text-sm font-bold"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Onde?</label>
-                                    <input 
-                                        type="text" placeholder="Local..."
-                                        value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})}
-                                        className="w-full bg-slate-900/50 border-none rounded-2xl p-4 text-sm font-bold"
-                                    />
-                                </div>
+                                <input type="datetime-local" value={formData.dateTime} onChange={e => setFormData({...formData, dateTime: e.target.value})} className="w-full bg-slate-900/50 border-none rounded-2xl p-4 text-sm font-bold" />
+                                <input type="text" placeholder="Local..." value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full bg-slate-900/50 border-none rounded-2xl p-4 text-sm font-bold" />
                             </div>
 
                             <div className="flex gap-4 pt-4">
                                 {editingEvent && (
                                     <button onClick={() => handleDeleteEvent(editingEvent.id)} className="flex-1 bg-red-500/10 text-red-500 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Excluir</button>
                                 )}
-                                <button onClick={handleSaveEvent} className="flex-[2] bg-blue-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-blue-500/40 hover:bg-blue-500 transition-all">Salvar Atividade</button>
+                                <button onClick={handleSaveEvent} className="flex-[2] bg-blue-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-blue-500/40 hover:bg-blue-500 transition-all">Salvar</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-           {/* Botão Flutuante - Visível apenas no Celular */}
+
             <button 
-                onClick={() => { 
-                    setEditingEvent(null); 
-                    setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false });
-                    setShowEventModal(true); 
-                }}
+                onClick={() => { setEditingEvent(null); setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false }); setShowEventModal(true); }}
                 className="md:hidden fixed bottom-8 right-6 w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-2xl z-[60] active:scale-95 transition-transform"
             >
                 <Plus size={28} strokeWidth={3} />
