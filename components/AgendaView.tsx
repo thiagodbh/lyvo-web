@@ -91,23 +91,27 @@ const AgendaView: React.FC = () => {
         setFormData({ title: '', type: 'EVENT', dateTime: '', location: '', isFixed: false });
     };
 
-    const handleDeleteEvent = (id: string) => {
+    const handleDeleteEvent = async (id: string) => {
     if (window.confirm("Deseja excluir este compromisso permanentemente?")) {
-        // 1. Remove do Firestore
-        store.deleteEvent(id); 
-        
-        // 2. Remove do estado local IMEDIATAMENTE para sumir da tela
-        setEvents(prev => prev.filter(e => e.id !== id));
-        
-        // 3. Fecha o modal e limpa a edição
-        setShowEventModal(false);
-        setEditingEvent(null);
-        
-        // 4. Opcional: Força atualização se você tiver essa função
-        if (typeof setForceUpdate === 'function') setForceUpdate(prev => prev + 1);
+        try {
+            // 1. Remove do banco de dados (Firestore)
+            await store.deleteEvent(id); 
+            
+            // 2. Remove do estado local IMEDIATAMENTE (Faz sumir da tela na hora)
+            setEvents(prev => prev.filter(e => e.id !== id));
+            
+            // 3. Fecha o modal e limpa o registro de edição
+            setShowEventModal(false);
+            setEditingEvent(null);
+            
+            // 4. Força o calendário a se redesenhar
+            if (typeof setForceUpdate === 'function') setForceUpdate(prev => prev + 1);
+        } catch (error) {
+            console.error("Erro ao deletar:", error);
+            alert("Erro ao excluir. Verifique sua conexão.");
+        }
     }
 };
-
     // --- LÓGICA DE CALENDÁRIO ---
     const calendarGrid = useMemo(() => {
         const year = selectedDate.getFullYear();
