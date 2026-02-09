@@ -104,20 +104,29 @@ const AgendaView: React.FC = () => {
     };
 
     const handleDeleteEvent = async (id: string) => {
-        if (!id) return;
-        if (window.confirm("Deseja excluir este compromisso permanentemente?")) {
-            try {
-                await store.deleteEvent(id); 
-                setEvents(prev => prev.filter(e => e.id !== id));
-                setShowEventModal(false);
-                setEditingEvent(null);
-                setForceUpdate(prev => prev + 1);
-            } catch (error) {
-                console.error("Erro ao deletar no Firestore:", error);
-            }
-        }
-    };
+    if (!id) return;
+    
+    // Encontra o evento para saber se é fixo
+    const eventToDelete = events.find(e => e.id === id);
+    
+    // Define a mensagem personalizada
+    const mensagem = eventToDelete?.isFixed 
+        ? "Este é um compromisso FIXO. Deseja excluir TODAS as repetições desta semana?" 
+        : "Deseja excluir este compromisso permanentemente?";
 
+    if (window.confirm(mensagem)) {
+        try {
+            await store.deleteEvent(id); 
+            setEvents(prev => prev.filter(e => e.id !== id));
+            setShowEventModal(false);
+            setEditingEvent(null);
+            setForceUpdate(prev => prev + 1);
+        } catch (error) {
+            console.error("Erro ao deletar:", error);
+            alert("Não foi possível excluir o compromisso.");
+        }
+    }
+};
     // --- LÓGICA DE CALENDÁRIO ---
     const calendarGrid = useMemo(() => {
         const year = selectedDate.getFullYear();
