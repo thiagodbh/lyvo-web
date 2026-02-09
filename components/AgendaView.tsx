@@ -8,7 +8,7 @@ import { store } from "../services/firestoreStore";
 import { CalendarEvent, CalendarConnection } from '../types';
 
 const AgendaView: React.FC = () => {
-    // Estados de Interface
+    // --- ESTADOS DE INTERFACE ---
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [showEventModal, setShowEventModal] = useState(false);
@@ -16,7 +16,7 @@ const AgendaView: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [forceUpdate, setForceUpdate] = useState(0);
 
-    // Estado do Formulário Completo
+    // --- ESTADO DO FORMULÁRIO (COMPLETO) ---
     const initialForm = {
         title: '',
         type: 'EVENT' as 'EVENT' | 'REMINDER' | 'TASK',
@@ -30,7 +30,7 @@ const AgendaView: React.FC = () => {
 
     const [formData, setFormData] = useState(initialForm);
 
-    // 1. Função isolada para buscar eventos (pode ser chamada pelo botão OU pelo sistema)
+    // --- 1. BUSCA GOOGLE AGENDA (COM PERSISTÊNCIA) ---
     const fetchGoogleEvents = async (token: string) => {
         setIsLoading(true);
         try {
@@ -60,14 +60,13 @@ const AgendaView: React.FC = () => {
                 });
             }
         } catch (error) {
-            console.error("Erro ao buscar agenda Google:", error);
-            if (error) localStorage.removeItem('google_calendar_token');
+            console.error("Erro Google:", error);
+            localStorage.removeItem('google_calendar_token');
         } finally {
             setIsLoading(false);
         }
     };
 
-    // 2. O botão de login agora apenas salva o token e chama a função acima
     const loginComGoogle = useGoogleLogin({
         onSuccess: (tokenResponse) => {
             localStorage.setItem('google_calendar_token', tokenResponse.access_token);
@@ -76,71 +75,61 @@ const AgendaView: React.FC = () => {
         scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
     });
 
-    // --- EFEITO DE PERSISTÊNCIA ---
+    // --- 2. SINCRONIZAÇÃO INICIAL E F5 ---
     useEffect(() => {
-        const localEvents = store.getConsolidatedEvents();
-        const savedToken = localStorage.getItem('google_calendar_token');
-
         const syncAll = async () => {
+            const localEvents = store.getConsolidatedEvents();
+            const savedToken = localStorage.getItem('google_calendar_token');
+
             if (savedToken) {
                 await fetchGoogleEvents(savedToken);
             }
+            
             setEvents(prev => {
                 const googleEvents = prev.filter(e => e.source === 'GOOGLE');
                 return [...localEvents, ...googleEvents];
             });
         };
-
         syncAll();
-    }, [selectedDate, showEventModal, forceUpdate]); 
+    }, [selectedDate, showEventModal, forceUpdate]);
 
-    // --- SALVAMENTO CORRIGIDO PARA NOVOS CAMPOS ---
-   const handleSaveEvent = async () => {
-    if (!formData.title || !formData.dateTime) return;
+    // --- 3. SALVAMENTO (RESOLVE DUPLICAÇÃO) ---
+    const handleSaveEvent = async () => {
+        if (!formData.title || !formData.dateTime) return;
 
-    // LÓGICA ANTI-DUPLICAÇÃO:
-    // Se o editingEvent existe, pegamos o ID dele. 
-    // SÓ geramos um ID aleatório se for um evento NOVO (null).
-    const eventId = editingEvent?.id ? editingEvent.id : Math.random().toString(36).substr(2, 9);
+        const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
 
-    const eventToSave: CalendarEvent = {
-        ...formData,
-        id: eventId, // Aqui o ID será SEMPRE o mesmo da edição
-        source: 'INTERNAL',
-        recurringDays: formData.recurringDays || []
-    };
+        const eventToSave: CalendarEvent = {
+            ...formData,
+            id: eventId,
+            source: 'INTERNAL',
+            recurringDays: formData.recurringDays || []
+        };
 
-    try {
-        setIsLoading(true);
-        
-        // Se temos um ID de edição, usamos o updateEvent
-        if (editingEvent?.id) {
-            await store.updateEvent(eventToSave);
-        } else {
-            // Se não, é um evento novo, usamos o addEvent
-            await store.addEvent(eventToSave);
+        try {
+            setIsLoading(true);
+            if (editingEvent?.id) {
+                await store.updateEvent(eventToSave);
+            } else {
+                await store.addEvent(eventToSave);
+            }
+            
+            setShowEventModal(false);
+            setEditingEvent(null);
+            setFormData(initialForm);
+            setForceUpdate(prev => prev + 1);
+        } catch (error) {
+            console.error("Erro ao salvar:", error);
+        } finally {
+            setIsLoading(false);
         }
-        
-        setShowEventModal(false);
-        setEditingEvent(null);
-        // Reset completo do formulário para não sobrar rastro do ID anterior
-        setFormData({
-            title: '', type: 'EVENT', dateTime: '', location: '', 
-            isFixed: false, status: 'PENDING', description: '', recurringDays: []
-        });
-        setForceUpdate(prev => prev + 1);
-    } catch (error) {
-        console.error("Erro ao salvar:", error);
-    } finally {
-        setIsLoading(false);
-    }
-};
+    };
 
     const handleDeleteEvent = async (id: string) => {
         if (!id) return;
         const eventToDelete = events.find(e => e.id === id);
         const mensagem = eventToDelete?.isFixed 
-            ? "Este é um compromisso FIXO. Deseja excluir TODAS as repetições desta semana?" 
+            ? "Este é um compromisso FIXO. Deseja excluir TODAS as repetições?" 
             : "Deseja excluir este compromisso permanentemente?";
 
         if (window.confirm(mensagem)) {
@@ -152,12 +141,11 @@ const AgendaView: React.FC = () => {
                 setForceUpdate(prev => prev + 1);
             } catch (error) {
                 console.error("Erro ao deletar:", error);
-                alert("Não foi possível excluir o compromisso.");
             }
         }
     };
 
-    // --- LÓGICA DE CALENDÁRIO ---
+    // --- 4. LÓGICA DO CALENDÁRIO ---
     const calendarGrid = useMemo(() => {
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth();
@@ -173,6 +161,7 @@ const AgendaView: React.FC = () => {
     const getEventsForDate = (date: Date) => {
         const dayOfWeek = date.getDay();
         return events.filter(e => {
+            if (e.status === 'CANCELED') return false;
             const eventDate = new Date(e.dateTime).toDateString();
             const isSpecificDay = eventDate === date.toDateString();
             const isRecurringDay = e.isFixed && (e.recurringDays || []).includes(dayOfWeek);
@@ -180,7 +169,6 @@ const AgendaView: React.FC = () => {
         });
     };
 
-    // Função para Ícone de Status
     const renderStatusIcon = (status: string) => {
         switch(status) {
             case 'IN_PROGRESS': return <PlayCircle size={14} className="text-blue-500 animate-pulse" />;
@@ -191,8 +179,9 @@ const AgendaView: React.FC = () => {
     };
 
     return (
-        <div className="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
-            <header className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-slate-200 bg-white shadow-sm">
+        <div className="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans overflow-hidden">
+            {/* HEADER */}
+            <header className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-slate-200 bg-white shadow-sm z-10">
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
                         <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
@@ -202,11 +191,14 @@ const AgendaView: React.FC = () => {
                     </div>
                     
                     <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-                        <button onClick={() => setSelectedDate(new Date(selectedDate.setMonth(selectedDate.getMonth() - 1)))} className="p-1.5 hover:text-blue-600 transition-colors"><ChevronLeft size={20}/></button>
+                        <button onClick={() => setSelectedDate(new Date(selectedDate.setMonth(selectedDate.getMonth() - 1)))} className="p-1.5 hover:text-blue-600 transition-colors">
+                            <ChevronLeft size={20}/>
+                        </button>
                         <span className="text-xs font-bold min-w-[120px] text-center uppercase tracking-widest text-slate-600">
                             {selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                         </span>
-                        <button onClick={() => setSelectedDate(new Date(selectedDate.setMonth(selectedDate.getMonth() + 1)))} className="p-1.5 hover:text-blue-600 transition-colors"><ChevronRight size={20}/></button>
+                        <button onClick={() => setSelectedDate(new Date(selectedDate.setMonth(selectedDate.getMonth() + 1)))} className="p-1.5 hover:text-blue-600 transition-colors">
+                            <ChevronRight size={20}/></button>
                     </div>
                 </div>
 
@@ -224,7 +216,8 @@ const AgendaView: React.FC = () => {
             </header>
 
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden h-[calc(100vh-73px)]">
-                <main className="flex-none md:flex-1 p-2 md:p-6 overflow-y-auto border-b md:border-b-0 border-slate-200 bg-white">
+                {/* GRADE CALENDÁRIO */}
+                <main className="flex-none md:flex-1 p-2 md:p-6 overflow-y-auto bg-white border-b md:border-b-0 border-slate-200">
                     <div className="rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
                         <div className="grid grid-cols-7 text-center py-4 bg-slate-50 border-b border-slate-100">
                             {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d => (
@@ -241,7 +234,7 @@ const AgendaView: React.FC = () => {
                                     <div 
                                         key={i}
                                         onClick={() => date && setSelectedDate(date)}
-                                        className={`min-h-[60px] md:min-h-[110px] p-2 border-r border-b border-slate-50 transition-all cursor-pointer relative
+                                        className={`min-h-[65px] md:min-h-[110px] p-2 border-r border-b border-slate-50 transition-all cursor-pointer relative
                                             ${!date ? 'bg-slate-50/50' : isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/80'}
                                         `}
                                     >
@@ -256,13 +249,16 @@ const AgendaView: React.FC = () => {
                                                 <div className="hidden md:block space-y-1">
                                                     {dayEvents.slice(0, 2).map(e => (
                                                         <div key={e.id} className={`text-[9px] px-2 py-0.5 rounded-md border-l-2 truncate font-bold
-                                                            ${e.status === 'COMPLETED' ? 'opacity-50 line-through' : ''}
+                                                            ${e.status === 'COMPLETED' ? 'opacity-40 line-through' : ''}
                                                             ${e.type === 'REMINDER' ? 'bg-amber-50 border-amber-500 text-amber-700' : 
                                                               e.type === 'TASK' ? 'bg-purple-50 border-purple-500 text-purple-700' :
                                                               'bg-blue-50 border-blue-500 text-blue-700'}`}>
                                                             {e.title}
                                                         </div>
                                                     ))}
+                                                </div>
+                                                <div className="md:hidden flex justify-center mt-1">
+                                                    {dayEvents.length > 0 && <div className={`w-1.5 h-1.5 rounded-full ${dayEvents.some(ev => ev.status !== 'COMPLETED') ? 'bg-blue-500' : 'bg-slate-300'}`} />}
                                                 </div>
                                             </>
                                         )}
@@ -273,7 +269,8 @@ const AgendaView: React.FC = () => {
                     </div>
                 </main>
 
-                <aside className="flex-1 md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200 p-6 overflow-y-auto bg-white min-h-[300px] mb-20 md:mb-0">
+                {/* LISTA DE COMPROMISSOS */}
+                <aside className="flex-1 md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200 p-6 overflow-y-auto bg-white pb-24 md:pb-6">
                     <div className="flex items-center justify-between mb-8">
                         <h2 className="text-xl font-black tracking-tight uppercase text-blue-600">Compromissos</h2>
                         <span className="text-[10px] bg-blue-50 text-blue-600 font-black px-3 py-1 rounded-full uppercase">
@@ -286,29 +283,23 @@ const AgendaView: React.FC = () => {
                             getEventsForDate(selectedDate).map(event => (
                                 <div 
                                     key={event.id}
-                                  onClick={() => { 
-    if (event.source === 'GOOGLE') return;
-
-    const dateObj = new Date(event.dateTime);
-    const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
-        .toISOString().slice(0, 16);
-    
-    // PASSO CRUCIAL: Salva o evento INTEIRO (incluindo o ID) para o estado de edição
-    setEditingEvent(event); 
-    
-    setFormData({ 
-        title: event.title,
-        type: event.type || 'EVENT',
-        dateTime: formattedDate,
-        location: event.location || '',
-        isFixed: event.isFixed || false,
-        status: event.status || 'PENDING',
-        description: event.description || '',
-        recurringDays: event.recurringDays || []
-    }); 
-    
-    setShowEventModal(true); 
-}}
+                                    onClick={() => { 
+                                        if (event.source === 'GOOGLE') return;
+                                        const dateObj = new Date(event.dateTime);
+                                        const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                                        setEditingEvent(event); 
+                                        setFormData({
+                                            title: event.title,
+                                            type: event.type || 'EVENT',
+                                            dateTime: formattedDate,
+                                            location: event.location || '',
+                                            isFixed: event.isFixed || false,
+                                            status: event.status || 'PENDING',
+                                            description: event.description || '',
+                                            recurringDays: event.recurringDays || []
+                                        }); 
+                                        setShowEventModal(true); 
+                                    }}
                                     className={`group p-5 rounded-3xl border border-slate-100 bg-slate-50 transition-all cursor-pointer hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 active:scale-[0.98]
                                         ${event.type === 'REMINDER' ? 'border-l-[6px] border-l-amber-500' : 
                                           event.type === 'TASK' ? 'border-l-[6px] border-l-purple-500' :
@@ -346,13 +337,13 @@ const AgendaView: React.FC = () => {
             {/* MODAL DE EVENTO */}
             {showEventModal && (
                 <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/40 backdrop-blur-sm">
-                    <div className="w-full max-w-xl rounded-t-[40px] md:rounded-[40px] p-8 shadow-2xl animate-in slide-in-from-bottom duration-300 bg-white">
-                        <div className="flex justify-between items-center mb-8">
+                    <div className="w-full max-w-xl rounded-t-[40px] md:rounded-[40px] p-8 shadow-2xl bg-white max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800">{editingEvent ? 'Editar' : 'Novo Registro'}</h2>
-                            <button onClick={() => setShowEventModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X /></button>
+                            <button onClick={() => { setShowEventModal(false); setEditingEvent(null); }} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X /></button>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                             <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-4">
                                 {['EVENT', 'REMINDER', 'TASK'].map((t) => (
                                     <button 
@@ -367,21 +358,18 @@ const AgendaView: React.FC = () => {
                             </div>
 
                             {formData.type === 'TASK' && (
-                                <div className="space-y-2 mb-4">
-                                    <label className="text-[10px] font-black uppercase opacity-40 ml-1">Descrição da Tarefa</label>
-                                    <textarea 
-                                        placeholder="Detalhes da tarefa..."
-                                        value={formData.description}
-                                        onChange={e => setFormData({...formData, description: e.target.value})}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-500 min-h-[100px]"
-                                    />
-                                </div>
+                                <textarea 
+                                    placeholder="Detalhes da tarefa..." 
+                                    value={formData.description} 
+                                    onChange={e => setFormData({...formData, description: e.target.value})}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-500 min-h-[100px]"
+                                />
                             )}
 
-                            <div className="space-y-2 mb-4">
-                                <label className="text-[10px] font-black uppercase opacity-40 ml-1">Status do Compromisso</label>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase opacity-40 ml-1">Status</label>
                                 <select 
-                                    value={formData.status}
+                                    value={formData.status} 
                                     onChange={e => setFormData({...formData, status: e.target.value as any})}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold focus:outline-none appearance-none"
                                 >
@@ -392,66 +380,43 @@ const AgendaView: React.FC = () => {
                                 </select>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Título</label>
-                                <input 
-                                    type="text" placeholder="O que vamos fazer?" 
-                                    value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-blue-500 transition-all"
-                                />
-                            </div>
+                            <input type="text" placeholder="Título..." value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold focus:border-blue-500" />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Data e Hora</label>
-                                    <input type="datetime-local" value={formData.dateTime} onChange={e => setFormData({...formData, dateTime: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Localização</label>
-                                    <input type="text" placeholder="Onde?" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold" />
-                                </div>
+                                <input type="datetime-local" value={formData.dateTime} onChange={e => setFormData({...formData, dateTime: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold" />
+                                <input type="text" placeholder="Local..." value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold" />
                             </div>
 
-                            <div className="p-4 border-2 border-dashed border-slate-100 rounded-3xl space-y-4 mb-4">
+                            <div className="p-4 border-2 border-dashed border-slate-100 rounded-3xl space-y-4">
                                 <div className="flex items-center gap-3">
-                                    <input 
-                                        type="checkbox" 
-                                        id="isFixed"
-                                        className="w-5 h-5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500"
-                                        checked={formData.isFixed} 
-                                        onChange={e => setFormData({...formData, isFixed: e.target.checked})} 
-                                    />
-                                    <label htmlFor="isFixed" className="text-sm font-black text-slate-700 uppercase tracking-tight">Repetir toda semana</label>
+                                    <input type="checkbox" id="isFixed" checked={formData.isFixed} onChange={e => setFormData({...formData, isFixed: e.target.checked})} className="w-5 h-5 rounded-md" />
+                                    <label htmlFor="isFixed" className="text-sm font-black text-slate-700 uppercase">Repetir toda semana</label>
                                 </div>
-
                                 {formData.isFixed && (
-                                    <div className="space-y-3">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase ml-1">Nos dias:</p>
-                                        <div className="flex justify-between gap-1">
-                                            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const currentDays = formData.recurringDays || [];
-                                                        const days = currentDays.includes(idx) ? currentDays.filter(d => d !== idx) : [...currentDays, idx];
-                                                        setFormData({...formData, recurringDays: days});
-                                                    }}
-                                                    className={`w-9 h-9 rounded-xl text-[10px] font-black transition-all ${ (formData.recurringDays || []).includes(idx) ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
-                                                >
-                                                    {day}
-                                                </button>
-                                            ))}
-                                        </div>
+                                    <div className="flex justify-between gap-1">
+                                        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, idx) => (
+                                            <button 
+                                                key={idx} 
+                                                type="button" 
+                                                onClick={() => {
+                                                    const currentDays = formData.recurringDays || [];
+                                                    const days = currentDays.includes(idx) ? currentDays.filter(d => d !== idx) : [...currentDays, idx];
+                                                    setFormData({...formData, recurringDays: days});
+                                                }} 
+                                                className={`w-9 h-9 rounded-xl text-[10px] font-black transition-all ${ (formData.recurringDays || []).includes(idx) ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                                            >
+                                                {day}
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
                             </div>
 
                             <div className="flex gap-4 pt-4">
                                 {editingEvent && (
-                                    <button type="button" onClick={() => handleDeleteEvent(editingEvent.id)} className="flex-1 bg-red-50 text-red-500 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Excluir</button>
+                                    <button type="button" onClick={() => handleDeleteEvent(editingEvent.id)} className="flex-1 bg-red-50 text-red-500 py-4 rounded-2xl font-black text-[10px] uppercase hover:bg-red-500 hover:text-white transition-all">Excluir</button>
                                 )}
-                                <button onClick={handleSaveEvent} className="flex-[2] bg-blue-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-blue-500/40 hover:bg-blue-700 transition-all">Salvar</button>
+                                <button onClick={handleSaveEvent} className="flex-[2] bg-blue-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase shadow-2xl hover:bg-blue-700 transition-all">Salvar</button>
                             </div>
                         </div>
                     </div>
