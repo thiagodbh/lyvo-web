@@ -234,8 +234,8 @@ const AgendaView: React.FC = () => {
                 </div>
             </header>
 
-            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-                <main className="flex-1 p-2 md:p-6 overflow-y-auto">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden h-[calc(100vh-73px)]">
+                <main className="flex-none md:flex-1 p-2 md:p-6 overflow-y-auto border-b md:border-b-0 border-slate-200 bg-white">
                     <div className="rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
                         <div className="grid grid-cols-7 text-center py-4 bg-slate-50 border-b border-slate-100">
                             {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d => (
@@ -284,7 +284,7 @@ const AgendaView: React.FC = () => {
                     </div>
                 </main>
 
-                <aside className="w-full md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200 p-6 overflow-y-auto pb-32 md:pb-6 bg-white">
+                <aside className="flex-1 md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200 p-6 overflow-y-auto bg-white min-h-[300px] mb-20 md:mb-0">
                     <div className="flex items-center justify-between mb-8">
                         <h2 className="text-xl font-black tracking-tight uppercase text-blue-600">Compromissos</h2>
                         <span className="text-[10px] bg-blue-50 text-blue-600 font-black px-3 py-1 rounded-full uppercase">
