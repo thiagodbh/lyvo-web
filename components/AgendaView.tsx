@@ -98,39 +98,23 @@ const AgendaView: React.FC = () => {
     const handleSaveEvent = async () => {
     if (!formData.title || !formData.dateTime) return;
 
-    // Se o evento for do Google, não permitimos editar no Firebase
-    if (editingEvent?.source === 'GOOGLE') {
-        alert("Eventos do Google Agenda não podem ser editados por aqui.");
-        return;
-    }
-
+    // Usamos o ID do evento que estamos editando. 
+    // Se não houver um (novo evento), aí sim geramos um aleatório.
     const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
 
     const eventToSave: CalendarEvent = {
         ...formData,
-        id: eventId,
-        source: 'INTERNAL',
-        recurringDays: formData.recurringDays || []
+        id: eventId, // Aqui garantimos que o ID seja o mesmo
+        source: 'INTERNAL'
     };
 
     try {
         setIsLoading(true);
         
-        // LÓGICA DE SALVAMENTO BLINDADA:
+        // Se temos um editingEvent, forçamos o update naquele ID específico
         if (editingEvent?.id) {
-            try {
-                // Tenta atualizar
-                await store.updateEvent(eventToSave);
-            } catch (updateError: any) {
-                // Se o erro for "documento não encontrado", ele cria um novo
-                if (updateError.code === 'not-found' || updateError.message.includes('No document to update')) {
-                    await store.addEvent(eventToSave);
-                } else {
-                    throw updateError;
-                }
-            }
+            await store.updateEvent(eventToSave);
         } else {
-            // Se for novo, apenas adiciona
             await store.addEvent(eventToSave);
         }
         
@@ -138,10 +122,8 @@ const AgendaView: React.FC = () => {
         setEditingEvent(null);
         setFormData(initialForm);
         setForceUpdate(prev => prev + 1);
-        
-    } catch (error: any) {
-        console.error("Erro detalhado:", error);
-        alert("Erro técnico: " + error.message);
+    } catch (error) {
+        console.error("Erro ao salvar:", error);
     } finally {
         setIsLoading(false);
     }
