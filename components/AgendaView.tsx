@@ -96,45 +96,56 @@ const AgendaView: React.FC = () => {
 
     // --- SALVAMENTO CORRIGIDO PARA NOVOS CAMPOS ---
     const handleSaveEvent = async () => {
-        if (!formData.title || !formData.dateTime) {
-            alert("Título e Data são obrigatórios.");
-            return;
-        }
+    if (!formData.title || !formData.dateTime) return;
 
-        // 1. Garantimos que se estivermos editando, o ID seja preservado
-        // 2. Garantimos que todos os novos campos (status, etc) entrem no objeto
-        const eventToSave: CalendarEvent = {
-            ...formData,
-            id: editingEvent?.id || Math.random().toString(36).substr(2, 9),
-            source: 'INTERNAL',
-            recurringDays: formData.recurringDays || []
-        };
+    // Se o evento for do Google, não permitimos editar no Firebase
+    if (editingEvent?.source === 'GOOGLE') {
+        alert("Eventos do Google Agenda não podem ser editados por aqui.");
+        return;
+    }
 
-        try {
-            setIsLoading(true);
-            if (editingEvent?.id) {
-                // EDIÇÃO: Passamos o objeto completo com o ID existente
-                await store.updateEvent(eventToSave);
-                console.log("Evento atualizado no Firebase:", eventToSave);
-            } else {
-                // CRIAÇÃO: Novo evento
-                await store.addEvent(eventToSave);
-                console.log("Novo evento criado no Firebase");
-            }
-            
-            // Sucesso: Fecha e limpa tudo
-            setShowEventModal(false);
-            setEditingEvent(null);
-            setFormData(initialForm);
-            setForceUpdate(prev => prev + 1);
-            
-        } catch (error: any) {
-            console.error("Erro crítico ao salvar:", error);
-            alert("Erro ao salvar: " + (error.message || "Verifique sua conexão."));
-        } finally {
-            setIsLoading(false);
-        }
+    const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
+
+    const eventToSave: CalendarEvent = {
+        ...formData,
+        id: eventId,
+        source: 'INTERNAL',
+        recurringDays: formData.recurringDays || []
     };
+
+    try {
+        setIsLoading(true);
+        
+        // LÓGICA DE SALVAMENTO BLINDADA:
+        if (editingEvent?.id) {
+            try {
+                // Tenta atualizar
+                await store.updateEvent(eventToSave);
+            } catch (updateError: any) {
+                // Se o erro for "documento não encontrado", ele cria um novo
+                if (updateError.code === 'not-found' || updateError.message.includes('No document to update')) {
+                    await store.addEvent(eventToSave);
+                } else {
+                    throw updateError;
+                }
+            }
+        } else {
+            // Se for novo, apenas adiciona
+            await store.addEvent(eventToSave);
+        }
+        
+        setShowEventModal(false);
+        setEditingEvent(null);
+        setFormData(initialForm);
+        setForceUpdate(prev => prev + 1);
+        
+    } catch (error: any) {
+        console.error("Erro detalhado:", error);
+        alert("Erro técnico: " + error.message);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     const handleDeleteEvent = async (id: string) => {
         if (!id) return;
