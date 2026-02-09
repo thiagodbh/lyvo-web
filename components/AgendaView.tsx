@@ -363,7 +363,43 @@ const AgendaView: React.FC = () => {
                                     <input type="text" placeholder="Onde?" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold" />
                                 </div>
                             </div>
+{/* NOVO: Configuração de Repetição Semanal */}
+<div className="p-4 border-2 border-dashed border-slate-100 rounded-3xl space-y-4 mb-4">
+    <div className="flex items-center gap-3">
+        <input 
+            type="checkbox" 
+            id="isFixed"
+            className="w-5 h-5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500"
+            checked={formData.isFixed} 
+            onChange={e => setFormData({...formData, isFixed: e.target.checked})} 
+        />
+        <label htmlFor="isFixed" className="text-sm font-black text-slate-700 uppercase tracking-tight">Repetir toda semana</label>
+    </div>
 
+    {formData.isFixed && (
+        <div className="space-y-3">
+            <p className="text-[10px] font-black text-slate-400 uppercase ml-1">Nos dias:</p>
+            <div className="flex justify-between gap-1">
+                {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, idx) => (
+                    <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                            const days = formData.recurringDays.includes(idx)
+                                ? formData.recurringDays.filter(d => d !== idx)
+                                : [...formData.recurringDays, idx];
+                            setFormData({...formData, recurringDays: days});
+                        }}
+                        className={`w-9 h-9 rounded-xl text-[10px] font-black transition-all ${formData.recurringDays.includes(idx) ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                    >
+                        {day}
+                    </button>
+                ))}
+            </div>
+        </div>
+    )}
+</div>
+                            
                             <div className="flex gap-4 pt-4">
                                 {editingEvent && (
                                     <button 
