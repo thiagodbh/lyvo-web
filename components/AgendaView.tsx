@@ -96,30 +96,43 @@ const AgendaView: React.FC = () => {
 
     // --- SALVAMENTO CORRIGIDO PARA NOVOS CAMPOS ---
     const handleSaveEvent = async () => {
-        if (!formData.title || !formData.dateTime) return;
+        if (!formData.title || !formData.dateTime) {
+            alert("Título e Data são obrigatórios.");
+            return;
+        }
 
-        const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
-
+        // 1. Garantimos que se estivermos editando, o ID seja preservado
+        // 2. Garantimos que todos os novos campos (status, etc) entrem no objeto
         const eventToSave: CalendarEvent = {
             ...formData,
-            id: eventId,
+            id: editingEvent?.id || Math.random().toString(36).substr(2, 9),
             source: 'INTERNAL',
-            recurringDays: formData.recurringDays || [] // Proteção contra undefined
+            recurringDays: formData.recurringDays || []
         };
 
         try {
+            setIsLoading(true);
             if (editingEvent?.id) {
+                // EDIÇÃO: Passamos o objeto completo com o ID existente
                 await store.updateEvent(eventToSave);
+                console.log("Evento atualizado no Firebase:", eventToSave);
             } else {
+                // CRIAÇÃO: Novo evento
                 await store.addEvent(eventToSave);
+                console.log("Novo evento criado no Firebase");
             }
             
+            // Sucesso: Fecha e limpa tudo
             setShowEventModal(false);
             setEditingEvent(null);
-            setFormData(initialForm); // Reset para o estado inicial completo
+            setFormData(initialForm);
             setForceUpdate(prev => prev + 1);
-        } catch (error) {
-            console.error("Erro ao salvar:", error);
+            
+        } catch (error: any) {
+            console.error("Erro crítico ao salvar:", error);
+            alert("Erro ao salvar: " + (error.message || "Verifique sua conexão."));
+        } finally {
+            setIsLoading(false);
         }
     };
 
