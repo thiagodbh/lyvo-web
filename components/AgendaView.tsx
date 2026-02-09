@@ -95,32 +95,39 @@ const AgendaView: React.FC = () => {
     }, [selectedDate, showEventModal, forceUpdate]); 
 
     // --- SALVAMENTO CORRIGIDO PARA NOVOS CAMPOS ---
-    const handleSaveEvent = async () => {
+   const handleSaveEvent = async () => {
     if (!formData.title || !formData.dateTime) return;
 
-    // Usamos o ID do evento que estamos editando. 
-    // Se não houver um (novo evento), aí sim geramos um aleatório.
-    const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
+    // LÓGICA ANTI-DUPLICAÇÃO:
+    // Se o editingEvent existe, pegamos o ID dele. 
+    // SÓ geramos um ID aleatório se for um evento NOVO (null).
+    const eventId = editingEvent?.id ? editingEvent.id : Math.random().toString(36).substr(2, 9);
 
     const eventToSave: CalendarEvent = {
         ...formData,
-        id: eventId, // Aqui garantimos que o ID seja o mesmo
-        source: 'INTERNAL'
+        id: eventId, // Aqui o ID será SEMPRE o mesmo da edição
+        source: 'INTERNAL',
+        recurringDays: formData.recurringDays || []
     };
 
     try {
         setIsLoading(true);
         
-        // Se temos um editingEvent, forçamos o update naquele ID específico
+        // Se temos um ID de edição, usamos o updateEvent
         if (editingEvent?.id) {
             await store.updateEvent(eventToSave);
         } else {
+            // Se não, é um evento novo, usamos o addEvent
             await store.addEvent(eventToSave);
         }
         
         setShowEventModal(false);
         setEditingEvent(null);
-        setFormData(initialForm);
+        // Reset completo do formulário para não sobrar rastro do ID anterior
+        setFormData({
+            title: '', type: 'EVENT', dateTime: '', location: '', 
+            isFixed: false, status: 'PENDING', description: '', recurringDays: []
+        });
         setForceUpdate(prev => prev + 1);
     } catch (error) {
         console.error("Erro ao salvar:", error);
@@ -279,18 +286,16 @@ const AgendaView: React.FC = () => {
                             getEventsForDate(selectedDate).map(event => (
                                 <div 
                                     key={event.id}
-                                    onClick={() => { 
-    // Impede editar eventos que vêm do Google
+                                  onClick={() => { 
     if (event.source === 'GOOGLE') return;
 
     const dateObj = new Date(event.dateTime);
     const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
         .toISOString().slice(0, 16);
     
-    // Define o evento atual para o estado de edição (crucial para não duplicar)
+    // PASSO CRUCIAL: Salva o evento INTEIRO (incluindo o ID) para o estado de edição
     setEditingEvent(event); 
     
-    // Preenche o formulário com TODOS os dados existentes do evento
     setFormData({ 
         title: event.title,
         type: event.type || 'EVENT',
