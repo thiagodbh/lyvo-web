@@ -75,24 +75,28 @@ const AgendaView: React.FC = () => {
         scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
     });
 
-    // 3. EFEITO DE PERSISTÊNCIA: Carrega os eventos locais E os do Google ao abrir/atualizar
+    // --- EFEITO DE PERSISTÊNCIA (RESOLVE O DESLOGUE) ---
     useEffect(() => {
-        // Carrega eventos do banco local (Firestore)
+        // 1. Puxa os eventos do Firebase (Galo/Lyvo)
         const localEvents = store.getConsolidatedEvents();
         
-        // Tenta recuperar o token do Google salvo no navegador
+        // 2. Tenta recuperar o token do Google que guardamos no Passo Anterior
         const savedToken = localStorage.getItem('google_calendar_token');
-        
-        if (savedToken) {
-            // Se existir token, busca os eventos do Google automaticamente
-            fetchGoogleEvents(savedToken);
-        }
 
-        setEvents(prev => {
-            const googleEvents = prev.filter(e => e.source === 'GOOGLE');
-            return [...localEvents, ...googleEvents];
-        });
-    }, [selectedDate, showEventModal, forceUpdate]);
+        // 3. Função interna para gerir a junção dos eventos
+        const syncAll = async () => {
+            if (savedToken) {
+                // Se existe token, chama a função de busca do Google
+                await fetchGoogleEvents(savedToken);
+            } else {
+                // Se não existe token, apenas garante os locais na tela
+                setEvents(localEvents);
+            }
+        };
+
+        syncAll();
+    }, [selectedDate, showEventModal, forceUpdate]); 
+    // Mantemos essas dependências para atualizar quando mudar o mês ou salvar algo novo
 
     const handleSaveEvent = async () => {
         if (!formData.title || !formData.dateTime) return;
