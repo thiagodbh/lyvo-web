@@ -19,10 +19,13 @@ const AgendaView: React.FC = () => {
     // Estado do Formulário
     const [formData, setFormData] = useState({
         title: '',
-        type: 'EVENT' as 'EVENT' | 'REMINDER',
+        type: 'EVENT' as 'EVENT' | 'REMINDER' | 'TASK',
         dateTime: '',
         location: '',
-        isFixed: false
+        isFixed: false,
+        status: 'PENDING' as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED',
+        description: '',
+        recurringDays: [] as number[]
     });
 
     // --- SINCRONIA COM GOOGLE AGENDA ---
@@ -129,7 +132,16 @@ const AgendaView: React.FC = () => {
     }, [selectedDate]);
 
     const getEventsForDate = (date: Date) => {
-        return events.filter(e => new Date(e.dateTime).toDateString() === date.toDateString());
+        const dayOfWeek = date.getDay(); // 0 (Dom) a 6 (Sáb)
+        return events.filter(e => {
+            const eventDate = new Date(e.dateTime).toDateString();
+            const isSpecificDay = eventDate === date.toDateString();
+            
+            // Se for fixo, checa se o dia da semana atual está nos dias escolhidos
+            const isRecurringDay = e.isFixed && e.recurringDays?.includes(dayOfWeek);
+            
+            return isSpecificDay || isRecurringDay;
+        });
     };
 
     return (
