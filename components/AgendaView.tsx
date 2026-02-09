@@ -28,48 +28,66 @@ const AgendaView: React.FC = () => {
         recurringDays: [] as number[]
     });
 
-    // --- SINCRONIA COM GOOGLE AGENDA ---
-    const loginComGoogle = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
-            setIsLoading(true);
-            try {
-                const firstDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).toISOString();
-                const lastDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).toISOString();
+   // 1. Função isolada para buscar eventos (pode ser chamada pelo botão OU pelo sistema)
+    const fetchGoogleEvents = async (token: string) => {
+        setIsLoading(true);
+        try {
+            const firstDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).toISOString();
+            const lastDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).toISOString();
 
-                const response = await fetch(
-                    `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${firstDay}&timeMax=${lastDay}&singleEvents=true&orderBy=startTime`,
-                    { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
-                );
-                
-                const data = await response.json();
-                if (data.items) {
-                    const googleEvents: CalendarEvent[] = data.items.map((gEvent: any) => ({
-                        id: gEvent.id,
-                        title: gEvent.summary || "(Sem título)",
-                        dateTime: gEvent.start.dateTime || gEvent.start.date,
-                        location: gEvent.location || '',
-                        source: 'GOOGLE',
-                        type: 'EVENT',
-                        isFixed: false
-                    }));
+            const response = await fetch(
+                `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${firstDay}&timeMax=${lastDay}&singleEvents=true&orderBy=startTime`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            
+            const data = await response.json();
+            if (data.items) {
+                const googleEvents: CalendarEvent[] = data.items.map((gEvent: any) => ({
+                    id: gEvent.id,
+                    title: gEvent.summary || "(Sem título)",
+                    dateTime: gEvent.start.dateTime || gEvent.start.date,
+                    location: gEvent.location || '',
+                    source: 'GOOGLE',
+                    type: 'EVENT',
+                    isFixed: false
+                }));
 
-                    setEvents(prev => {
-                        const filteredPrev = prev.filter(e => e.source !== 'GOOGLE');
-                        return [...filteredPrev, ...googleEvents];
-                    });
-                }
-            } catch (error) {
-                console.error("Erro ao buscar agenda Google:", error);
-            } finally {
-                setIsLoading(false);
+                setEvents(prev => {
+                    const filteredPrev = prev.filter(e => e.source !== 'GOOGLE');
+                    return [...filteredPrev, ...googleEvents];
+                });
             }
+        } catch (error) {
+            console.error("Erro ao buscar agenda Google:", error);
+            // Se o token estiver vencido, removemos para pedir novo login
+            if (error) localStorage.removeItem('google_calendar_token');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // 2. O botão de login agora apenas salva o token e chama a função acima
+    const loginComGoogle = useGoogleLogin({
+        onSuccess: (tokenResponse) => {
+            localStorage.setItem('google_calendar_token', tokenResponse.access_token);
+            fetchGoogleEvents(tokenResponse.access_token);
         },
         scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
     });
 
-    // --- CARREGAMENTO INICIAL E CRUD ---
+    // 3. EFEITO DE PERSISTÊNCIA: Carrega os eventos locais E os do Google ao abrir/atualizar
     useEffect(() => {
+        // Carrega eventos do banco local (Firestore)
         const localEvents = store.getConsolidatedEvents();
+        
+        // Tenta recuperar o token do Google salvo no navegador
+        const savedToken = localStorage.getItem('google_calendar_token');
+        
+        if (savedToken) {
+            // Se existir token, busca os eventos do Google automaticamente
+            fetchGoogleEvents(savedToken);
+        }
+
         setEvents(prev => {
             const googleEvents = prev.filter(e => e.source === 'GOOGLE');
             return [...localEvents, ...googleEvents];
