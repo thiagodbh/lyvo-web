@@ -101,19 +101,26 @@ const AgendaView: React.FC = () => {
     };
 
     const handleDeleteEvent = async (id: string) => {
-        if (!id) return;
-        if (window.confirm("Deseja excluir este compromisso permanentemente?")) {
-            try {
-                await store.deleteEvent(id); 
-                setEvents(prev => prev.filter(e => e.id !== id));
-                setShowEventModal(false);
-                setEditingEvent(null);
-                setForceUpdate(prev => prev + 1);
-            } catch (error) {
-                console.error("Erro ao deletar no Firestore:", error);
-            }
+    console.log("Tentando excluir evento com ID:", id); // Verificação técnica
+    if (!id) return alert("Erro: ID do evento não encontrado.");
+
+    if (window.confirm("Deseja excluir este compromisso permanentemente?")) {
+        try {
+            await store.deleteEvent(id); 
+            
+            // Atualiza a lista removendo o item deletado
+            setEvents(prev => prev.filter(e => e.id !== id));
+            
+            setShowEventModal(false);
+            setEditingEvent(null);
+            
+            // Força a atualização visual do calendário
+            setForceUpdate(prev => prev + 1);
+        } catch (error) {
+            console.error("Erro ao deletar no Firestore:", error);
         }
-    };
+    }
+};
 
     // --- LÓGICA DE CALENDÁRIO ---
     const calendarGrid = useMemo(() => {
@@ -231,22 +238,18 @@ const AgendaView: React.FC = () => {
                         {getEventsForDate(selectedDate).length > 0 ? (
                             getEventsForDate(selectedDate).map(event => (
                                 <div 
-                                    key={event.id}
-                                    onClick={() => { 
-                                        const dateObj = new Date(event.dateTime);
-                                        const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
-                                            .toISOString().slice(0, 16);
-                                        
-                                        setEditingEvent(event); 
-                                        setFormData({ 
-                                            title: event.title,
-                                            type: event.type || 'EVENT',
-                                            dateTime: formattedDate,
-                                            location: event.location || '',
-                                            isFixed: event.isFixed || false
-                                        }); 
-                                        setShowEventModal(true); 
-                                    }}
+    key={event.id}
+    onClick={() => { 
+        setEditingEvent(event); // Marca qual evento estamos editando
+        setFormData({
+            title: event.title,
+            type: event.type || 'EVENT',
+            dateTime: new Date(event.dateTime).toISOString().slice(0, 16), // Formata para o input
+            location: event.location || '',
+            isFixed: event.isFixed || false
+        }); 
+        setShowEventModal(true); 
+    }}
                                     className={`group p-5 rounded-3xl border border-slate-100 bg-slate-50 transition-all cursor-pointer hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 active:scale-[0.98]
                                         ${event.type === 'REMINDER' ? 'border-l-[6px] border-l-amber-500' : 'border-l-[6px] border-l-blue-600'}
                                     `}
@@ -317,22 +320,18 @@ const AgendaView: React.FC = () => {
 
                             <div className="flex gap-4 pt-4">
                                 {editingEvent && (
-                                    <button 
-                                        type="button"
-                                        onClick={() => handleDeleteEvent(editingEvent.id)} 
-                                        className="flex-1 bg-red-50 text-red-500 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
-                                    >
-                                        Excluir
-                                    </button>
-                                )}
-                                <button onClick={handleSaveEvent} className="flex-[2] bg-blue-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-blue-500/40 hover:bg-blue-700 transition-all">
-                                    Salvar Atividade
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+    <button 
+        type="button"
+        onClick={() => {
+            if (editingEvent?.id) {
+                handleDeleteEvent(editingEvent.id);
+            }
+        }} 
+        className="flex-1 bg-red-500/10 text-red-500 py-3 rounded-xl font-black text-[10px] uppercase hover:bg-red-500 hover:text-white transition-all"
+    >
+        Excluir
+    </button>
+)}
 
             {/* BOTÃO FLUTUANTE MOBILE */}
             <button 
