@@ -298,13 +298,30 @@ const AgendaView: React.FC = () => {
                                 <div 
                                     key={event.id}
                                     onClick={() => { 
-                                        const dateObj = new Date(event.dateTime);
-                                        const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
-                                            .toISOString().slice(0, 16);
-                                        setEditingEvent(event); 
-                                        setFormData({ ...initialForm, ...event, dateTime: formattedDate }); 
-                                        setShowEventModal(true); 
-                                    }}
+    // Impede editar eventos que vêm do Google
+    if (event.source === 'GOOGLE') return;
+
+    const dateObj = new Date(event.dateTime);
+    const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
+        .toISOString().slice(0, 16);
+    
+    // Define o evento atual para o estado de edição (crucial para não duplicar)
+    setEditingEvent(event); 
+    
+    // Preenche o formulário com TODOS os dados existentes do evento
+    setFormData({ 
+        title: event.title,
+        type: event.type || 'EVENT',
+        dateTime: formattedDate,
+        location: event.location || '',
+        isFixed: event.isFixed || false,
+        status: event.status || 'PENDING',
+        description: event.description || '',
+        recurringDays: event.recurringDays || []
+    }); 
+    
+    setShowEventModal(true); 
+}}
                                     className={`group p-5 rounded-3xl border border-slate-100 bg-slate-50 transition-all cursor-pointer hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 active:scale-[0.98]
                                         ${event.type === 'REMINDER' ? 'border-l-[6px] border-l-amber-500' : 
                                           event.type === 'TASK' ? 'border-l-[6px] border-l-purple-500' :
