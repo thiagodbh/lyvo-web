@@ -302,10 +302,47 @@ const AgendaView: React.FC = () => {
                         </div>
 
                         <div className="space-y-6">
-                            <div className="flex bg-slate-100 p-1.5 rounded-2xl">
-                                <button onClick={() => setFormData({...formData, type: 'EVENT'})} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.type === 'EVENT' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400'}`}>Compromisso</button>
-                                <button onClick={() => setFormData({...formData, type: 'REMINDER'})} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.type === 'REMINDER' ? 'bg-white text-amber-600 shadow-md' : 'text-slate-400'}`}>Lembrete</button>
-                            </div>
+                            {/* Seletor de Tipo Atualizado */}
+<div className="flex bg-slate-100 p-1.5 rounded-2xl mb-4">
+    {['EVENT', 'REMINDER', 'TASK'].map((t) => (
+        <button 
+            key={t}
+            type="button"
+            onClick={() => setFormData({...formData, type: t as any})} 
+            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.type === t ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400'}`}
+        >
+            {t === 'EVENT' ? 'Evento' : t === 'REMINDER' ? 'Lembrete' : 'Tarefa'}
+        </button>
+    ))}
+</div>
+
+{/* NOVO: Campo de Descrição (Aparece apenas se for Tarefa) */}
+{formData.type === 'TASK' && (
+    <div className="space-y-2 mb-4">
+        <label className="text-[10px] font-black uppercase opacity-40 ml-1">Descrição da Tarefa</label>
+        <textarea 
+            placeholder="Detalhes da tarefa..."
+            value={formData.description}
+            onChange={e => setFormData({...formData, description: e.target.value})}
+            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-500 min-h-[100px]"
+        />
+    </div>
+)}
+
+{/* NOVO: Seletor de Status */}
+<div className="space-y-2 mb-4">
+    <label className="text-[10px] font-black uppercase opacity-40 ml-1">Status do Compromisso</label>
+    <select 
+        value={formData.status}
+        onChange={e => setFormData({...formData, status: e.target.value as any})}
+        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold focus:outline-none appearance-none"
+    >
+        <option value="PENDING">🕒 Pendente</option>
+        <option value="IN_PROGRESS">⚡ Em Andamento</option>
+        <option value="COMPLETED">✅ Concluído</option>
+        <option value="CANCELED">❌ Cancelado</option>
+    </select>
+</div>
 
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">Título</label>
