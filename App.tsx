@@ -46,79 +46,75 @@ function App() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
- React.useEffect(() => {
-  const unsubscribe = authService.onChange(async (u) => {
-    if (!u?.uid) {
-      store.clearUser();
-      setIsAuthenticated(false);
+  React.useEffect(() => {
+    const unsubscribe = authService.onChange(async (u) => {
+      if (!u?.uid) {
+        store.clearUser();
+        setIsAuthenticated(false);
+        setIsAuthorized(null);
+        return;
+      }
+
+      store.setUser(u.uid);
+      setIsAuthenticated(true);
       setIsAuthorized(null);
-      return;
-    }
 
-    store.setUser(u.uid);
-    setIsAuthenticated(true);
+      try {
+        const snap = await getDoc(doc(db, "users", u.uid));
+        // Ajustado para aceitar true ou trial ativo
+        setIsAuthorized(snap.exists() && (snap.data()?.active === true || snap.data()?.plan === "trial"));
+      } catch {
+        setIsAuthorized(false);
+      }
+    });
 
-    setIsAuthorized(null);
-
-    try {
-      const snap = await getDoc(doc(db, "users", u.uid));
-      setIsAuthorized(snap.exists() && snap.data()?.active === true);
-    } catch {
-      setIsAuthorized(false);
-    }
-  });
-
-  return () => unsubscribe?.();
-}, []);
-
+    return () => unsubscribe?.();
+  }, []);
 
   const handleLogin = async (email: string, password: string) => {
-  await authService.signIn(email, password);
-};
+    await authService.signIn(email, password);
+  };
 
-const handleSignUp = async (email: string, password: string) => {
-  await authService.signUp(email, password);
+  const handleSignUp = async (email: string, password: string) => {
+    await authService.signUp(email, password);
 
-  const u = authService.getCurrentUser();
-  if (!u?.uid) return;
+    const u = authService.getCurrentUser();
+    if (!u?.uid) return;
 
-  const userRef = doc(db, "users", u.uid);
-  const snap = await getDoc(userRef);
+    const userRef = doc(db, "users", u.uid);
+    const snap = await getDoc(userRef);
 
-  // cria o cadastro do usuário no Firestore (uma única vez)
-  if (!snap.exists()) {
-    await setDoc(userRef, {
-      email,
-      active: false,          // começa bloqueado
-      plan: "free",
-      createdAt: serverTimestamp(),
-    });
-  }
-};
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        email,
+        active: true, // Alterado para true para permitir que o AccessGuard gerencie o Trial
+        plan: "trial",
+        createdAt: serverTimestamp(),
+      });
+    }
+  };
 
   const handleLogout = async () => {
-  await authService.signOut();
-  setCurrentTab(AppTab.CHAT);
-  setIsAuthorized(null);
-};
+    await authService.signOut();
+    setCurrentTab(AppTab.CHAT);
+    setIsAuthorized(null);
+  };
 
-
-  // --- Authenticated Layout (Responsive with Fixed Bottom Nav) ---
   if (isAuthenticated === null) {
-  return (
-    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-      <div className="text-gray-500 font-medium">Carregando...</div>
-    </div>
-  );
-}
-if (isAuthenticated && isAuthorized === null) {
-  return (
-    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-      <div className="text-gray-500 font-medium">Verificando acesso...</div>
-    </div>
-  );
-}
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="text-gray-500 font-medium">Carregando...</div>
+      </div>
+    );
+  }
 
+  if (isAuthenticated && isAuthorized === null) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="text-gray-500 font-medium">Verificando acesso...</div>
+      </div>
+    );
+  }
 
   if (isAuthenticated) {
     const renderContent = () => {
@@ -182,16 +178,6 @@ if (isAuthenticated && isAuthorized === null) {
           </nav>
         </div>
       </AccessGuard>
-    );
-
-        {/* BOTTOM NAV (STRICTLY FIXED AT BOTTOM) */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-          <NavButton tab={AppTab.CHAT} icon={MessageCircle} label="Chat" />
-          <NavButton tab={AppTab.FINANCE} icon={PieChart} label="Finanças" />
-          <NavButton tab={AppTab.AGENDA} icon={Calendar} label="Agenda" />
-          <NavButton tab={AppTab.PROFILE} icon={User} label="Perfil" />
-        </nav>
-      </div>
     );
   }
 
