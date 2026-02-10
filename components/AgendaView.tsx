@@ -17,15 +17,17 @@ import { CalendarEvent, CalendarConnection } from '../types';
 
 type ViewMode = 'DAY' | 'WEEK' | 'MONTH';
 
-const EventCard: React.FC<{ event: CalendarEvent }> = ({ event }) => {
+const EventCard: React.FC<{ event: CalendarEvent; onClick?: () => void }> = ({ event, onClick }) => {
     const isInternal = event.source === 'INTERNAL';
-    // Visual Style based on source
     const borderColor = isInternal ? 'border-lyvo-primary' : (event.color || 'border-green-500');
     const bgColor = isInternal ? 'bg-blue-50' : 'bg-gray-50';
     const sourceLabel = isInternal ? 'Lyvo' : (event.source === 'GOOGLE' ? 'Google' : 'Externo');
 
     return (
-        <div className={`relative bg-white p-4 rounded-xl shadow-sm border-l-[6px] ${borderColor} mb-3 flex flex-col gap-1 transition-all hover:shadow-md`}>
+        <div 
+            onClick={onClick}
+            className={`relative bg-white p-4 rounded-xl shadow-sm border-l-[6px] ${borderColor} mb-3 flex flex-col gap-1 transition-all hover:shadow-md cursor-pointer active:scale-[0.98]`}
+        >
             <div className="flex justify-between items-start">
                 <h3 className="font-bold text-gray-800 text-sm leading-tight">{event.title}</h3>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider ${bgColor} text-gray-500`}>
@@ -56,7 +58,11 @@ const AgendaView: React.FC = () => {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [connections, setConnections] = useState<CalendarConnection[]>([]);
-    const [forceUpdate, setForceUpdate] = useState(0); // Trigger re-render for store updates
+    const [forceUpdate, setForceUpdate] = useState(0);
+
+    // Estados para controle do Modal de Edição e Criação
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent> | null>(null);
     const loginComGoogle = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
     try {
@@ -102,6 +108,52 @@ const AgendaView: React.FC = () => {
         setEvents(store.getConsolidatedEvents());
         setConnections([...store.calendarConnections]);
     }, [forceUpdate, showSyncModal]);
+
+    // --- Event Actions (Lógica para Evitar Duplicação) ---
+    const handleOpenCreateModal = () => {
+        setEditingEvent({
+            title: '',
+            dateTime: selectedDate.toISOString(),
+            type: 'EVENT',
+            status: 'PENDING',
+            location: '',
+            description: ''
+        });
+        setShowEditModal(true);
+    };
+
+    const handleEditEvent = (event: CalendarEvent) => {
+        setEditingEvent(event);
+        setShowEditModal(true);
+    };
+
+    const handleSaveEvent = async () => {
+        if (!editingEvent?.title || !editingEvent.dateTime) return;
+
+        try {
+            if (editingEvent.id) {
+                // UPDATE: Se o evento já tem ID, atualizamos o existente
+                await store.updateEvent(editingEvent as CalendarEvent);
+            } else {
+                // CREATE: Se não tem ID, criamos um novo documento
+                await store.addEvent(editingEvent as Omit<CalendarEvent, "id" | "source">);
+            }
+            setShowEditModal(false);
+            setEditingEvent(null);
+            setForceUpdate(prev => prev + 1);
+        } catch (error) {
+            console.error("Erro ao salvar:", error);
+            alert("Erro ao salvar o evento.");
+        }
+    };
+
+    const handleDeleteEvent = async (id: string) => {
+        if (window.confirm("Deseja excluir este compromisso?")) {
+            await store.deleteEvent(id);
+            setShowEditModal(false);
+            setForceUpdate(prev => prev + 1);
+        }
+    };
 
     // --- Helpers ---
     const getDaysInMonth = (date: Date) => {
@@ -239,7 +291,7 @@ const AgendaView: React.FC = () => {
                      <div key={dateLabel}>
                          <h3 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wide ml-1">{dateLabel}</h3>
                          <div className="space-y-1">
-                            {dateEvents.map(event => <EventCard key={event.id} event={event} />)}
+                            {dateEvents.map(event => <EventCard key={event.id} event={event} onClick={() => handleEditEvent(event)} />)}
                          </div>
                      </div>
                  ))}
