@@ -414,8 +414,7 @@ const AgendaView: React.FC = () => {
 >
     <Plus className="w-7 h-7" />
 </button>
-
-            {/* Sync Modal */}
+            {/* 1. Sync Modal */}
             {showSyncModal && (
                 <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
                     <div className="bg-white w-full sm:w-[90%] max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up">
@@ -431,143 +430,64 @@ const AgendaView: React.FC = () => {
                                 <div key={conn.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl bg-gray-50">
                                     <div className="flex items-center space-x-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${conn.source === 'GOOGLE' ? 'bg-white shadow-sm' : 'bg-blue-100'}`}>
-                                            {/* Simple Icon placeholder for Google G */}
-                                            {conn.source === 'GOOGLE' 
-                                                ? <span className="font-bold text-blue-500 text-lg">G</span>
-                                                : <CalendarIcon className="w-5 h-5 text-blue-600" />
-                                            }
+                                            {conn.source === 'GOOGLE' ? <span className="font-bold text-blue-500 text-lg">G</span> : <CalendarIcon className="w-5 h-5 text-blue-600" />}
                                         </div>
                                         <div>
                                             <p className="font-bold text-gray-800 text-sm">{conn.accountName}</p>
                                             <p className="text-[10px] text-gray-400">
-                                                {conn.connectionStatus === 'CONNECTED' 
-                                                    ? `Sincronizado: ${new Date(conn.lastSyncDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` 
-                                                    : 'Desconectado'}
+                                                {conn.connectionStatus === 'CONNECTED' ? `Sincronizado: ${new Date(conn.lastSyncDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : 'Desconectado'}
                                             </p>
                                         </div>
                                     </div>
-                                    
-                                    <button 
-                                        onClick={() => toggleConnection(conn.id)}
-                                        className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 ${conn.connectionStatus === 'CONNECTED' ? 'bg-green-500' : 'bg-gray-300'}`}
-                                    >
+                                    <button onClick={() => toggleConnection(conn.id)} className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 ${conn.connectionStatus === 'CONNECTED' ? 'bg-green-500' : 'bg-gray-300'}`}>
                                         <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${conn.connectionStatus === 'CONNECTED' ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                     </button>
                                 </div>
                             ))}
-
-                            <button 
-    onClick={() => loginComGoogle()} // <--- Adicione isso aqui
-    className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium text-sm hover:bg-gray-50 flex items-center justify-center space-x-2"
->
-    <Plus className="w-4 h-4" />
-    <span>Conectar Google Calendar</span>
-</button>
+                            <button onClick={() => loginComGoogle()} className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium text-sm hover:bg-gray-50 flex items-center justify-center space-x-2">
+                                <Plus className="w-4 h-4" />
+                                <span>Conectar Google Calendar</span>
+                            </button>
                         </div>
-
-                        <button 
-                            onClick={() => { setShowSyncModal(false); setForceUpdate(prev => prev + 1); }}
-                            className="w-full bg-lyvo-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-600 transition"
-                        >
+                        <button onClick={() => { setShowSyncModal(false); setForceUpdate(prev => prev + 1); }} className="w-full bg-lyvo-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-600 transition">
                             Concluído
                         </button>
                     </div>
-                    {/* Modal de Edição/Criação - Fase 2 */}
+                </div>
+            )}
+
+            {/* 2. Edit/Create Modal (Fase 2) */}
             {showEditModal && editingEvent && (
                 <div className="absolute inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slide-up">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-gray-800">
-                                {editingEvent.id ? 'Editar Compromisso' : 'Novo Compromisso'}
-                            </h2>
-                            <button 
-                                onClick={() => { setShowEditModal(false); setEditingEvent(null); }} 
-                                className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 transition-colors"
-                            >
+                            <h2 className="text-xl font-bold text-gray-800">{editingEvent.id ? 'Editar Compromisso' : 'Novo Compromisso'}</h2>
+                            <button onClick={() => { setShowEditModal(false); setEditingEvent(null); }} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         <div className="space-y-4">
-                            {/* Título */}
-                            <div>
-                                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Título</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Ex: Reunião de Planejamento"
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-lyvo-primary outline-none transition-all"
-                                    value={editingEvent.title || ''}
-                                    onChange={e => setEditingEvent({...editingEvent, title: e.target.value})}
-                                />
-                            </div>
-
-                            {/* Seletor de Tipo (Fase 2) */}
-                            <div>
-                                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Tipo</label>
-                                <div className="flex gap-2 mt-1">
-                                    {(['EVENT', 'TASK', 'REMINDER'] as const).map(t => (
-                                        <button
-                                            key={t}
-                                            onClick={() => setEditingEvent({...editingEvent, type: t})}
-                                            className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-all ${
-                                                editingEvent.type === t 
-                                                ? 'bg-lyvo-primary text-white border-lyvo-primary' 
-                                                : 'bg-white text-gray-400 border-gray-100'
-                                            }`}
-                                        >
-                                            {t === 'EVENT' ? 'Evento' : t === 'TASK' ? 'Tarefa' : 'Lembrete'}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Data e Hora */}
-                            <div>
-                                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Data e Horário</label>
-                                <input 
-                                    type="datetime-local" 
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-lyvo-primary outline-none transition-all"
-                                    value={editingEvent.dateTime ? new Date(editingEvent.dateTime).toISOString().slice(0, 16) : ''}
-                                    onChange={e => setEditingEvent({...editingEvent, dateTime: new Date(e.target.value).toISOString()})}
-                                />
-                            </div>
-
-                            {/* Localização */}
-                            <div>
-                                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Localização</label>
-                                <div className="flex items-center bg-gray-50 border border-gray-100 rounded-xl px-3 py-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-lyvo-primary transition-all">
-                                    <MapPin className="w-4 h-4 text-gray-400 mr-2" />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Onde será?"
-                                        className="flex-1 text-sm bg-transparent outline-none"
-                                        value={editingEvent.location || ''}
-                                        onChange={e => setEditingEvent({...editingEvent, location: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Ações de Rodapé */}
-                            <div className="flex gap-3 pt-4 border-t border-gray-50 mt-6">
-                                {editingEvent.id && (
-                                    <button 
-                                        onClick={() => handleDeleteEvent(editingEvent.id!)}
-                                        className="px-5 py-3 rounded-xl bg-red-50 text-red-500 font-bold hover:bg-red-100 transition-colors"
-                                    >
-                                        Excluir
+                            <input type="text" placeholder="Título" className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none" value={editingEvent.title || ''} onChange={e => setEditingEvent({...editingEvent, title: e.target.value})} />
+                            
+                            <div className="flex gap-2">
+                                {(['EVENT', 'TASK', 'REMINDER'] as const).map(t => (
+                                    <button key={t} onClick={() => setEditingEvent({...editingEvent, type: t})} className={`flex-1 py-2 text-xs font-bold rounded-lg border ${editingEvent.type === t ? 'bg-lyvo-primary text-white' : 'bg-white text-gray-400'}`}>
+                                        {t === 'EVENT' ? 'Evento' : t === 'TASK' ? 'Tarefa' : 'Lembrete'}
                                     </button>
+                                ))}
+                            </div>
+
+                            <input type="datetime-local" className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none" value={editingEvent.dateTime ? new Date(editingEvent.dateTime).toISOString().slice(0, 16) : ''} onChange={e => setEditingEvent({...editingEvent, dateTime: new Date(e.target.value).toISOString()})} />
+
+                            <div className="flex gap-3 pt-4">
+                                {editingEvent.id && (
+                                    <button onClick={() => handleDeleteEvent(editingEvent.id!)} className="px-5 py-3 rounded-xl bg-red-50 text-red-500 font-bold">Excluir</button>
                                 )}
-                                <button 
-                                    onClick={handleSaveEvent}
-                                    className="flex-1 bg-lyvo-primary text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-600 transition-all active:scale-95"
-                                >
-                                    Salvar Alterações
-                                </button>
+                                <button onClick={handleSaveEvent} className="flex-1 bg-lyvo-primary text-white py-3 rounded-xl font-bold shadow-lg">Salvar</button>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
                 </div>
             )}
         </div>
@@ -575,3 +495,5 @@ const AgendaView: React.FC = () => {
 };
 
 export default AgendaView;
+
+            
