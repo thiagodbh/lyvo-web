@@ -93,57 +93,72 @@ const AgendaView: React.FC = () => {
         syncAll();
     }, [selectedDate, showEventModal, forceUpdate]);
 
-    // --- 3. SALVAMENTO (RESOLVE DUPLICAÇÃO) ---
-    const handleSaveEvent = async () => {
-        if (!formData.title || !formData.dateTime) return;
+// --- 3. SALVAMENTO CORRIGIDO (FOCADO EM NÃO DUPLICAR) ---
+const handleSaveEvent = async () => {
+    // Validação rigorosa
+    if (!formData.title || !formData.dateTime) {
+        alert("Título e Data são obrigatórios.");
+        return;
+    }
 
-        const eventId = editingEvent?.id || Math.random().toString(36).substr(2, 9);
+    try {
+        setIsLoading(true);
+        
+        // Se temos editingEvent.id, usamos ele. Jamais geramos um novo se estivermos editando.
+        const targetId = editingEvent?.id;
 
         const eventToSave: CalendarEvent = {
             ...formData,
-            id: eventId,
+            id: targetId || Math.random().toString(36).substr(2, 9),
             source: 'INTERNAL',
-            recurringDays: formData.recurringDays || []
+            recurringDays: formData.isFixed ? (formData.recurringDays || []) : []
         };
 
+        if (targetId) {
+            // Garantia de atualização por ID
+            await store.updateEvent(eventToSave);
+        } else {
+            await store.addEvent(eventToSave);
+        }
+        
+        // LIMPEZA TOTAL DE ESTADO APÓS SUCESSO
+        setShowEventModal(false);
+        setEditingEvent(null);
+        setFormData(initialForm);
+        
+        // Força a re-busca dos dados do Firestore para garantir sincronia
+        setForceUpdate(prev => prev + 1);
+    } catch (error) {
+        console.error("Erro crítico ao salvar:", error);
+        alert("Erro ao salvar. Verifique o console.");
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+// --- 4. EXCLUSÃO CORRIGIDA ---
+const handleDeleteEvent = async (id: string) => {
+    if (!id) return;
+    
+    if (window.confirm("Tem certeza que deseja remover este compromisso?")) {
         try {
             setIsLoading(true);
-            if (editingEvent?.id) {
-                await store.updateEvent(eventToSave);
-            } else {
-                await store.addEvent(eventToSave);
-            }
+            await store.deleteEvent(id); 
+            
+            // Remove do estado local imediatamente para dar feedback visual
+            setEvents(prev => prev.filter(e => e.id !== id));
             
             setShowEventModal(false);
             setEditingEvent(null);
-            setFormData(initialForm);
             setForceUpdate(prev => prev + 1);
         } catch (error) {
-            console.error("Erro ao salvar:", error);
+            console.error("Erro ao deletar:", error);
+            alert("Não foi possível excluir o evento.");
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleDeleteEvent = async (id: string) => {
-        if (!id) return;
-        const eventToDelete = events.find(e => e.id === id);
-        const mensagem = eventToDelete?.isFixed 
-            ? "Este é um compromisso FIXO. Deseja excluir TODAS as repetições?" 
-            : "Deseja excluir este compromisso permanentemente?";
-
-        if (window.confirm(mensagem)) {
-            try {
-                await store.deleteEvent(id); 
-                setEvents(prev => prev.filter(e => e.id !== id));
-                setShowEventModal(false);
-                setEditingEvent(null);
-                setForceUpdate(prev => prev + 1);
-            } catch (error) {
-                console.error("Erro ao deletar:", error);
-            }
-        }
-    };
+    }
+};
 
     // --- 4. LÓGICA DO CALENDÁRIO ---
     const calendarGrid = useMemo(() => {
