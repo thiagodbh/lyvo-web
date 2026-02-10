@@ -172,15 +172,20 @@ const handleDeleteEvent = async (id: string) => {
     }, [selectedDate]);
 
     const getEventsForDate = (date: Date) => {
-        const dayOfWeek = date.getDay();
-        return events.filter(e => {
-            if (e.status === 'CANCELED') return false;
-            const eventDate = new Date(e.dateTime).toDateString();
-            const isSpecificDay = eventDate === date.toDateString();
-            const isRecurringDay = e.isFixed && (e.recurringDays || []).includes(dayOfWeek);
-            return isSpecificDay || isRecurringDay;
-        });
-    };
+    const dayOfWeek = date.getDay();
+    return events.filter(e => {
+        // Se o evento foi cancelado, ele não deve poluir a agenda
+        if (e.status === 'CANCELED') return false;
+
+        const eventDate = new Date(e.dateTime).toDateString();
+        const isSpecificDay = eventDate === date.toDateString();
+        
+        // Lógica de recorrência para eventos fixos
+        const isRecurringDay = e.isFixed && (e.recurringDays || []).includes(dayOfWeek);
+        
+        return isSpecificDay || isRecurringDay;
+    });
+};
 
     const renderStatusIcon = (status: string) => {
         switch(status) {
@@ -297,22 +302,28 @@ const handleDeleteEvent = async (id: string) => {
                                 <div 
                                     key={event.id}
                                     onClick={() => { 
-                                        if (event.source === 'GOOGLE') return;
-                                        const dateObj = new Date(event.dateTime);
-                                        const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-                                        setEditingEvent(event); 
-                                        setFormData({
-                                            title: event.title,
-                                            type: event.type || 'EVENT',
-                                            dateTime: formattedDate,
-                                            location: event.location || '',
-                                            isFixed: event.isFixed || false,
-                                            status: event.status || 'PENDING',
-                                            description: event.description || '',
-                                            recurringDays: event.recurringDays || []
-                                        }); 
-                                        setShowEventModal(true); 
-                                    }}
+    if (event.source === 'GOOGLE') return;
+
+    const dateObj = new Date(event.dateTime);
+    // Ajuste de fuso horário para o input datetime-local
+    const formattedDate = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000))
+        .toISOString().slice(0, 16);
+
+    // Salva o objeto INTEIRO do evento (incluindo o ID do Firestore)
+    setEditingEvent(event); 
+    
+    setFormData({
+        title: event.title,
+        type: event.type || 'EVENT',
+        dateTime: formattedDate,
+        location: event.location || '',
+        isFixed: event.isFixed || false,
+        status: event.status || 'PENDING',
+        description: event.description || '',
+        recurringDays: event.recurringDays || []
+    }); 
+    setShowEventModal(true); 
+}}
                                     className={`group p-5 rounded-3xl border border-slate-100 bg-slate-50 transition-all cursor-pointer hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 active:scale-[0.98]
                                         ${event.type === 'REMINDER' ? 'border-l-[6px] border-l-amber-500' : 
                                           event.type === 'TASK' ? 'border-l-[6px] border-l-purple-500' :
