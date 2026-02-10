@@ -95,47 +95,45 @@ const AgendaView: React.FC = () => {
 
 // --- 3. SALVAMENTO CORRIGIDO (FOCADO EM NÃO DUPLICAR) ---
 const handleSaveEvent = async () => {
-    // Validação rigorosa
-    if (!formData.title || !formData.dateTime) {
-        alert("Título e Data são obrigatórios.");
-        return;
-    }
+    if (!formData.title || !formData.dateTime) return;
 
     try {
         setIsLoading(true);
-        
-        // Se temos editingEvent.id, usamos ele. Jamais geramos um novo se estivermos editando.
-        const targetId = editingEvent?.id;
+
+        // LÓGICA ANTI-DUPLICAÇÃO:
+        // Prioridade total para o ID do evento que está sendo editado.
+        const eventId = editingEvent?.id;
 
         const eventToSave: CalendarEvent = {
             ...formData,
-            id: targetId || Math.random().toString(36).substr(2, 9),
+            // Se não houver id (novo evento), gera um. Se houver, preserva o original.
+            id: eventId || Math.random().toString(36).substr(2, 9),
             source: 'INTERNAL',
-            recurringDays: formData.isFixed ? (formData.recurringDays || []) : []
+            recurringDays: formData.recurringDays || []
         };
 
-        if (targetId) {
-            // Garantia de atualização por ID
+        if (eventId) {
+            // Se tinha ID, é uma atualização obrigatória
             await store.updateEvent(eventToSave);
         } else {
+            // Se não tinha ID, é uma criação nova
             await store.addEvent(eventToSave);
         }
         
-        // LIMPEZA TOTAL DE ESTADO APÓS SUCESSO
+        // Limpeza rigorosa do estado
         setShowEventModal(false);
         setEditingEvent(null);
         setFormData(initialForm);
         
-        // Força a re-busca dos dados do Firestore para garantir sincronia
+        // Dispara a atualização global do sistema
         setForceUpdate(prev => prev + 1);
     } catch (error) {
-        console.error("Erro crítico ao salvar:", error);
-        alert("Erro ao salvar. Verifique o console.");
+        console.error("Erro ao salvar:", error);
+        alert("Não foi possível salvar as alterações.");
     } finally {
         setIsLoading(false);
     }
 };
-
 // --- 4. EXCLUSÃO CORRIGIDA ---
 const handleDeleteEvent = async (id: string) => {
     if (!id) return;
