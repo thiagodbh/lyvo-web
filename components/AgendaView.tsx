@@ -291,7 +291,13 @@ const AgendaView: React.FC = () => {
                      <div key={dateLabel}>
                          <h3 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wide ml-1">{dateLabel}</h3>
                          <div className="space-y-1">
-                            {dateEvents.map(event => <EventCard key={event.id} event={event} onClick={() => handleEditEvent(event)} />)}
+                            {dateEvents.map(event => (
+    <EventCard 
+        key={event.id} 
+        event={event} 
+        onClick={() => handleEditEvent(event)} 
+    />
+))}
                          </div>
                      </div>
                  ))}
