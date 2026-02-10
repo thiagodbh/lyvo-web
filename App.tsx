@@ -1,6 +1,7 @@
 import AccessGuard from './src/components/AccessGuard';
 import Paywall from './src/components/Paywall';
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+// Caminhos ajustados para garantir conexão com o Firebase
 import { db } from './src/services/firebase';
 import { store } from './src/services/firestoreStore';
 import React, { useState } from 'react';
@@ -61,8 +62,10 @@ function App() {
 
       try {
         const snap = await getDoc(doc(db, "users", u.uid));
+        // Ajuste na autorização para permitir Trial
         setIsAuthorized(snap.exists() && (snap.data()?.active === true || snap.data()?.plan === "trial"));
-      } catch {
+      } catch (err) {
+        console.error("Erro auth:", err);
         setIsAuthorized(false);
       }
     });
