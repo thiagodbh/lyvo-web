@@ -166,14 +166,14 @@ if (isAuthenticated && isAuthorized === null) {
     };
 
     return (
-      <AccessGuard paywallComponent={<Paywall />}>
+      <AccessGuard paywallComponent={<Paywall onLogout={handleLogout} />}>
         <div className="w-full bg-gray-50 relative overflow-hidden flex flex-col min-h-[100dvh] h-[100dvh]">
-          {/* MAIN CONTENT AREA - Padding bottom matched to nav height */}
+          {/* MAIN CONTENT AREA */}
           <main className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
             {renderContent()}
           </main>
 
-          {/* BOTTOM NAV (STRICTLY FIXED AT BOTTOM) */}
+          {/* BOTTOM NAV */}
           <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
             <NavButton tab={AppTab.CHAT} icon={MessageCircle} label="Chat" />
             <NavButton tab={AppTab.FINANCE} icon={PieChart} label="Finanças" />
