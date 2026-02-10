@@ -434,7 +434,7 @@ const AgendaView: React.FC = () => {
             {/* FAB for new event */}
            <button 
     onClick={handleOpenCreateModal}
-    className="absolute bottom-24 right-6 w-14 h-14 bg-lyvo-primary text-white rounded-2xl shadow-xl flex items-center justify-center hover:bg-blue-600 transition-transform active:scale-95 z-50"
+    className="absolute bottom-24 right-6 w-14 h-14 bg-blue-500 text-white rounded-2xl shadow-xl flex items-center justify-center hover:bg-blue-600 transition-transform active:scale-95 z-50"
 >
     <Plus className="w-7 h-7" />
 </button>
