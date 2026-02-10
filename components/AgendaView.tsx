@@ -399,23 +399,35 @@ const AgendaView: React.FC = () => {
                     </div>
 
                     {/* Mobile View (Stacked) */}
-                    <div className="md:hidden space-y-6">
-                        {viewMode === 'MONTH' && (
-                            <>
-                                {renderMonthView()}
-                                <div>
-                                    <h3 className="text-lg font-bold text-lyvo-text mb-3 px-1">
-                                        Eventos em {selectedDate.toLocaleDateString('pt-BR', { month: 'long' })}
-                                    </h3>
-                                    {renderListView('day')} 
-                                </div>
-                            </>
-                        )}
+                    {/* Mobile View (Fixed Header + Scrollable List) - Fase 4 */}
+<div className="md:hidden flex flex-col h-[calc(100vh-140px)]">
+  {viewMode === "MONTH" && (
+    <>
+      {/* Calendário Fixo no Topo */}
+      <div className="sticky top-0 z-20 bg-white pb-2 shadow-sm">
+        {renderMonthView()}
+      </div>
 
-                        {viewMode === 'WEEK' && renderListView('week')}
-                        
-                        {viewMode === 'DAY' && renderListView('day')}
-                    </div>
+      {/* Lista rolável abaixo do calendário (com respiro pro FAB) */}
+      <div className="flex-1 overflow-y-auto pb-24">
+        {renderListView("day")}
+      </div>
+    </>
+  )}
+
+  {viewMode === "WEEK" && (
+    <div className="flex-1 overflow-y-auto pb-24">
+      {renderListView("week")}
+    </div>
+  )}
+
+  {viewMode === "DAY" && (
+    <div className="flex-1 overflow-y-auto pb-24">
+      {renderListView("day")}
+    </div>
+  )}
+</div>
+
                 </div>
             </div>
 
