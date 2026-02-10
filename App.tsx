@@ -1,17 +1,23 @@
-import AccessGuard from './src/components/AccessGuard';
-import Paywall from './src/components/Paywall';
+import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { MessageCircle, PieChart, Calendar, User, Settings, LogOut } from 'lucide-react';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+// Imports de Serviços
 import { db } from './src/services/firebase';
 import { store } from './src/services/firestoreStore';
-import React, { useState } from 'react';
 import { authService } from './src/services/authService';
-import { MessageCircle, PieChart, Calendar, User, Settings, LogOut } from 'lucide-react';
+
+// Imports de Componentes
+import AccessGuard from './src/components/AccessGuard';
+import Paywall from './src/components/Paywall';
 import ChatInterface from './src/components/ChatInterface';
 import FinanceDashboard from './src/components/FinanceDashboard';
 import AgendaView from './src/components/AgendaView';
 import LandingPage from './src/components/LandingPage';
+
+// Types
 import { AppTab } from './src/types';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Placeholder for Profile Screen
 const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
@@ -46,7 +52,7 @@ function App() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const unsubscribe = authService.onChange(async (u) => {
       if (!u?.uid) {
         store.clearUser();
@@ -57,11 +63,10 @@ function App() {
 
       store.setUser(u.uid);
       setIsAuthenticated(true);
-      setIsAuthorized(null);
 
       try {
         const snap = await getDoc(doc(db, "users", u.uid));
-        // Lógica de autorização preservada
+        // Valida se o documento existe e se o plano é trial ou active
         setIsAuthorized(snap.exists() && (snap.data()?.active === true || snap.data()?.plan === "trial"));
       } catch (err) {
         console.error("Erro na autorização:", err);
@@ -77,20 +82,26 @@ function App() {
   };
 
   const handleSignUp = async (email: string, password: string) => {
-    await authService.signUp(email, password);
-    const u = authService.getCurrentUser();
-    if (!u?.uid) return;
+    try {
+      await authService.signUp(email, password);
+      const u = authService.getCurrentUser();
+      if (!u?.uid) return;
 
-    const userRef = doc(db, "users", u.uid);
-    const snap = await getDoc(userRef);
+      const userRef = doc(db, "users", u.uid);
+      const snap = await getDoc(userRef);
 
-    if (!snap.exists()) {
-      await setDoc(userRef, {
-        email,
-        active: true, 
-        plan: "trial",
-        createdAt: serverTimestamp(),
-      });
+      // Implementação rigorosa do Trial de 7 dias no Firestore
+      if (!snap.exists()) {
+        await setDoc(userRef, {
+          email,
+          active: true, 
+          plan: "trial",
+          createdAt: serverTimestamp(),
+        });
+        setIsAuthorized(true);
+      }
+    } catch (error) {
+      console.error("Erro no cadastro:", error);
     }
   };
 
@@ -108,6 +119,7 @@ function App() {
     );
   }
 
+  // Tela de transição enquanto verifica Firestore
   if (isAuthenticated && isAuthorized === null) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-gray-50">
