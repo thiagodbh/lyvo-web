@@ -1,23 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import Paywall from './components/Paywall';
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from './services/firebase';
+import { store } from './services/firestoreStore';
+import React, { useState } from 'react';
+import { authService } from './services/authService';
 import { MessageCircle, PieChart, Calendar, User, Settings, LogOut } from 'lucide-react';
+import ChatInterface from './components/ChatInterface';
+import FinanceDashboard from './components/FinanceDashboard';
+import AgendaView from './components/AgendaView';
+import LandingPage from './components/LandingPage';
+import { AppTab } from './types';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-
-// Imports de Serviços
-import { db } from './src/services/firebase';
-import { store } from './src/services/firestoreStore';
-import { authService } from './src/services/authService';
-
-// Imports de Componentes
-import AccessGuard from './src/components/AccessGuard';
-import Paywall from './src/components/Paywall';
-import ChatInterface from './src/components/ChatInterface';
-import FinanceDashboard from './src/components/FinanceDashboard';
-import AgendaView from './src/components/AgendaView';
-import LandingPage from './src/components/LandingPage';
-
-// Types
-import { AppTab } from './src/types';
 
 // Placeholder for Profile Screen
 const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
@@ -52,90 +45,96 @@ function App() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
-  useEffect(() => {
-    const unsubscribe = authService.onChange(async (u) => {
-      if (!u?.uid) {
-        store.clearUser();
-        setIsAuthenticated(false);
-        setIsAuthorized(null);
-        return;
-      }
+ React.useEffect(() => {
+  const unsubscribe = authService.onChange(async (u) => {
+    if (!u?.uid) {
+      store.clearUser();
+      setIsAuthenticated(false);
+      setIsAuthorized(null);
+      return;
+    }
 
-      store.setUser(u.uid);
-      setIsAuthenticated(true);
+    store.setUser(u.uid);
+    setIsAuthenticated(true);
 
-      try {
-        const snap = await getDoc(doc(db, "users", u.uid));
-        // Valida se o documento existe e se o plano é trial ou active
-        setIsAuthorized(snap.exists() && (snap.data()?.active === true || snap.data()?.plan === "trial"));
-      } catch (err) {
-        console.error("Erro na autorização:", err);
-        setIsAuthorized(false);
-      }
-    });
+    setIsAuthorized(null);
 
-    return () => unsubscribe?.();
-  }, []);
+    try {
+      const snap = await getDoc(doc(db, "users", u.uid));
+      setIsAuthorized(snap.exists() && snap.data()?.active === true);
+    } catch {
+      setIsAuthorized(false);
+    }
+  });
+
+  return () => unsubscribe?.();
+}, []);
+
 
   const handleLogin = async (email: string, password: string) => {
-    await authService.signIn(email, password);
-  };
+  await authService.signIn(email, password);
+};
 
-  const handleSignUp = async (email: string, password: string) => {
-    try {
-      await authService.signUp(email, password);
-      const u = authService.getCurrentUser();
-      if (!u?.uid) return;
+const handleSignUp = async (email: string, password: string) => {
+  await authService.signUp(email, password);
 
-      const userRef = doc(db, "users", u.uid);
-      const snap = await getDoc(userRef);
+  const u = authService.getCurrentUser();
+  if (!u?.uid) return;
 
-      // Implementação rigorosa do Trial de 7 dias no Firestore
-      if (!snap.exists()) {
-        await setDoc(userRef, {
-          email,
-          active: true, 
-          plan: "trial",
-          createdAt: serverTimestamp(),
-        });
-        setIsAuthorized(true);
-      }
-    } catch (error) {
-      console.error("Erro no cadastro:", error);
-    }
-  };
+  const userRef = doc(db, "users", u.uid);
+  const snap = await getDoc(userRef);
+
+  // cria o cadastro do usuário no Firestore (uma única vez)
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      email,
+      active: false,          // começa bloqueado
+      plan: "free",
+      createdAt: serverTimestamp(),
+    });
+  }
+};
 
   const handleLogout = async () => {
-    await authService.signOut();
-    setCurrentTab(AppTab.CHAT);
-    setIsAuthorized(null);
-  };
+  await authService.signOut();
+  setCurrentTab(AppTab.CHAT);
+  setIsAuthorized(null);
+};
 
+
+  // --- Authenticated Layout (Responsive with Fixed Bottom Nav) ---
   if (isAuthenticated === null) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-        <div className="text-gray-500 font-medium">Carregando...</div>
-      </div>
-    );
-  }
+  return (
+    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+      <div className="text-gray-500 font-medium">Carregando...</div>
+    </div>
+  );
+}
+if (isAuthenticated && isAuthorized === null) {
+  return (
+    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+      <div className="text-gray-500 font-medium">Verificando acesso...</div>
+    </div>
+  );
+}
 
-  // Tela de transição enquanto verifica Firestore
-  if (isAuthenticated && isAuthorized === null) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-        <div className="text-gray-500 font-medium">Verificando acesso...</div>
-      </div>
-    );
-  }
+if (isAuthenticated && isAuthorized === false) {
+  return <Paywall onLogout={handleLogout} />;
+}
 
   if (isAuthenticated) {
     const renderContent = () => {
       switch (currentTab) {
-        case AppTab.CHAT: return <ChatInterface />;
-        case AppTab.FINANCE: return <FinanceDashboard />;
-        case AppTab.AGENDA: return <AgendaView />;
-        case AppTab.PROFILE: return <ProfileScreen onLogout={handleLogout} />;
-        default: return <ChatInterface />;
+        case AppTab.CHAT:
+          return <ChatInterface />;
+        case AppTab.FINANCE:
+          return <FinanceDashboard />;
+        case AppTab.AGENDA:
+          return <AgendaView />;
+        case AppTab.PROFILE:
+          return <ProfileScreen onLogout={handleLogout} />;
+        default:
+          return <ChatInterface />;
       }
     };
 
@@ -149,30 +148,44 @@ function App() {
             ${isActive ? 'text-lyvo-primary' : 'text-gray-400 hover:text-gray-600'}
           `}
         >
-          <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''} transition-all duration-300`} strokeWidth={isActive ? 2.5 : 2} />
-          <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : ''}`}>{label}</span>
+          <Icon
+            className={`
+              w-6 h-6 
+              ${isActive ? 'fill-current' : ''} transition-all duration-300
+            `}
+            strokeWidth={isActive ? 2.5 : 2}
+          />
+          <span
+            className={`
+              text-[10px] 
+              font-medium ${isActive ? 'font-bold' : ''}
+            `}
+          >
+            {label}
+          </span>
         </button>
       );
     };
 
     return (
-      <AccessGuard paywallComponent={<Paywall onLogout={handleLogout} />}>
-        <div className="w-full bg-gray-50 relative overflow-hidden flex flex-col min-h-[100dvh] h-[100dvh]">
-          <main className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
-            {renderContent()}
-          </main>
+      <div className="w-full bg-gray-50 relative overflow-hidden flex flex-col min-h-[100dvh] h-[100dvh]">
+        {/* MAIN CONTENT AREA - Padding bottom matched to nav height */}
+        <main className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
+          {renderContent()}
+        </main>
 
-          <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-            <NavButton tab={AppTab.CHAT} icon={MessageCircle} label="Chat" />
-            <NavButton tab={AppTab.FINANCE} icon={PieChart} label="Finanças" />
-            <NavButton tab={AppTab.AGENDA} icon={Calendar} label="Agenda" />
-            <NavButton tab={AppTab.PROFILE} icon={User} label="Perfil" />
-          </nav>
-        </div>
-      </AccessGuard>
+        {/* BOTTOM NAV (STRICTLY FIXED AT BOTTOM) */}
+        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+          <NavButton tab={AppTab.CHAT} icon={MessageCircle} label="Chat" />
+          <NavButton tab={AppTab.FINANCE} icon={PieChart} label="Finanças" />
+          <NavButton tab={AppTab.AGENDA} icon={Calendar} label="Agenda" />
+          <NavButton tab={AppTab.PROFILE} icon={User} label="Perfil" />
+        </nav>
+      </div>
     );
   }
 
+  // --- Unauthenticated Layout (Landing Page) ---
   return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
 }
 
