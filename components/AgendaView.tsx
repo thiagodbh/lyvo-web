@@ -174,8 +174,20 @@ const AgendaView: React.FC = () => {
                date1.getFullYear() === date2.getFullYear();
     };
 
-    const getEventsForDate = (date: Date) => {
-        return events.filter(e => isSameDate(new Date(e.dateTime), date));
+   const getEventsForDate = (date: Date) => {
+        return events.filter(e => {
+            const eventDate = new Date(e.dateTime);
+            
+            // 1. Verificação de data exata (Evento normal)
+            const isSameDay = isSameDate(eventDate, date);
+            
+            // 2. Verificação de recorrência (Fase 3)
+            const dayOfWeek = date.getDay();
+            const isRecurring = e.recurringDays?.includes(dayOfWeek);
+            
+            // O evento aparece se for no dia específico OU se for recorrente naquele dia da semana
+            return isSameDay || isRecurring;
+        });
     };
 
     const handleNavigate = (direction: 'prev' | 'next') => {
@@ -477,6 +489,43 @@ const AgendaView: React.FC = () => {
                                     </button>
                                 ))}
                             </div>
+                            {/* Seletor de Recorrência Semanal (Fase 3) */}
+                <div className="mt-2">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Repetir Semanalmente</label>
+                    <div className="flex justify-between mt-1 px-1">
+                        {[
+                            { label: 'D', value: 0 },
+                            { label: 'S', value: 1 },
+                            { label: 'T', value: 2 },
+                            { label: 'Q', value: 3 },
+                            { label: 'Q', value: 4 },
+                            { label: 'S', value: 5 },
+                            { label: 'S', value: 6 }
+                        ].map((day) => {
+                            const isSelected = editingEvent.recurringDays?.includes(day.value);
+                            return (
+                                <button
+                                    key={day.value}
+                                    type="button"
+                                    onClick={() => {
+                                        const currentDays = editingEvent.recurringDays || [];
+                                        const nextDays = isSelected
+                                            ? currentDays.filter(d => d !== day.value)
+                                            : [...currentDays, day.value];
+                                        setEditingEvent({ ...editingEvent, recurringDays: nextDays });
+                                    }}
+                                    className={`w-8 h-8 rounded-full text-[10px] font-bold transition-all border ${
+                                        isSelected 
+                                        ? 'bg-lyvo-primary text-white border-lyvo-primary shadow-sm' 
+                                        : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'
+                                    }`}
+                                >
+                                    {day.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
 
                             <input type="datetime-local" className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none" value={editingEvent.dateTime ? new Date(editingEvent.dateTime).toISOString().slice(0, 16) : ''} onChange={e => setEditingEvent({...editingEvent, dateTime: new Date(e.target.value).toISOString()})} />
 
