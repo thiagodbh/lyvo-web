@@ -427,7 +427,6 @@ const ChatInterface: React.FC = () => {
           onClose={() => { setActiveModal(null); setModalInitialData(null); }}
           onSave={async (data) => {
             try {
-              // 1. INÍCIO DA MUDANÇA: Adicionamos o AWAIT para garantir a gravação
               if (data.type === 'EVENT') {
                 const [year, month, day] = data.date.split('-').map(Number);
                 const [hour, minute] = data.time.split(':').map(Number);
@@ -454,27 +453,19 @@ const ChatInterface: React.FC = () => {
                 );
               }
 
-              // 2. DISPARA O EVENTO PARA ATUALIZAR A TELA
               window.dispatchEvent(new Event('lyvo:data-changed'));
 
-              // 3. LIMPA O MODAL E EXIBE SUCESSO
               setActiveModal(null);
               setModalInitialData(null);
               setMessages((prev) => [
                 ...prev,
                 { id: Date.now().toString(), role: 'assistant', content: '✅ Registrado com sucesso!' },
               ]);
-              // FINAL DA MUDANÇA
             } catch (e) {
-              // AQUI VOCÊ MANTÉM O SEU CÓDIGO DO PRINT (Linha 464 em diante)
               console.error('SAVE ERROR:', e);
               setMessages((prev) => [
                 ...prev,
-                { 
-                  id: Date.now().toString(), 
-                  role: 'assistant', 
-                  content: '❌ Erro ao salvar. Verifique sua conexão.' 
-                },
+                { id: Date.now().toString(), role: 'assistant', content: '❌ Erro ao salvar. Verifique sua conexão.' },
               ]);
             }
           }}
