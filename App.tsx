@@ -168,6 +168,12 @@ if (isAuthenticated && isAuthorized === false) {
     };
 
     return (
+      <AccessGuard paywallComponent={<Paywall onLogout={handleLogout} />}>
+        <div className="w-full bg-gray-50 relative overflow-hidden flex flex-col min-h-[100dvh] h-[100dvh]">
+          {/* ... restante do seu código (main, nav, etc) ... */}
+        </div>
+      </AccessGuard>
+    );
       <div className="w-full bg-gray-50 relative overflow-hidden flex flex-col min-h-[100dvh] h-[100dvh]">
         {/* MAIN CONTENT AREA - Padding bottom matched to nav height */}
         <main className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
