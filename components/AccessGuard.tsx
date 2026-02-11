@@ -16,17 +16,19 @@ const AccessGuard: React.FC<AccessGuardProps> = ({ children, paywallComponent })
  // src/components/AccessGuard.tsx
 
   useEffect(() => {
+    // 1. Pegamos o usuário atual IMEDIATAMENTE
+    const user = authService.getCurrentUser();
+    
+    if (!user) {
+      setStatus('denied');
+      return;
+    }
+
+    // 2. ATIVAÇÃO IMEDIATA DA STORE (Local Exato da Correção)
+    // Isso garante que o UID esteja disponível antes de qualquer tentativa de salvar dado
+    store.setUser(user.uid);
+
     const checkAccess = async () => {
-      const user = authService.getCurrentUser();
-      
-      if (!user) {
-        setStatus('denied');
-        return;
-      }
-
-      // ESTA LINHA É A CHAVE: Ela ativa a store ANTES de carregar as abas
-      store.setUser(user.uid);
-
       try {
         const userRef = doc(db, "users", user.uid);
         const snap = await getDoc(userRef);
@@ -34,13 +36,11 @@ const AccessGuard: React.FC<AccessGuardProps> = ({ children, paywallComponent })
         if (snap.exists()) {
           const data = snap.data();
           
-          // Se for premium, libera
           if (data.active === true || data.plan === 'premium') {
             setStatus('granted');
             return;
           }
 
-          // Lógica dos 4 dias
           if (data.createdAt) {
             const createdAt = data.createdAt.toDate();
             const now = new Date();
@@ -56,7 +56,6 @@ const AccessGuard: React.FC<AccessGuardProps> = ({ children, paywallComponent })
         setStatus('denied');
       } catch (error) {
         console.error("Erro ao validar acesso:", error);
-        // Em caso de erro de rede, podemos liberar para não travar o usuário
         setStatus('granted'); 
       }
     };
