@@ -198,16 +198,18 @@ class FirestoreStore {
     return `${billingDate.getFullYear()}-${String(billingDate.getMonth() + 1).padStart(2, "0")}`;
   }
 
-  async addTransaction(t: Omit<Transaction, "id">, installments: number = 1) {
-  // AJUSTE DE SEGURANÇA: Se o uid da store estiver nulo, busca direto do Auth
-  if (!this.uid) {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) this.uid = currentUser.uid;
-  }
+ async addTransaction(t: Omit<Transaction, "id">, installments: number = 1) {
+    // GARANTIA TOTAL: Busca o UID no ato do clique se ele estiver nulo
+    if (!this.uid) {
+      this.uid = auth.currentUser?.uid || null;
+    }
 
-  if (!this.uid) return null;
+    if (!this.uid) {
+      console.error("Tentativa de salvar sem UID");
+      return null;
+    }
 
-    // cartão (parcelado)
+    // Código de cartão (parcelado)
     if ((t as any).relatedCardId) {
       const baseDate = new Date(t.date);
       const valPerInstallment = t.value / installments;
@@ -227,6 +229,7 @@ class FirestoreStore {
           createdAt: Timestamp.now(),
         });
       }
+      window.dispatchEvent(new Event("lyvo:data-changed"));
       return null;
     }
 
@@ -236,7 +239,6 @@ class FirestoreStore {
       createdAt: Timestamp.now(),
     });
 
-    // atualizar spent (opcional, igual ao mock)
     if (t.type === "EXPENSE") {
       const budget = this.budgetLimits.find((b) => b.category === t.category);
       if (budget) {
@@ -245,11 +247,10 @@ class FirestoreStore {
         });
       }
     }
-window.dispatchEvent(new Event("lyvo:data-changed"));
-    
+
+    window.dispatchEvent(new Event("lyvo:data-changed"));
     return { ...(t as any), id: ref.id } as Transaction;
   }
-
   async deleteTransaction(id: string) {
     await deleteDoc(doc(db, "transactions", id));
   }
@@ -629,13 +630,21 @@ window.dispatchEvent(new Event("lyvo:data-changed"));
 
   // ---------------- AGENDA ----------------
 
-  addEvent(e: Omit<CalendarEvent, "id" | "source">) {
+  async addEvent(e: Omit<CalendarEvent, "id" | "source">) {
+    if (!this.uid) {
+      this.uid = auth.currentUser?.uid || null;
+    }
     if (!this.uid) return null;
+
     const payload: Omit<CalendarEvent, "id"> = { ...(e as any), source: "INTERNAL" };
-    return addDoc(this.col("events"), { ...payload, uid: this.uid, createdAt: Timestamp.now() }).then((ref) => ({
-      ...(payload as any),
-      id: ref.id,
-    }));
+    const ref = await addDoc(this.col("events"), { 
+      ...payload, 
+      uid: this.uid, 
+      createdAt: Timestamp.now() 
+    });
+
+    window.dispatchEvent(new Event("lyvo:data-changed"));
+    return { ...(payload as any), id: ref.id };
   }
 
   toggleConnection(id: string) {
