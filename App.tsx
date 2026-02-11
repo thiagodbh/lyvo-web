@@ -160,21 +160,8 @@ if (isAuthenticated && isAuthorized === null) {
             ${isActive ? 'text-lyvo-primary' : 'text-gray-400 hover:text-gray-600'}
           `}
         >
-          <Icon
-            className={`
-              w-6 h-6 
-              ${isActive ? 'fill-current' : ''} transition-all duration-300
-            `}
-            strokeWidth={isActive ? 2.5 : 2}
-          />
-          <span
-            className={`
-              text-[10px] 
-              font-medium ${isActive ? 'font-bold' : ''}
-            `}
-          >
-            {label}
-          </span>
+          <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''} transition-all duration-300`} strokeWidth={isActive ? 2.5 : 2} />
+          <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : ''}`}>{label}</span>
         </button>
       );
     };
@@ -195,7 +182,8 @@ if (isAuthenticated && isAuthorized === null) {
         </div>
       </AccessGuard>
     );
-  // --- Unauthenticated Layout (Landing Page) ---
+  }
+
   return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
 }
 
