@@ -239,7 +239,8 @@ class FirestoreStore {
         });
       }
     }
-
+window.dispatchEvent(new Event("lyvo:data-changed"));
+    
     return { ...(t as any), id: ref.id } as Transaction;
   }
 
