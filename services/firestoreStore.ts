@@ -95,10 +95,24 @@ class FirestoreStore {
     this.unsubs = [];
   }
 
+  // NOVO CÓDIGO PARA SUBSTITUIR AS FUNÇÕES ORIGINAIS:
+
   private col(name: string) {
     return collection(db, name);
   }
 
+  // Essa função é o "coração" do app. Se ela falha, tudo some.
+  private qByUid(name: string) {
+    // Buscamos o UID direto do Firebase Auth para garantir que NUNCA seja nulo
+    const uid = this.uid || auth.currentUser?.uid; 
+    
+    if (!uid) {
+      console.warn(`Tentativa de ler a coleção ${name} sem UID logado.`);
+      return null;
+    }
+    
+    return query(this.col(name), where("uid", "==", uid));
+  }
   private qByUid(name: string) {
     if (!this.uid) return null;
     return query(this.col(name), where("uid", "==", this.uid));
