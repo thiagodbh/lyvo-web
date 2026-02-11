@@ -84,6 +84,22 @@ const handleSignUp = async (email: string, password: string) => {
   const userRef = doc(db, "users", u.uid);
   const snap = await getDoc(userRef);
 
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      email,
+      active: false,          // Mantemos false para exigir pagamento após o trial
+      plan: "trial",          // Mudamos para trial para identificação
+      createdAt: serverTimestamp(), // DATA CRUCIAL PARA OS 4 DIAS
+    });
+  }
+};
+
+  const u = authService.getCurrentUser();
+  if (!u?.uid) return;
+
+  const userRef = doc(db, "users", u.uid);
+  const snap = await getDoc(userRef);
+
   // cria o cadastro do usuário no Firestore (uma única vez)
   if (!snap.exists()) {
     await setDoc(userRef, {
