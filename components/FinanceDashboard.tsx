@@ -95,14 +95,22 @@ const FinanceDashboard: React.FC = () => {
         }
     };
 
-    const triggerUpdate = () => setRefreshTrigger(prev => prev + 1);
+    // Localize as linhas 106-114 e substitua por este bloco:
+
+    const triggerUpdate = () => {
+        setRefreshTrigger(prev => prev + 1);
+        refreshData(); // Garante que os dados locais sejam atualizados
+    };
 
     useEffect(() => {
         refreshData();
     }, [viewDate, refreshTrigger]);
 
     useEffect(() => {
-        const handler = () => triggerUpdate();
+        const handler = () => {
+            console.log("Evento recebido: atualizando interface...");
+            triggerUpdate();
+        };
         window.addEventListener("lyvo:data-changed", handler);
         return () => window.removeEventListener("lyvo:data-changed", handler);
     }, []);
