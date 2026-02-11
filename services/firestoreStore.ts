@@ -199,7 +199,13 @@ class FirestoreStore {
   }
 
   async addTransaction(t: Omit<Transaction, "id">, installments: number = 1) {
-    if (!this.uid) return null;
+  // AJUSTE DE SEGURANÇA: Se o uid da store estiver nulo, busca direto do Auth
+  if (!this.uid) {
+    const currentUser = authService.getCurrentUser();
+    if (currentUser) this.uid = currentUser.uid;
+  }
+
+  if (!this.uid) return null;
 
     // cartão (parcelado)
     if ((t as any).relatedCardId) {
