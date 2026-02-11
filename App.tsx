@@ -118,10 +118,6 @@ if (isAuthenticated && isAuthorized === null) {
   );
 }
 
-if (isAuthenticated && isAuthorized === false) {
-  return <Paywall onLogout={handleLogout} />;
-}
-
   if (isAuthenticated) {
     const renderContent = () => {
       switch (currentTab) {
