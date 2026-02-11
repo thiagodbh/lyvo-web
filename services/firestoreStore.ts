@@ -95,24 +95,10 @@ class FirestoreStore {
     this.unsubs = [];
   }
 
-  // NOVO CÓDIGO PARA SUBSTITUIR AS FUNÇÕES ORIGINAIS:
-
   private col(name: string) {
     return collection(db, name);
   }
 
-  // Essa função é o "coração" do app. Se ela falha, tudo some.
-  private qByUid(name: string) {
-    // Buscamos o UID direto do Firebase Auth para garantir que NUNCA seja nulo
-    const uid = this.uid || auth.currentUser?.uid; 
-    
-    if (!uid) {
-      console.warn(`Tentativa de ler a coleção ${name} sem UID logado.`);
-      return null;
-    }
-    
-    return query(this.col(name), where("uid", "==", uid));
-  }
   private qByUid(name: string) {
     if (!this.uid) return null;
     return query(this.col(name), where("uid", "==", this.uid));
@@ -212,18 +198,10 @@ class FirestoreStore {
     return `${billingDate.getFullYear()}-${String(billingDate.getMonth() + 1).padStart(2, "0")}`;
   }
 
- async addTransaction(t: Omit<Transaction, "id">, installments: number = 1) {
-    // GARANTIA TOTAL: Busca o UID no ato do clique se ele estiver nulo
-    if (!this.uid) {
-      this.uid = auth.currentUser?.uid || null;
-    }
+  async addTransaction(t: Omit<Transaction, "id">, installments: number = 1) {
+    if (!this.uid) return null;
 
-    if (!this.uid) {
-      console.error("Tentativa de salvar sem UID");
-      return null;
-    }
-
-    // Código de cartão (parcelado)
+    // cartão (parcelado)
     if ((t as any).relatedCardId) {
       const baseDate = new Date(t.date);
       const valPerInstallment = t.value / installments;
@@ -243,7 +221,6 @@ class FirestoreStore {
           createdAt: Timestamp.now(),
         });
       }
-      window.dispatchEvent(new Event("lyvo:data-changed"));
       return null;
     }
 
@@ -253,6 +230,7 @@ class FirestoreStore {
       createdAt: Timestamp.now(),
     });
 
+    // atualizar spent (opcional, igual ao mock)
     if (t.type === "EXPENSE") {
       const budget = this.budgetLimits.find((b) => b.category === t.category);
       if (budget) {
@@ -262,9 +240,9 @@ class FirestoreStore {
       }
     }
 
-    window.dispatchEvent(new Event("lyvo:data-changed"));
     return { ...(t as any), id: ref.id } as Transaction;
   }
+
   async deleteTransaction(id: string) {
     await deleteDoc(doc(db, "transactions", id));
   }
@@ -644,21 +622,13 @@ class FirestoreStore {
 
   // ---------------- AGENDA ----------------
 
-  async addEvent(e: Omit<CalendarEvent, "id" | "source">) {
-    if (!this.uid) {
-      this.uid = auth.currentUser?.uid || null;
-    }
+  addEvent(e: Omit<CalendarEvent, "id" | "source">) {
     if (!this.uid) return null;
-
     const payload: Omit<CalendarEvent, "id"> = { ...(e as any), source: "INTERNAL" };
-    const ref = await addDoc(this.col("events"), { 
-      ...payload, 
-      uid: this.uid, 
-      createdAt: Timestamp.now() 
-    });
-
-    window.dispatchEvent(new Event("lyvo:data-changed"));
-    return { ...(payload as any), id: ref.id };
+    return addDoc(this.col("events"), { ...payload, uid: this.uid, createdAt: Timestamp.now() }).then((ref) => ({
+      ...(payload as any),
+      id: ref.id,
+    }));
   }
 
   toggleConnection(id: string) {
