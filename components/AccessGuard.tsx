@@ -13,6 +13,8 @@ interface AccessGuardProps {
 const AccessGuard: React.FC<AccessGuardProps> = ({ children, paywallComponent }) => {
   const [status, setStatus] = useState<'loading' | 'granted' | 'denied'>('loading');
 
+ // src/components/AccessGuard.tsx
+
   useEffect(() => {
     const checkAccess = async () => {
       const user = authService.getCurrentUser();
@@ -22,8 +24,7 @@ const AccessGuard: React.FC<AccessGuardProps> = ({ children, paywallComponent })
         return;
       }
 
-      // GARANTIA: Força a store a reconhecer o usuário antes de qualquer renderização
-      // Isso resolve o erro de "dados não salvando"
+      // ESTA LINHA É A CHAVE: Ela ativa a store ANTES de carregar as abas
       store.setUser(user.uid);
 
       try {
@@ -33,15 +34,15 @@ const AccessGuard: React.FC<AccessGuardProps> = ({ children, paywallComponent })
         if (snap.exists()) {
           const data = snap.data();
           
-          // 1. Se for plano ativo, libera direto
-          if (data.active === true && data.plan === 'premium') {
+          // Se for premium, libera
+          if (data.active === true || data.plan === 'premium') {
             setStatus('granted');
             return;
           }
 
-          // 2. Lógica dos 4 dias (Trial)
+          // Lógica dos 4 dias
           if (data.createdAt) {
-            const createdAt = data.createdAt.toDate(); // Converte Timestamp do Firebase
+            const createdAt = data.createdAt.toDate();
             const now = new Date();
             const diffInDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
 
@@ -55,7 +56,8 @@ const AccessGuard: React.FC<AccessGuardProps> = ({ children, paywallComponent })
         setStatus('denied');
       } catch (error) {
         console.error("Erro ao validar acesso:", error);
-        setStatus('denied');
+        // Em caso de erro de rede, podemos liberar para não travar o usuário
+        setStatus('granted'); 
       }
     };
 
