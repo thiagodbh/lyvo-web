@@ -59,12 +59,51 @@ function App() {
 
     setIsAuthorized(null);
 
-    try {
-      const snap = await getDoc(doc(db, "users", u.uid));
-      setIsAuthorized(snap.exists() && snap.data()?.active === true);
-    } catch {
-      setIsAuthorized(false);
-    }
+   try {
+  const userRef = doc(db, "users", u.uid);
+  const snap = await getDoc(userRef);
+
+  if (!snap.exists()) {
+    setIsAuthorized(false);
+    return;
+  }
+
+  const data = snap.data();
+  const now = Date.now();
+
+  // Se ainda não tem trialEndsAt, cria (primeiro login)
+  if (!data.trialEndsAt) {
+    const threeDaysFromNow = Date.now() + 3 * 24 * 60 * 60 * 1000;
+
+    await setDoc(userRef, {
+      ...data,
+      trialEndsAt: threeDaysFromNow,
+    }, { merge: true });
+
+    setIsAuthorized(true);
+    return;
+  }
+
+  // Se já é assinante ativo
+  if (data.active === true) {
+    setIsAuthorized(true);
+    return;
+  }
+
+  // Se ainda está no período de trial
+  if (now < data.trialEndsAt) {
+    setIsAuthorized(true);
+    return;
+  }
+
+  // Caso contrário, bloqueia
+  setIsAuthorized(false);
+
+} catch (err) {
+  console.error(err);
+  setIsAuthorized(false);
+}
+
   });
 
   return () => unsubscribe?.();
