@@ -1,33 +1,48 @@
-import { doc, getDoc, Timestamp } from "firebase/firestore";
+// src/services/accessControl.ts
+import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { db } from "./firebase";
 
-type AccessResult = {
-  allowed: boolean;
-  reason: "ACTIVE" | "TRIAL" | "EXPIRED" | "NO_USER_DOC";
-};
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
-export async function checkUserAccess(uid: string): Promise<AccessResult> {
-  const ref = doc(db, "users", uid);
-  const snap = await getDoc(ref);
+export async function checkUserAccess(uid: string): Promise<boolean> {
+  const userRef = doc(db, "users", uid);
+  const snap = await getDoc(userRef);
 
-  if (!snap.exists()) {
-    return { allowed: false, reason: "NO_USER_DOC" };
+  if (!snap.exists()) return false;
+
+  const data: any = snap.data();
+  const nowMs = Date.now();
+
+  // Assinante ativo
+  if (data.active === true) return true;
+
+  // Se não existe trialEndsAt ainda, cria na primeira vez
+  if (!data.trialEndsAt) {
+    const trialEndsAt = Timestamp.fromDate(new Date(nowMs + THREE_DAYS_MS));
+
+    await setDoc(
+      userRef,
+      {
+        trialEndsAt,
+        plan: "trial",
+        active: false,
+      },
+      { merge: true }
+    );
+
+    return true;
   }
 
-  const data = snap.data() as any;
+  // trialEndsAt pode vir como Timestamp
+  const trialEndsMs =
+    typeof data.trialEndsAt?.toMillis === "function"
+      ? data.trialEndsAt.toMillis()
+      : typeof data.trialEndsAt === "number"
+      ? data.trialEndsAt
+      : null;
 
-  // pago/liberado
-  if (data?.active === true) {
-    return { allowed: true, reason: "ACTIVE" };
-  }
+  if (!trialEndsMs) return false;
 
-  // trial liberado por data
-  const trialEndsAt: Timestamp | undefined = data?.trialEndsAt;
-  if (data?.plan === "trial" && trialEndsAt?.toDate) {
-    const ends = trialEndsAt.toDate().getTime();
-    const now = Date.now();
-    if (ends > now) return { allowed: true, reason: "TRIAL" };
-  }
-
-  return { allowed: false, reason: "EXPIRED" };
+  // Dentro do trial
+  return nowMs < trialEndsMs;
 }
