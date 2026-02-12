@@ -1,3 +1,4 @@
+import { checkUserAccess } from "./services/accessControl";
 import { Timestamp } from "firebase/firestore";
 import Paywall from './components/Paywall';
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -61,47 +62,9 @@ function App() {
     setIsAuthorized(null);
 
    try {
-  const userRef = doc(db, "users", u.uid);
-  const snap = await getDoc(userRef);
-
-  if (!snap.exists()) {
-    setIsAuthorized(false);
-    return;
-  }
-
-  const data = snap.data();
-  const now = Date.now();
-
-  // Se ainda não tem trialEndsAt, cria (primeiro login)
-  if (!data.trialEndsAt) {
-    const threeDaysFromNow = Date.now() + 3 * 24 * 60 * 60 * 1000;
-
-    await setDoc(userRef, {
-      ...data,
-      trialEndsAt: threeDaysFromNow,
-    }, { merge: true });
-
-    setIsAuthorized(true);
-    return;
-  }
-
-  // Se já é assinante ativo
-  if (data.active === true) {
-    setIsAuthorized(true);
-    return;
-  }
-
-  // Se ainda está no período de trial
-  if (now < data.trialEndsAt) {
-    setIsAuthorized(true);
-    return;
-  }
-
-  // Caso contrário, bloqueia
-  setIsAuthorized(false);
-
-} catch (err) {
-  console.error(err);
+  const allowed = await checkUserAccess(u.uid);
+  setIsAuthorized(allowed);
+} catch {
   setIsAuthorized(false);
 }
 
