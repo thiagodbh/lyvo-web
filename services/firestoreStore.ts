@@ -22,7 +22,8 @@ import {
   CalendarConnection,
 } from "../types";
 
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 const DEFAULT_CREDIT_CARDS: Omit<CreditCard, "id">[] = [
   {
@@ -69,13 +70,20 @@ class FirestoreStore {
   private unsubs: Unsub[] = [];
   private seeded = false;
 
-  setUser(uid: string) {
-    if (this.uid === uid) return;
-    this.clearSubscriptions();
-    this.uid = uid;
-    this.startSubscriptions();
-    this.seedDefaultsOnce().catch(() => {});
+  setUser(uid: string | null) {
+  if (!uid) {
+    this.clearUser();
+    return;
   }
+
+  if (this.uid === uid) return;
+
+  this.clearUser(); // limpa arrays + subscriptions
+  this.uid = uid;
+  this.startSubscriptions();
+  this.seedDefaultsOnce().catch(() => {});
+}
+
 
   clearUser() {
     this.uid = null;
@@ -659,3 +667,7 @@ class FirestoreStore {
 
 
 export const store = new FirestoreStore();
+onAuthStateChanged(auth, (user) => {
+  store.setUser(user ? user.uid : null);
+});
+
