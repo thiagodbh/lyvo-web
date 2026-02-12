@@ -8,7 +8,21 @@ export async function checkUserAccess(uid: string): Promise<boolean> {
   const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
 
-  if (!snap.exists()) return false;
+  if (!snap.exists()) {
+  const trialEndsAt = Timestamp.fromDate(new Date(Date.now() + THREE_DAYS_MS));
+
+  await setDoc(
+    userRef,
+    {
+      trialEndsAt,
+      plan: "trial",
+      active: false,
+    },
+    { merge: true }
+  );
+
+  return true;
+}
 
   const data: any = snap.data();
   const nowMs = Date.now();
