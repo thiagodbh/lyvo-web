@@ -8,24 +8,27 @@ export async function checkUserAccess(uid: string): Promise<boolean> {
   const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
 
+  const nowMs = Date.now();
+
+  // ✅ Se o usuário ainda não tem doc (race condition no signup), cria e libera trial
   if (!snap.exists()) {
-  const trialEndsAt = Timestamp.fromDate(new Date(Date.now() + THREE_DAYS_MS));
+    const trialEndsAt = Timestamp.fromDate(new Date(nowMs + THREE_DAYS_MS));
 
-  await setDoc(
-    userRef,
-    {
-      trialEndsAt,
-      plan: "trial",
-      active: false,
-    },
-    { merge: true }
-  );
+    await setDoc(
+      userRef,
+      {
+        active: false,
+        plan: "trial",
+        trialEndsAt,
+        createdAt: Timestamp.now(),
+      },
+      { merge: true }
+    );
 
-  return true;
-}
+    return true;
+  }
 
   const data: any = snap.data();
-  const nowMs = Date.now();
 
   // Assinante ativo
   if (data.active === true) return true;
@@ -47,7 +50,7 @@ export async function checkUserAccess(uid: string): Promise<boolean> {
     return true;
   }
 
-  // trialEndsAt pode vir como Timestamp
+  // trialEndsAt pode vir como Timestamp ou number
   const trialEndsMs =
     typeof data.trialEndsAt?.toMillis === "function"
       ? data.trialEndsAt.toMillis()
