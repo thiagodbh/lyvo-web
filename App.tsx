@@ -94,8 +94,8 @@ const handleSignUp = async (email: string, password: string) => {
   active: false,
   plan: "trial",
   createdAt: serverTimestamp(),
-  trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)), // +3 dias
-});
+  trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)),
+}, { merge: true });
   }
 };
 
