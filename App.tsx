@@ -1,3 +1,4 @@
+import { Timestamp } from "firebase/firestore";
 import Paywall from './components/Paywall';
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from './services/firebase';
@@ -126,11 +127,12 @@ const handleSignUp = async (email: string, password: string) => {
   // cria o cadastro do usuário no Firestore (uma única vez)
   if (!snap.exists()) {
     await setDoc(userRef, {
-      email,
-      active: false,          // começa bloqueado
-      plan: "free",
-      createdAt: serverTimestamp(),
-    });
+  email,
+  active: false,
+  plan: "trial",
+  createdAt: serverTimestamp(),
+  trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)), // +3 dias
+});
   }
 };
 
