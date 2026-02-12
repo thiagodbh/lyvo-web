@@ -3,15 +3,16 @@ type Props = {
 };
 
 export default function Paywall({ onLogout }: Props) {
-  const checkoutUrl = "https://lastlink.com/SEU-LINK-AQUI";
+  const annualUrl = "https://lastlink.com/p/CA05DE2CE/checkout-payment/";
+  const monthlyUrl = "https://lastlink.com/p/CE5BD085C/checkout-payment/";
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-b from-white to-gray-50 p-6">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-        {/* Top bar */}
+        {/* Header */}
         <div className="px-6 pt-7 pb-5 text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">
-            Acesso encerrado
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-black">
+            Teste finalizado
           </div>
 
           <h1 className="mt-4 text-2xl font-black text-gray-900 leading-tight">
@@ -21,16 +22,18 @@ export default function Paywall({ onLogout }: Props) {
           </h1>
 
           <p className="mt-3 text-gray-600 text-sm leading-relaxed">
-            O Lyvo funciona como um <span className="font-semibold">chat estilo WhatsApp</span> que registra seus gastos,
-            organiza finanças, agenda e rotinas com poucos comandos.
+            Você já usou o Lyvo e sabe: ele funciona como um{" "}
+            <span className="font-semibold">chat inteligente</span> que organiza
+            suas finanças, agenda e rotinas em segundos. Agora é hora de{" "}
+            <span className="font-semibold">não perder esse controle</span>.
           </p>
         </div>
 
         {/* Benefits */}
-        <div className="px-6 pb-6">
+        <div className="px-6">
           <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
             <p className="text-[11px] font-black uppercase tracking-widest text-gray-500">
-              O que você desbloqueia ao assinar
+              O que você garante ao continuar
             </p>
 
             <ul className="mt-3 space-y-3 text-sm text-gray-700">
@@ -39,7 +42,7 @@ export default function Paywall({ onLogout }: Props) {
                   ✓
                 </span>
                 <span>
-                  <span className="font-bold">Chat inteligente</span> para registrar gastos/rotinas em segundos.
+                  <span className="font-bold">Controle total das finanças</span>: transações, contas fixas, cartões e previsões.
                 </span>
               </li>
 
@@ -48,7 +51,7 @@ export default function Paywall({ onLogout }: Props) {
                   ✓
                 </span>
                 <span>
-                  <span className="font-bold">Finanças completas</span>: transações, contas fixas, cartões e previsões.
+                  <span className="font-bold">Registro por chat</span>: anote gastos e ações em segundos, sem fricção.
                 </span>
               </li>
 
@@ -57,7 +60,7 @@ export default function Paywall({ onLogout }: Props) {
                   ✓
                 </span>
                 <span>
-                  <span className="font-bold">Agenda e compromissos</span> organizados, sem perder nada.
+                  <span className="font-bold">Agenda organizada</span> para não esquecer compromissos e prazos.
                 </span>
               </li>
 
@@ -66,23 +69,69 @@ export default function Paywall({ onLogout }: Props) {
                   ✓
                 </span>
                 <span>
-                  <span className="font-bold">Tudo salvo e sincronizado</span> com segurança no seu usuário.
+                  <span className="font-bold">Tudo salvo e seguro</span>, sincronizado com sua conta.
                 </span>
               </li>
             </ul>
           </div>
+        </div>
 
-          {/* CTA */}
-          <div className="mt-5 space-y-3">
+        {/* Plans */}
+        <div className="px-6 mt-5 space-y-4">
+          {/* Annual - Highlighted */}
+          <div className="relative rounded-2xl border-2 border-blue-600 p-4 bg-blue-50">
+            <div className="absolute -top-3 right-4 bg-blue-600 text-white text-[10px] font-black px-3 py-1 rounded-full">
+              MAIS VANTAJOSO
+            </div>
+
+            <h3 className="text-sm font-black text-blue-900 uppercase tracking-wider">
+              Plano Anual
+            </h3>
+
+            <p className="mt-1 text-2xl font-black text-blue-900">
+              R$ 149,90 <span className="text-sm font-bold text-blue-700">/ ano</span>
+            </p>
+
+            <p className="mt-1 text-xs text-blue-800">
+              Menos de R$ 12,50 por mês. Economize mais de 50% em relação ao mensal.
+            </p>
+
             <a
-              href={checkoutUrl}
+              href={annualUrl}
               target="_blank"
               rel="noreferrer"
-              className="block w-full bg-blue-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-blue-700 transition text-center shadow-lg shadow-blue-600/10"
+              className="mt-3 block w-full bg-blue-600 text-white py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-blue-700 transition text-center shadow-lg shadow-blue-600/20"
             >
-              Ativar acesso agora
+              Assinar plano anual
             </a>
+          </div>
 
+          {/* Monthly */}
+          <div className="rounded-2xl border border-gray-200 p-4 bg-white">
+            <h3 className="text-sm font-black text-gray-800 uppercase tracking-wider">
+              Plano Mensal
+            </h3>
+
+            <p className="mt-1 text-2xl font-black text-gray-900">
+              R$ 24,90 <span className="text-sm font-bold text-gray-600">/ mês</span>
+            </p>
+
+            <p className="mt-1 text-xs text-gray-500">
+              Pagamento recorrente. Cancele quando quiser.
+            </p>
+
+            <a
+              href={monthlyUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 block w-full bg-gray-900 text-white py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-gray-800 transition text-center"
+            >
+              Assinar plano mensal
+            </a>
+          </div>
+
+          {/* Footer actions */}
+          <div className="pt-2 space-y-3">
             <button
               onClick={onLogout}
               className="w-full py-3 rounded-2xl font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition"
@@ -91,7 +140,7 @@ export default function Paywall({ onLogout }: Props) {
             </button>
 
             <p className="text-center text-[11px] text-gray-400">
-              Você pode ativar a assinatura e entrar imediatamente sem perder seus dados.
+              Seus dados continuam salvos. Ao assinar, você volta exatamente de onde parou.
             </p>
           </div>
         </div>
