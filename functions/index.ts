@@ -46,3 +46,80 @@ export const lastlinkWebhook = functions.https.onRequest(async (req, res) => {
         res.status(500).send("Erro interno.");
     }
 });
+// ================= GOOGLE CALENDAR (OAuth + Sync) =================
+
+// Troca "code" por tokens e salva refresh_token no Firestore
+export const googleConnect = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Usuário não autenticado");
+  }
+
+  const code = data?.code;
+  if (!code) {
+    throw new functions.https.HttpsError("invalid-argument", "Code não fornecido");
+  }
+
+  const clientId = functions.config().google.client_id;
+  const clientSecret = functions.config().google.client_secret;
+
+  // Para flow auth-code no front com @react-oauth/google, usar "postmessage"
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: "postmessage",
+      grant_type: "authorization_code",
+    }),
+  });
+
+  const tokenData: any = await tokenRes.json();
+
+  if (!tokenRes.ok) {
+    throw new functions.https.HttpsError(
+      "unknown",
+      tokenData?.error_description || tokenData?.error || "Falha ao trocar code por token"
+    );
+  }
+
+  // ⚠️ Se não vier refresh_token, o Google não vai conseguir “manter logado”.
+  if (!tokenData.refresh_token) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Refresh token não retornado. Precisamos forçar consentimento no login do Google."
+    );
+  }
+
+  const uid = context.auth.uid;
+
+  await admin.firestore().collection("googleConnections").doc(uid).set(
+    {
+      refresh_token: tokenData.refresh_token,
+      scope: tokenData.scope,
+      token_type: tokenData.token_type,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return { success: true };
+});
+
+// Por enquanto: só valida se existe conexão salva.
+// No próximo passo, aqui vai entrar a lógica de sync bidirecional.
+export const googleSync = functions.https.onCall(async (_data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Usuário não autenticado");
+  }
+
+  const uid = context.auth.uid;
+  const snap = await admin.firestore().collection("googleConnections").doc(uid).get();
+
+  if (!snap.exists) {
+    throw new functions.https.HttpsError("failed-precondition", "Google não conectado");
+  }
+
+  return { success: true };
+});
