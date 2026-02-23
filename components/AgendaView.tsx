@@ -64,44 +64,26 @@ const AgendaView: React.FC = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent> | null>(null);
     const loginComGoogle = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
+  flow: 'auth-code',
+  scope: 'https://www.googleapis.com/auth/calendar.events',
+  onSuccess: async (codeResponse) => {
     try {
-        // Busca os eventos diretamente da API do Google usando o token recebido
-        const response = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${new Date().toISOString()}`,
-            {
-                headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-            }
-        );
-        
-        const data = await response.json();
+      // Envia o code para o backend trocar por tokens e salvar refresh_token
+      await store.connectGoogleCalendar(codeResponse.code);
 
-        if (data.items) {
-            // Converte o formato do Google para o formato que seu App Lyvo entende
-            const googleEvents = data.items.map((gEvent: any) => ({
-                id: gEvent.id,
-                title: gEvent.summary || "(Sem título)",
-                dateTime: gEvent.start.dateTime || gEvent.start.date,
-                location: gEvent.location || '',
-                source: 'GOOGLE',
-                color: 'border-blue-500'
-            }));
+      // Sincroniza eventos (Google -> Lyvo) e atualiza a tela
+      await store.syncCalendar();
 
-            // Atualiza a lista na tela e fecha o modal
-            setEvents(prev => [...prev, ...googleEvents]);
-            setForceUpdate(prev => prev + 1);
-            setShowSyncModal(false);
-            
-            alert(`${googleEvents.length} eventos sincronizados com sucesso!`);
-        }
+      setForceUpdate(prev => prev + 1);
+      setShowSyncModal(false);
+      alert("Google Agenda conectado e sincronizado com sucesso!");
     } catch (error) {
-        console.error("Erro ao carregar agenda:", error);
-        alert("Não foi possível carregar os eventos do Google.");
+      console.error("Erro ao conectar com o Google:", error);
+      alert("Falha ao conectar com o Google Agenda.");
     }
-},
-        onError: () => console.log('Erro ao conectar com o Google'),
-        scope: 'https://www.googleapis.com/auth/calendar.events',
-    });
+  },
+  onError: () => alert("Erro ao conectar com o Google."),
+});
 
     // --- Data Loading ---
     useEffect(() => {
