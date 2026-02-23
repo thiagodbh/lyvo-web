@@ -24,6 +24,7 @@ import {
 
 import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const DEFAULT_CREDIT_CARDS: Omit<CreditCard, "id">[] = [
   {
@@ -630,6 +631,66 @@ class FirestoreStore {
 
   // ---------------- AGENDA ----------------
 
+    // Conecta Google Agenda (recebe "code" do flow auth-code)
+  async connectGoogleCalendar(code: string) {
+    if (!this.uid) throw new Error("Usuário não autenticado");
+
+    // 1) chama Cloud Function que troca o code por tokens e salva refresh_token
+    const fn = httpsCallable(getFunctions(), "googleConnect");
+    await fn({ code });
+
+    // 2) cria/atualiza a conexão no Firestore (pra UI saber que está conectado)
+    const q = query(
+      this.col("calendarConnections"),
+      where("uid", "==", this.uid),
+      where("source", "==", "GOOGLE")
+    );
+
+    const snap = await getDocs(q);
+
+    const payload = {
+      uid: this.uid,
+      source: "GOOGLE",
+      type: "CALENDAR",
+      accountName: "Google Agenda",
+      connectionStatus: "CONNECTED",
+      lastSyncDate: new Date().toISOString(),
+      updatedAt: Timestamp.now(),
+    };
+
+    if (snap.empty) {
+      await addDoc(this.col("calendarConnections"), {
+        ...payload,
+        createdAt: Timestamp.now(),
+      } as any);
+    } else {
+      await updateDoc(doc(db, "calendarConnections", snap.docs[0].id), payload as any);
+    }
+  }
+
+  // Sincroniza (Google <-> Lyvo) via backend
+  async syncCalendar() {
+    if (!this.uid) throw new Error("Usuário não autenticado");
+
+    const fn = httpsCallable(getFunctions(), "googleSync");
+    await fn({}); // backend fará o sync real
+
+    // Atualiza o lastSyncDate na conexão (pra UI mostrar horário atualizado)
+    const q = query(
+      this.col("calendarConnections"),
+      where("uid", "==", this.uid),
+      where("source", "==", "GOOGLE")
+    );
+
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      await updateDoc(doc(db, "calendarConnections", snap.docs[0].id), {
+        lastSyncDate: new Date().toISOString(),
+        connectionStatus: "CONNECTED",
+        updatedAt: Timestamp.now(),
+      } as any);
+    }
+  }
   addEvent(e: Omit<CalendarEvent, "id" | "source">) {
     if (!this.uid) return null;
     const payload: Omit<CalendarEvent, "id"> = { ...(e as any), source: "INTERNAL" };
