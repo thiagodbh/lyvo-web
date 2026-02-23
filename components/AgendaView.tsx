@@ -79,6 +79,7 @@ const googleSyncFn = httpsCallable(functions, "googleSync");
     await googleConnectFn({ code: codeResponse.code });
 
     const result: any = await googleSyncFn({ timeMin: new Date().toISOString() });
+    console.log("googleSync result:", result);  
     const googleEvents = (result.data?.items || []).map((e: any) => ({
       id: e.id,
       title: e.title || "(Sem título)",
@@ -92,10 +93,16 @@ const googleSyncFn = httpsCallable(functions, "googleSync");
     setForceUpdate(prev => prev + 1);
     setShowSyncModal(false);
     alert(`${googleEvents.length} eventos sincronizados com sucesso!`);
-  } catch (error) {
-    console.error("Erro ao conectar/sincronizar Google:", error);
-    alert("Falha ao conectar com o Google Agenda.");
-  }
+  } catch (error: any) {
+  console.error("Erro ao conectar/sincronizar Google:", error);
+  const msg =
+    error?.message ||
+    error?.details ||
+    error?.code ||
+    JSON.stringify(error);
+
+  alert("Falha ao conectar com o Google Agenda:\n\n" + msg);
+}
 },
 
   onError: (err) => {
