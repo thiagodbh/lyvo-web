@@ -100,7 +100,7 @@ const AgendaView: React.FC = () => {
     }
 },
         onError: () => console.log('Erro ao conectar com o Google'),
-        scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
+        scope: 'https://www.googleapis.com/auth/calendar.events',
     });
 
     // --- Data Loading ---
