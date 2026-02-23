@@ -105,7 +105,7 @@ export const googleConnect = onCall(async (request) => {
   return { success: true };
 });
 
-// Por enquanto: só valida se existe conexão salva.
+// Lista eventos do Google Calendar usando refresh_token salvo no Firestore
 export const googleSync = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Usuário não autenticado");
@@ -118,5 +118,76 @@ export const googleSync = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "Google não conectado");
   }
 
-  return { success: true };
+  const refreshToken = snap.data()?.refresh_token as string | undefined;
+  if (!refreshToken) {
+    throw new HttpsError("failed-precondition", "Refresh token ausente");
+  }
+
+  // Busca client_id e client_secret do config
+  const cfg = (functions as any).config?.();
+  const clientId = cfg?.google?.client_id;
+  const clientSecret = cfg?.google?.client_secret;
+
+  if (!clientId || !clientSecret) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Config google.client_id / google.client_secret não encontrada no Firebase."
+    );
+  }
+
+  // 1) refresh_token -> access_token
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  const tokenData: any = await tokenRes.json();
+
+  if (!tokenRes.ok || !tokenData.access_token) {
+    throw new HttpsError(
+      "unknown",
+      tokenData?.error_description || tokenData?.error || "Falha ao gerar access_token"
+    );
+  }
+
+  // 2) lista eventos (padrão: últimos 30 dias até próximos 90 dias)
+  const now = new Date();
+  const timeMin = (request.data?.timeMin as string | undefined) || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const timeMax = (request.data?.timeMax as string | undefined) || new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString();
+
+  const url =
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events` +
+    `?singleEvents=true&orderBy=startTime` +
+    `&timeMin=${encodeURIComponent(timeMin)}` +
+    `&timeMax=${encodeURIComponent(timeMax)}`;
+
+  const eventsRes = await fetch(url, {
+    headers: { Authorization: `Bearer ${tokenData.access_token}` },
+  });
+
+  const eventsData: any = await eventsRes.json();
+
+  if (!eventsRes.ok) {
+    throw new HttpsError(
+      "unknown",
+      eventsData?.error?.message || "Falha ao listar eventos do Google Calendar"
+    );
+  }
+
+  const items = (eventsData.items || []).map((gEvent: any) => ({
+    id: gEvent.id,
+    title: gEvent.summary || "(Sem título)",
+    dateTime: gEvent.start?.dateTime || gEvent.start?.date || null,
+    location: gEvent.location || "",
+    description: gEvent.description || "",
+    updated: gEvent.updated || null,
+  }));
+
+  return { success: true, items };
 });
