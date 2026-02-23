@@ -49,20 +49,29 @@ export const lastlinkWebhook = functions.https.onRequest(async (req, res) => {
 // ================= GOOGLE CALENDAR (OAuth + Sync) =================
 
 // Troca "code" por tokens e salva refresh_token no Firestore
-export const googleConnect = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Usuário não autenticado");
+export const googleConnect = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Usuário não autenticado");
   }
 
-  const code = data?.code;
+  const code = request.data?.code as string | undefined;
   if (!code) {
-    throw new functions.https.HttpsError("invalid-argument", "Code não fornecido");
+    throw new HttpsError("invalid-argument", "Code não fornecido");
   }
 
-  const clientId = functions.config().google.client_id;
-  const clientSecret = functions.config().google.client_secret;
+  // ⚠️ Tipagem do v2 está marcando config() como never no seu projeto.
+  // Para não travar o build, usamos cast seguro.
+  const cfg = (functions as any).config?.();
+  const clientId = cfg?.google?.client_id;
+  const clientSecret = cfg?.google?.client_secret;
 
-  // Para flow auth-code no front com @react-oauth/google, usar "postmessage"
+  if (!clientId || !clientSecret) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Config google.client_id / google.client_secret não encontrada no Firebase."
+    );
+  }
+
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -78,21 +87,20 @@ export const googleConnect = functions.https.onCall(async (data, context) => {
   const tokenData: any = await tokenRes.json();
 
   if (!tokenRes.ok) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "unknown",
       tokenData?.error_description || tokenData?.error || "Falha ao trocar code por token"
     );
   }
 
-  // ⚠️ Se não vier refresh_token, o Google não vai conseguir “manter logado”.
   if (!tokenData.refresh_token) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "failed-precondition",
       "Refresh token não retornado. Precisamos forçar consentimento no login do Google."
     );
   }
 
-  const uid = context.auth.uid;
+  const uid = request.auth.uid;
 
   await admin.firestore().collection("googleConnections").doc(uid).set(
     {
@@ -108,17 +116,16 @@ export const googleConnect = functions.https.onCall(async (data, context) => {
 });
 
 // Por enquanto: só valida se existe conexão salva.
-// No próximo passo, aqui vai entrar a lógica de sync bidirecional.
-export const googleSync = functions.https.onCall(async (_data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Usuário não autenticado");
+export const googleSync = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Usuário não autenticado");
   }
 
-  const uid = context.auth.uid;
+  const uid = request.auth.uid;
   const snap = await admin.firestore().collection("googleConnections").doc(uid).get();
 
   if (!snap.exists) {
-    throw new functions.https.HttpsError("failed-precondition", "Google não conectado");
+    throw new HttpsError("failed-precondition", "Google não conectado");
   }
 
   return { success: true };
