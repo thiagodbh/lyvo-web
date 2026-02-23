@@ -74,33 +74,29 @@ const googleSyncFn = httpsCallable(functions, "googleSync");
   access_type: "offline",
   prompt: "consent",
 
-  onSuccess: async ({ code }) => {
-    try {
-      // 1) Salva refresh_token no Firestore via Cloud Function
-      await googleConnectFn({ code });
+  onSuccess: async (codeResponse) => {
+  try {
+    await googleConnectFn({ code: codeResponse.code });
 
-      // 2) Busca eventos via backend (usando refresh_token)
-      const result: any = await googleSyncFn({ timeMin: new Date().toISOString() });
+    const result: any = await googleSyncFn({ timeMin: new Date().toISOString() });
+    const googleEvents = (result.data?.items || []).map((e: any) => ({
+      id: e.id,
+      title: e.title || "(Sem título)",
+      dateTime: e.dateTime,
+      location: e.location || "",
+      source: "GOOGLE",
+      color: "border-blue-500",
+    }));
 
-      const googleEvents = (result.data?.items || []).map((e: any) => ({
-        id: e.id,
-        title: e.title || "(Sem título)",
-        dateTime: e.dateTime,
-        location: e.location || "",
-        source: "GOOGLE",
-        color: "border-blue-500",
-      }));
-
-      setEvents(prev => [...prev, ...googleEvents]);
-      setForceUpdate(prev => prev + 1);
-      setShowSyncModal(false);
-
-      alert(`${googleEvents.length} eventos sincronizados com sucesso!`);
-    } catch (error) {
-      console.error("Erro ao conectar/sincronizar Google:", error);
-      alert("Falha ao conectar com o Google Agenda.");
-    }
-  },
+    setEvents(prev => [...prev, ...googleEvents]);
+    setForceUpdate(prev => prev + 1);
+    setShowSyncModal(false);
+    alert(`${googleEvents.length} eventos sincronizados com sucesso!`);
+  } catch (error) {
+    console.error("Erro ao conectar/sincronizar Google:", error);
+    alert("Falha ao conectar com o Google Agenda.");
+  }
+},
 
   onError: (err) => {
     console.error("Erro no login Google:", err);
