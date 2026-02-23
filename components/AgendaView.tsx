@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { store } from "../services/firestoreStore";
 import { CalendarEvent, CalendarConnection } from '../types';
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getApp } from "firebase/app";
 
 type ViewMode = 'DAY' | 'WEEK' | 'MONTH';
 
@@ -63,26 +65,47 @@ const AgendaView: React.FC = () => {
     // Estados para controle do Modal de Edição e Criação
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent> | null>(null);
+    const functions = getFunctions(getApp(), "us-central1");
+const googleConnectFn = httpsCallable(functions, "googleConnect");
+const googleSyncFn = httpsCallable(functions, "googleSync");
     const loginComGoogle = useGoogleLogin({
-  flow: 'auth-code',
-  scope: 'https://www.googleapis.com/auth/calendar.events',
-  onSuccess: async (codeResponse) => {
+  flow: "auth-code",
+  scope: "https://www.googleapis.com/auth/calendar.events",
+  access_type: "offline",
+  prompt: "consent",
+
+  onSuccess: async ({ code }) => {
     try {
-      // Envia o code para o backend trocar por tokens e salvar refresh_token
-      await store.connectGoogleCalendar(codeResponse.code);
+      // 1) Salva refresh_token no Firestore via Cloud Function
+      await googleConnectFn({ code });
 
-      // Sincroniza eventos (Google -> Lyvo) e atualiza a tela
-      await store.syncCalendar();
+      // 2) Busca eventos via backend (usando refresh_token)
+      const result: any = await googleSyncFn({ timeMin: new Date().toISOString() });
 
+      const googleEvents = (result.data?.items || []).map((e: any) => ({
+        id: e.id,
+        title: e.title || "(Sem título)",
+        dateTime: e.dateTime,
+        location: e.location || "",
+        source: "GOOGLE",
+        color: "border-blue-500",
+      }));
+
+      setEvents(prev => [...prev, ...googleEvents]);
       setForceUpdate(prev => prev + 1);
       setShowSyncModal(false);
-      alert("Google Agenda conectado e sincronizado com sucesso!");
+
+      alert(`${googleEvents.length} eventos sincronizados com sucesso!`);
     } catch (error) {
-      console.error("Erro ao conectar com o Google:", error);
+      console.error("Erro ao conectar/sincronizar Google:", error);
       alert("Falha ao conectar com o Google Agenda.");
     }
   },
-  onError: () => alert("Erro ao conectar com o Google."),
+
+  onError: (err) => {
+    console.error("Erro no login Google:", err);
+    alert("Falha ao conectar com o Google Agenda.");
+  },
 });
 
     // --- Data Loading ---
