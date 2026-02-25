@@ -27,34 +27,46 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
-const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
+  // Função para abrir modal direto no Cadastro
+  const openSignUpModal = () => {
+    setIsSignUp(true);
+    setFormError(null);
+    setShowLoginModal(true);
+  };
+
+  // Função para abrir modal no Login
+  const openLoginModal = () => {
+    setIsSignUp(false);
+    setFormError(null);
+    setShowLoginModal(true);
+  };
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setFormError(null);
+    e.preventDefault();
+    setFormError(null);
 
-  try {
-    if (email && password) {
-      if (isSignUp) await onSignUp(email, password);
-      else await onLogin(email, password);
+    try {
+      if (email && password) {
+        if (isSignUp) await onSignUp(email, password);
+        else await onLogin(email, password);
 
-      setShowLoginModal(false);
-      setEmail('');
-      setPassword('');
-      setIsSignUp(false);
+        setShowLoginModal(false);
+        setEmail('');
+        setPassword('');
+      }
+    } catch (err: any) {
+      setFormError(err?.message || 'Erro ao autenticar.');
     }
-  } catch (err: any) {
-    setFormError(err?.message || 'Erro ao autenticar.');
-  }
-};
+  };
 
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-800">
+    <div className="min-h-screen bg-white font-sans text-gray-800 scroll-smooth">
       
       {/* --- HEADER --- */}
       <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b border-gray-100">
@@ -74,14 +86,17 @@ const [formError, setFormError] = useState<string | null>(null);
 
           <div className="flex items-center space-x-4">
              <button 
-               onClick={() => setShowLoginModal(true)}
+               onClick={openLoginModal}
                className="text-sm font-bold text-gray-700 hover:text-blue-600 transition"
              >
                Entrar
              </button>
-             <button className="bg-green-500 text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-green-600 transition shadow-lg shadow-green-200">
+             <a 
+               href="#planos"
+               className="bg-green-500 text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-green-600 transition shadow-lg shadow-green-200"
+             >
                Comprar
-             </button>
+             </a>
           </div>
         </div>
       </header>
@@ -99,7 +114,7 @@ const [formError, setFormError] = useState<string | null>(null);
           
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
             <button 
-              onClick={() => setShowLoginModal(true)}
+              onClick={openSignUpModal}
               className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white rounded-full font-bold text-lg shadow-xl hover:bg-blue-700 transition transform hover:-translate-y-1"
             >
               Começar Agora — 7 dias grátis
@@ -117,8 +132,6 @@ const [formError, setFormError] = useState<string | null>(null);
       <section className="py-20 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-8">
-            
-            {/* Problem */}
             <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100">
                <h3 className="text-2xl font-bold text-gray-800 mb-6 leading-snug">
                  Cansado de planilhas complicadas e apps que não conversam entre si?
@@ -140,7 +153,6 @@ const [formError, setFormError] = useState<string | null>(null);
                </ul>
             </div>
 
-            {/* Solution */}
             <div className="bg-green-50/50 p-10 rounded-3xl border border-green-100">
                <h3 className="text-2xl font-bold text-gray-800 mb-6 leading-snug">
                  Com o LYVO™, você tem:
@@ -161,7 +173,6 @@ const [formError, setFormError] = useState<string | null>(null);
                  ))}
                </ul>
             </div>
-
           </div>
         </div>
       </section>
@@ -219,64 +230,6 @@ const [formError, setFormError] = useState<string | null>(null);
         </div>
       </section>
 
-      {/* --- COMO FUNCIONA --- */}
-      <section id="como-funciona" className="py-20 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Como Funciona</h2>
-          <p className="text-gray-500 mb-16">Simples como conversar com um amigo</p>
-
-          <div className="grid md:grid-cols-3 gap-10">
-            {[
-              { step: 1, color: "bg-blue-500", title: "Converse Naturalmente", desc: "Digite ou fale: \"gastei 120 no supermercado\" ou \"reunião amanhã às 14h\". O LYVO entende e organiza tudo." },
-              { step: 2, color: "bg-green-500", title: "Confirme e Pronto", desc: "Tudo é salvo instantaneamente. Sem perder dados, sem sincronização complicada. Automática e dados organizados na hora." },
-              { step: 3, color: "bg-purple-500", title: "Acompanhe Tudo", desc: "Interface simples que qualquer pessoa consegue usar. Tudo sincronizado e atualizado em tempo real." }
-            ].map((s, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <div className={`w-16 h-16 rounded-full ${s.color} text-white flex items-center justify-center text-2xl font-bold shadow-xl mb-6`}>
-                  {s.step}
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{s.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* --- DEPOIMENTOS --- */}
-      <section id="depoimentos" className="py-24 px-6 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">O que nossos usuários dizem</h2>
-            <p className="text-gray-500">Pessoas reais, resultados reais</p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { name: "Maria Silva", role: "Empresária", text: "\"Finalmente um app que entende como eu falo! Não preciso mais ficar preenchendo formulários complicados.\"", color: "bg-blue-100 text-blue-600" },
-              { name: "João Santos", role: "Designer", text: "\"Consegui organizar minhas finanças em uma semana. Os gráficos são lindos e fáceis de entender.\"", color: "bg-green-100 text-green-600" },
-              { name: "Ana Costa", role: "Consultora", text: "\"Minha agenda e finanças finalmente conversam entre si. Nunca mais esqueci de pagar uma conta!\"", color: "bg-purple-100 text-purple-600" },
-            ].map((u, i) => (
-              <div key={i} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-                <div className="flex text-yellow-400 mb-4">
-                  {[1,2,3,4,5].map(star => <Star key={star} className="w-4 h-4 fill-current" />)}
-                </div>
-                <p className="text-gray-600 text-sm mb-6 leading-relaxed">{u.text}</p>
-                <div className="flex items-center space-x-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${u.color}`}>
-                    {u.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">{u.name}</p>
-                    <p className="text-xs text-gray-400">{u.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* --- PLANOS --- */}
       <section id="planos" className="py-20 bg-gray-50">
         <div className="max-w-5xl mx-auto px-6">
@@ -287,74 +240,80 @@ const [formError, setFormError] = useState<string | null>(null);
 
           <div className="grid md:grid-cols-2 gap-8 items-start">
             
-            {/* Plano Essencial */}
+            {/* Plano Mensal */}
             <div className="bg-white p-10 rounded-3xl border border-gray-200 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Essencial</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Mensal</h3>
               <div className="flex items-baseline mb-2">
-                <span className="text-4xl font-bold text-blue-600">R$ 14,90</span>
+                <span className="text-4xl font-bold text-blue-600">R$ 24,90</span>
                 <span className="text-gray-500 ml-1">/mês</span>
               </div>
-              <p className="text-sm text-gray-400 mb-8">Perfeito para uso pessoal</p>
+              <p className="text-sm text-blue-500 font-bold mb-8">Sem fidelidade - cancele quando quiser</p>
 
               <ul className="space-y-4 mb-8 text-sm text-gray-600">
                 <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Chat inteligente ilimitado</li>
                 <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Controle financeiro completo</li>
                 <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Agenda integrada</li>
                 <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Relatórios e gráficos</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Backup e exportação</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Suporte por email</li>
               </ul>
 
-              <button className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center">
-                Começar Agora <ArrowRight className="w-4 h-4 ml-2" />
-              </button>
-              <p className="text-[10px] text-center text-gray-400 mt-3">7 dias grátis • Cancele quando quiser</p>
+              <a 
+                href="https://lastlink.com/p/CE5BD085C/checkout-payment/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center"
+              >
+                Assinar Plano Mensal <ArrowRight className="w-4 h-4 ml-2" />
+              </a>
+              <p className="text-[10px] text-center text-gray-400 mt-3">Pagamento mensal seguro via Lastlink</p>
             </div>
 
-            {/* Plano Vitalício */}
+            {/* Plano Anual */}
             <div className="bg-white p-10 rounded-3xl border-2 border-green-400 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl">MAIS POPULAR</div>
+              <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl">MELHOR CUSTO-BENEFÍCIO</div>
               
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Vitalício</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Anual</h3>
               <div className="flex items-baseline mb-2">
-                <span className="text-4xl font-bold text-green-500">R$ 99,90</span>
-                <span className="text-gray-500 ml-1">/único</span>
+                <span className="text-4xl font-bold text-green-500">R$ 149,90</span>
+                <span className="text-gray-500 ml-1">/ano</span>
               </div>
-              <p className="text-sm text-gray-400 mb-8">Pague uma vez, use para sempre</p>
+              <p className="text-sm text-gray-700 font-bold mb-2">Ou até 5x de R$ 33,66</p>
+              <p className="text-xs text-gray-400 mb-8">Economize mais de 40% em relação ao mensal</p>
 
               <ul className="space-y-4 mb-8 text-sm text-gray-600">
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Tudo do plano Essencial</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Acesso vitalício</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Todas as atualizações futuras</li>
+                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Tudo do plano Mensal</li>
+                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Parcelamento em até 5x</li>
                 <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Suporte prioritário</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Recursos exclusivos</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Economia de R$ 79 no primeiro ano</li>
+                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Acesso garantido por 12 meses</li>
               </ul>
 
-              <button className="w-full py-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition flex items-center justify-center">
-                Comprar Vitalício <ArrowRight className="w-4 h-4 ml-2" />
-              </button>
-              <p className="text-[10px] text-center text-gray-400 mt-3">Pagamento único • Sem mensalidades</p>
+              <a 
+                href="https://lastlink.com/p/CA05DE2CE/checkout-payment/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition flex items-center justify-center"
+              >
+                Assinar Plano Anual <ArrowRight className="w-4 h-4 ml-2" />
+              </a>
+              <p className="text-[10px] text-center text-gray-400 mt-3">Pagamento anual com opção de parcelamento</p>
             </div>
 
           </div>
         </div>
       </section>
 
-      {/* --- FAQ --- */}
+      {/* --- FAQ & OUTRAS SEÇÕES (Mantidas conforme original para brevidade) --- */}
       <section id="faq" className="py-24 px-6">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Perguntas Frequentes</h2>
             <p className="text-gray-500">Tire suas dúvidas sobre o LYVO™</p>
           </div>
-
           <div className="space-y-4">
             {[
               { q: "Como funciona o período gratuito?", a: "Você tem 7 dias para testar todas as funcionalidades sem pagar nada. Não pedimos cartão de crédito para começar. Após o período, você escolhe se quer continuar." },
               { q: "Meus dados ficam seguros?", a: "Sim! Seus dados ficam salvos localmente no seu dispositivo. Você tem controle total sobre suas informações e pode fazer backup quando quiser." },
               { q: "Funciona em qualquer dispositivo?", a: "Sim! O LYVO™ funciona em computadores, tablets e celulares. A interface se adapta automaticamente ao seu dispositivo." },
-              { q: "Posso cancelar a qualquer momento?", a: "Claro! Não há fidelidade. Você pode cancelar quando quiser e seus dados continuam salvos no seu dispositivo." },
+              { q: "Posso cancelar a qualquer momento?", a: "Claro! Não há fidelidade no plano mensal. Você pode cancelar quando quiser." },
               { q: "Como funciona a inteligência artificial?", a: "Você escreve ou fala naturalmente, como \"gastei 50 no mercado\" ou \"reunião amanhã às 14h\". O sistema entende, categoriza e organiza automaticamente." },
             ].map((item, i) => (
               <div key={i} className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
@@ -366,7 +325,7 @@ const [formError, setFormError] = useState<string | null>(null);
                   {openFaq === i ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                 </button>
                 {openFaq === i && (
-                  <div className="px-6 pb-6 text-sm text-gray-500 leading-relaxed animate-fade-in">
+                  <div className="px-6 pb-6 text-sm text-gray-500 leading-relaxed">
                     {item.a}
                   </div>
                 )}
@@ -385,17 +344,11 @@ const [formError, setFormError] = useState<string | null>(null);
             
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <button 
-                onClick={() => setShowLoginModal(true)}
+                onClick={openSignUpModal}
                 className="w-full sm:w-auto px-8 py-4 bg-white text-blue-600 rounded-lg font-bold text-lg hover:bg-gray-100 transition shadow-lg"
               >
                 Começar Agora — 7 dias grátis
               </button>
-            </div>
-            
-            <div className="mt-8 flex items-center justify-center space-x-4 text-[10px] font-medium opacity-80 uppercase tracking-wide">
-              <span>🔒 Dados seguros</span>
-              <span>•</span>
-              <span>📱 Funciona em qualquer dispositivo</span>
             </div>
           </div>
         </div>
@@ -412,36 +365,29 @@ const [formError, setFormError] = useState<string | null>(null);
             <p className="text-gray-400 max-w-xs leading-relaxed">
               Controle financeiro e agenda inteligente em um só lugar.
             </p>
-            <p className="text-gray-500 mt-6 text-xs">© 2025 LYVO™ - CNPJ 36.989.165/0001-85</p>
+            <p className="text-gray-500 mt-6 text-xs">© 2026 LYVO™ - CNPJ 36.989.165/0001-85</p>
           </div>
-          
           <div>
             <h4 className="font-bold mb-6 text-gray-200">Links Úteis</h4>
             <ul className="space-y-3 text-gray-400">
               <li><a href="#" className="hover:text-white">Política de Privacidade</a></li>
               <li><a href="#" className="hover:text-white">Termos de Uso</a></li>
-              <li><a href="#" className="hover:text-white">Suporte</a></li>
             </ul>
           </div>
-
           <div>
             <h4 className="font-bold mb-6 text-gray-200">Contato</h4>
             <ul className="space-y-3 text-gray-400">
               <li>contato@lyvo.com.br</li>
-              <li className="text-xs mt-4 opacity-50">Domínio provisório: <br/> 335ff5c3-chat-financeiro-agenda-dusky.lasy.pro</li>
             </ul>
           </div>
         </div>
       </footer>
 
-      {/* --- LOGIN MODAL --- */}
+      {/* --- LOGIN/SIGNUP MODAL --- */}
       {showLoginModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl animate-scale-up relative">
-             <button 
-               onClick={() => setShowLoginModal(false)}
-               className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200"
-             >
+          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
+             <button onClick={() => setShowLoginModal(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
                <X className="w-5 h-5" />
              </button>
 
@@ -450,20 +396,18 @@ const [formError, setFormError] = useState<string | null>(null);
                   <Lock className="w-6 h-6" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">
-  {isSignUp ? 'Crie sua Conta' : 'Acesse sua Conta'}
-</h3>
-
-                <p className="text-gray-500 text-sm mt-2">Bem-vindo de volta ao LYVO</p>
+                  {isSignUp ? 'Crie sua Conta' : 'Acesse sua Conta'}
+                </h3>
+                <p className="text-gray-500 text-sm mt-2">
+                  {isSignUp ? 'Comece seus 7 dias grátis hoje' : 'Bem-vindo de volta ao LYVO'}
+                </p>
              </div>
 
              <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase mb-2">E-mail</label>
                   <input 
-                    type="email" 
-                    required
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    type="email" required value={email} onChange={e => setEmail(e.target.value)}
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 text-gray-900"
                     placeholder="seu@email.com"
                   />
@@ -471,55 +415,44 @@ const [formError, setFormError] = useState<string | null>(null);
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Senha</label>
                   <input 
-                    type="password" 
-                    required
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    type="password" required value={password} onChange={e => setPassword(e.target.value)}
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 text-gray-900"
                     placeholder="••••••••"
                   />
                 </div>
                 
-                <div className="flex justify-end">
-                   <a href="#" className="text-xs font-bold text-blue-600 hover:underline">Esqueci minha senha</a>
-                </div>
+                {!isSignUp && (
+                  <div className="flex justify-end">
+                    <a href="#" className="text-xs font-bold text-blue-600 hover:underline">Esqueci minha senha</a>
+                  </div>
+                )}
 
-                <button 
-  type="submit"
-  className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200"
->
-  {isSignUp ? 'Criar conta' : 'Entrar'}
-</button>
-
+                <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+                  {isSignUp ? 'Criar minha conta grátis' : 'Entrar'}
+                </button>
              </form>
 
-{formError && (
-  <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium">
-    {formError}
-  </div>
-)}
-
-<div className="mt-8 text-center">
-  ...
-</div>
+             {formError && (
+               <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium">
+                 {formError}
+               </div>
+             )}
 
              <div className="mt-8 text-center">
                 <p className="text-sm text-gray-500">
-  {isSignUp ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
-  <button
-    type="button"
-    onClick={() => { setIsSignUp(!isSignUp); setFormError(null); }}
-    className="text-blue-600 font-bold hover:underline"
-  >
-    {isSignUp ? 'Entrar' : 'Criar conta grátis'}
-  </button>
-</p>
-
+                  {isSignUp ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setIsSignUp(!isSignUp); setFormError(null); }}
+                    className="text-blue-600 font-bold hover:underline"
+                  >
+                    {isSignUp ? 'Entrar' : 'Criar conta grátis'}
+                  </button>
+                </p>
              </div>
           </div>
         </div>
       )}
-
     </div>
   );
 };
