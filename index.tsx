@@ -10,7 +10,7 @@ if (!rootElement) {
 }
 
 // O seu Client ID gerado no Google Cloud
-const CLIENT_ID = "501648718670-u7pc1vj25rfudk3nfo4mnmvhc9tcgeud.apps.googleusercontent.com";
+const CLIENT_ID = "501648718670-u7pc1vj25rfudk3nfo4mmnvhc9tcgeud.apps.googleusercontent.com";
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
