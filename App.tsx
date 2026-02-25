@@ -194,7 +194,7 @@ if (isAuthenticated && isAuthorized === false) {
 }
 
 const RootApp = () => (
-  <GoogleOAuthProvider clientId="501648718670-u7pc1vj25rfudk3nfo4mnmvhc9tcgeud.apps.googleusercontent.com">
+  <GoogleOAuthProvider clientId="501648718670-u7pc1vj25rfudk3nfo4mmnvhc9tcgeud.apps.googleusercontent.com">
     <App />
   </GoogleOAuthProvider>
 );
