@@ -249,7 +249,14 @@ const [income, setIncome] = useState('');
       </section>
 
       {/* --- PLANOS --- */}
-      <div className="grid md:grid-cols-2 gap-8 items-start">
+      <section id="planos" className="py-20 bg-gray-50">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Planos Simples e Transparentes</h2>
+            <p className="text-gray-500">Escolha o que faz mais sentido para você</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 items-start">
             
             {/* Plano Anual - AGORA PRIMEIRO E EM DESTAQUE */}
             <div className="bg-white p-10 rounded-3xl border-2 border-green-400 shadow-xl relative overflow-hidden order-1 md:order-1">
@@ -307,8 +314,9 @@ const [income, setIncome] = useState('');
               </a>
               <p className="text-[10px] text-center text-gray-400 mt-3">Pagamento recorrente via Lastlink</p>
             </div>
-
           </div>
+        </div>
+      </section>
       {/* --- FAQ & OUTRAS SEÇÕES (Mantidas conforme original para brevidade) --- */}
       <section id="faq" className="py-24 px-6">
         <div className="max-w-3xl mx-auto">
