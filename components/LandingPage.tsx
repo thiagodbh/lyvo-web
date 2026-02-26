@@ -401,34 +401,36 @@ const [income, setIncome] = useState('');
         </div>
       </footer>
 
-      {/* --- LOGIN/SIGNUP MODAL --- */}
+     {/* --- LOGIN/SIGNUP MODAL ATUALIZADO --- */}
       {showLoginModal && (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-    {/* A mudança principal está na linha abaixo: max-w-2xl, max-h e overflow-y-auto */}
-    <div className="bg-white w-full max-w-2xl rounded-3xl p-6 md:p-8 shadow-2xl animate-scale-up relative max-h-[90vh] overflow-y-auto custom-scrollbar">
-             <button onClick={() => setShowLoginModal(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white w-full max-w-2xl rounded-3xl p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+             <button 
+               onClick={() => setShowLoginModal(false)}
+               className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200"
+             >
                <X className="w-5 h-5" />
              </button>
 
-             <div className="text-center mb-8">
+             <div className="text-center mb-6">
                 <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <Lock className="w-6 h-6" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">
-                  {isSignUp ? 'Crie sua Conta' : 'Acesse sua Conta'}
+                  {isSignUp ? 'Crie sua Conta Grátis' : 'Acesse sua Conta'}
                 </h3>
                 <p className="text-gray-500 text-sm mt-2">
-                  {isSignUp ? 'Comece seus 7 dias grátis hoje' : 'Bem-vindo de volta ao LYVO'}
+                  {isSignUp ? 'Personalize sua experiência no LYVO™' : 'Bem-vindo de volta'}
                 </p>
              </div>
 
              <form onSubmit={handleLoginSubmit} className="space-y-4">
                 {isSignUp && (
-                  <div className="grid md:grid-cols-2 gap-3 mb-4 animate-fade-in">
+                  <div className="grid md:grid-cols-2 gap-3 mb-4 animate-fade-in text-left">
                     <div className="col-span-2">
                       <label className="block text-[10px] font-bold text-gray-700 uppercase">Nome Completo</label>
                       <input type="text" required value={name} onChange={e => setName(e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="Seu nome" />
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="Como quer ser chamado?" />
                     </div>
                     
                     <div>
@@ -487,7 +489,7 @@ const [income, setIncome] = useState('');
                   </div>
                 )}
 
-                <div className="space-y-4">
+                <div className="space-y-4 text-left">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 uppercase mb-2">E-mail</label>
                     <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
@@ -511,18 +513,13 @@ const [income, setIncome] = useState('');
                 </button>
              </form>
 
-                <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200">
-                  {isSignUp ? 'Criar minha conta grátis' : 'Entrar'}
-                </button>
-             </form>
-
              {formError && (
                <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium">
                  {formError}
                </div>
              )}
 
-             <div className="mt-8 text-center">
+             <div className="mt-8 text-center border-t border-gray-100 pt-6">
                 <p className="text-sm text-gray-500">
                   {isSignUp ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
                   <button
