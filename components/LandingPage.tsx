@@ -424,69 +424,60 @@ const [income, setIncome] = useState('');
 
              <form onSubmit={handleLoginSubmit} className="space-y-4">
                 {isSignUp && (
-                  <div className="grid md:grid-cols-2 gap-3 mb-4 animate-fade-in text-left">
-                    <div className="col-span-2">
-                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Nome Completo</label>
-                      <input type="text" required value={name} onChange={e => setName(e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="Como quer ser chamado?" />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-700 uppercase">WhatsApp</label>
-                      <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="(00) 00000-0000" />
-                    </div>
+  /* Mudança: grid-cols-1 por padrão, md:grid-cols-2 apenas em telas maiores */
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 animate-fade-in text-left">
+    <div className="md:col-span-2">
+      <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">Nome Completo</label>
+      <input type="text" required value={name} onChange={e => setName(e.target.value)}
+        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base" 
+        placeholder="Como quer ser chamado?" />
+    </div>
+    
+    {/* WhatsApp e Nascimento agora ficam um embaixo do outro no celular */}
+    <div>
+      <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">WhatsApp</label>
+      <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)}
+        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base" 
+        placeholder="(00) 00000-0000" />
+    </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Nascimento</label>
-                      <input type="date" required value={birthDate} onChange={e => setBirthDate(e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" />
-                    </div>
+    <div>
+      <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">Data de Nascimento</label>
+      <input type="date" required value={birthDate} onChange={e => setBirthDate(e.target.value)}
+        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 text-base" />
+    </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Cidade</label>
-                      <input type="text" required value={city} onChange={e => setCity(e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="Ex: Belo Horizonte" />
-                    </div>
+    {/* Cidade e Estado lado a lado apenas se houver espaço, ou empilhados */}
+    <div className="grid grid-cols-3 gap-2 md:block">
+      <div className="col-span-2 md:mb-4">
+        <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">Cidade</label>
+        <input type="text" required value={city} onChange={e => setCity(e.target.value)}
+          className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base" 
+          placeholder="Sua cidade" />
+      </div>
+      <div className="md:block">
+        <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">UF</label>
+        <input type="text" maxLength={2} required value={state} onChange={e => setState(e.target.value)}
+          className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base text-center" 
+          placeholder="MG" />
+      </div>
+    </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Estado (UF)</label>
-                      <input type="text" maxLength={2} required value={state} onChange={e => setState(e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="MG" />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Profissão</label>
-                      <input type="text" required value={profession} onChange={e => setProfession(e.target.value)}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="Sua profissão" />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Sexo</label>
-                      <select value={gender} onChange={e => setGender(e.target.value)} required
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20">
-                        <option value="">Selecione...</option>
-                        <option value="Masculino">Masculino</option>
-                        <option value="Feminino">Feminino</option>
-                        <option value="Outro">Outro</option>
-                      </select>
-                    </div>
-
-                    <div className="col-span-2">
-                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Renda Mensal Média</label>
-                      <select value={income} onChange={e => setIncome(e.target.value)} required
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20">
-                        <option value="">Selecione a faixa...</option>
-                        <option value="Até 3k">Até R$ 3.000</option>
-                        <option value="3k-7k">R$ 3.001 a R$ 7.000</option>
-                        <option value="7k-15k">R$ 7.001 a R$ 15.000</option>
-                        <option value="15k-30k">R$ 15.001 a R$ 30.000</option>
-                        <option value="Acima 30k">Acima de R$ 30.000</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
+    {/* Faixa de Renda ocupando a largura total para facilitar a seleção */}
+    <div className="md:col-span-2">
+      <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">Renda Mensal Média</label>
+      <select value={income} onChange={e => setIncome(e.target.value)} required
+        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base appearance-none">
+        <option value="">Selecione a faixa...</option>
+        <option value="Até 3k">Até R$ 3.000</option>
+        <option value="3k-7k">R$ 3.001 a R$ 7.000</option>
+        <option value="7k-15k">R$ 7.001 a R$ 15.000</option>
+        <option value="15k-30k">R$ 15.001 a R$ 30.000</option>
+        <option value="Acima 30k">Acima de R$ 30.000</option>
+      </select>
+    </div>
+  </div>
+)}
                 <div className="space-y-4 text-left">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 uppercase mb-2">E-mail</label>
