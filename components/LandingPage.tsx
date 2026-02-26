@@ -28,6 +28,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [name, setName] = useState('');
+const [phone, setPhone] = useState('');
+const [birthDate, setBirthDate] = useState('');
+const [city, setCity] = useState('');
+const [state, setState] = useState('');
+const [gender, setGender] = useState('');
+const [profession, setProfession] = useState('');
+const [income, setIncome] = useState('');
 
   // Função para abrir modal direto no Cadastro
   const openSignUpModal = () => {
@@ -48,22 +56,32 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
+  e.preventDefault();
+  setFormError(null);
 
-    try {
-      if (email && password) {
-        if (isSignUp) await onSignUp(email, password);
-        else await onLogin(email, password);
-
-        setShowLoginModal(false);
-        setEmail('');
-        setPassword('');
+  try {
+    if (email && password) {
+      if (isSignUp) {
+        // Envia o objeto completo com os dados de mapeamento
+        await onSignUp(JSON.stringify({
+          name, email, password, phone, birthDate, 
+          city, state, gender, profession, income
+        }) as any);
+      } else {
+        await onLogin(email, password);
       }
-    } catch (err: any) {
-      setFormError(err?.message || 'Erro ao autenticar.');
+
+      setShowLoginModal(false);
+      // Limpa os campos após o sucesso
+      setEmail('');
+      setPassword('');
+      setName('');
+      setPhone('');
     }
-  };
+  } catch (err: any) {
+    setFormError(err?.message || 'Erro ao autenticar.');
+  }
+};
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-800 scroll-smooth">
@@ -385,8 +403,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
 
       {/* --- LOGIN/SIGNUP MODAL --- */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    {/* A mudança principal está na linha abaixo: max-w-2xl, max-h e overflow-y-auto */}
+    <div className="bg-white w-full max-w-2xl rounded-3xl p-6 md:p-8 shadow-2xl animate-scale-up relative max-h-[90vh] overflow-y-auto custom-scrollbar">
              <button onClick={() => setShowLoginModal(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
                <X className="w-5 h-5" />
              </button>
@@ -404,28 +423,93 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
              </div>
 
              <form onSubmit={handleLoginSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-2">E-mail</label>
-                  <input 
-                    type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 text-gray-900"
-                    placeholder="seu@email.com"
-                  />
+                {isSignUp && (
+                  <div className="grid md:grid-cols-2 gap-3 mb-4 animate-fade-in">
+                    <div className="col-span-2">
+                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Nome Completo</label>
+                      <input type="text" required value={name} onChange={e => setName(e.target.value)}
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="Seu nome" />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-700 uppercase">WhatsApp</label>
+                      <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)}
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="(00) 00000-0000" />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Nascimento</label>
+                      <input type="date" required value={birthDate} onChange={e => setBirthDate(e.target.value)}
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Cidade</label>
+                      <input type="text" required value={city} onChange={e => setCity(e.target.value)}
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="Ex: Belo Horizonte" />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Estado (UF)</label>
+                      <input type="text" maxLength={2} required value={state} onChange={e => setState(e.target.value)}
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="MG" />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Profissão</label>
+                      <input type="text" required value={profession} onChange={e => setProfession(e.target.value)}
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="Sua profissão" />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Sexo</label>
+                      <select value={gender} onChange={e => setGender(e.target.value)} required
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20">
+                        <option value="">Selecione...</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Feminino">Feminino</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-[10px] font-bold text-gray-700 uppercase">Renda Mensal Média</label>
+                      <select value={income} onChange={e => setIncome(e.target.value)} required
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20">
+                        <option value="">Selecione a faixa...</option>
+                        <option value="Até 3k">Até R$ 3.000</option>
+                        <option value="3k-7k">R$ 3.001 a R$ 7.000</option>
+                        <option value="7k-15k">R$ 7.001 a R$ 15.000</option>
+                        <option value="15k-30k">R$ 15.001 a R$ 30.000</option>
+                        <option value="Acima 30k">Acima de R$ 30.000</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-2">E-mail</label>
+                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                      className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="seu@email.com" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Senha</label>
+                    <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                      className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="••••••••" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Senha</label>
-                  <input 
-                    type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 text-gray-900"
-                    placeholder="••••••••"
-                  />
-                </div>
-                
+
                 {!isSignUp && (
                   <div className="flex justify-end">
                     <a href="#" className="text-xs font-bold text-blue-600 hover:underline">Esqueci minha senha</a>
                   </div>
                 )}
+
+                <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg mt-6 shadow-blue-200">
+                  {isSignUp ? 'Criar minha conta grátis' : 'Entrar'}
+                </button>
+             </form>
 
                 <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200">
                   {isSignUp ? 'Criar minha conta grátis' : 'Entrar'}
