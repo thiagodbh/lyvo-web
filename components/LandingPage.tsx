@@ -249,23 +249,46 @@ const [income, setIncome] = useState('');
       </section>
 
       {/* --- PLANOS --- */}
-      <section id="planos" className="py-20 bg-gray-50">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Planos Simples e Transparentes</h2>
-            <p className="text-gray-500">Escolha o que faz mais sentido para você</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 items-start">
+      <div className="grid md:grid-cols-2 gap-8 items-start">
             
-            {/* Plano Mensal */}
-            <div className="bg-white p-10 rounded-3xl border border-gray-200 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Mensal</h3>
+            {/* Plano Anual - AGORA PRIMEIRO E EM DESTAQUE */}
+            <div className="bg-white p-10 rounded-3xl border-2 border-green-400 shadow-xl relative overflow-hidden order-1 md:order-1">
+              <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl">MELHOR CUSTO-BENEFÍCIO</div>
+              
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Plano Anual</h3>
               <div className="flex items-baseline mb-2">
-                <span className="text-4xl font-bold text-blue-600">R$ 24,90</span>
+                <span className="text-4xl font-bold text-green-500">R$ 12,49</span>
+                <span className="text-gray-500 ml-1">/mês*</span>
+              </div>
+              <p className="text-sm text-gray-700 font-bold mb-2">Equivalente a R$ 149,90 por ano</p>
+              <p className="text-xs text-blue-600 font-medium mb-8 italic">Pague em até 5x de R$ 33,66 no cartão</p>
+
+              <ul className="space-y-4 mb-8 text-sm text-gray-600">
+                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> <strong>Economize 50%</strong> ao ano</li>
+                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Parcelamento em até 5x</li>
+                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Suporte prioritário</li>
+                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Acesso garantido por 12 meses</li>
+              </ul>
+
+              <a 
+                href="https://lastlink.com/p/CA05DE2CE/checkout-payment/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition flex items-center justify-center"
+              >
+                Aproveitar Desconto Anual <ArrowRight className="w-4 h-4 ml-2" />
+              </a>
+              <p className="text-[10px] text-center text-gray-400 mt-3">*Valor total de R$ 149,90 cobrado anualmente</p>
+            </div>
+
+            {/* Plano Mensal - AGORA SEGUNDO */}
+            <div className="bg-white p-10 rounded-3xl border border-gray-200 shadow-sm order-2 md:order-2">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Plano Mensal</h3>
+              <div className="flex items-baseline mb-2">
+                <span className="text-4xl font-bold text-gray-400">R$ 24,90</span>
                 <span className="text-gray-500 ml-1">/mês</span>
               </div>
-              <p className="text-sm text-blue-500 font-bold mb-8">Sem fidelidade - cancele quando quiser</p>
+              <p className="text-sm text-gray-500 font-medium mb-8">Sem fidelidade - cancele quando quiser</p>
 
               <ul className="space-y-4 mb-8 text-sm text-gray-600">
                 <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Chat inteligente ilimitado</li>
@@ -278,47 +301,14 @@ const [income, setIncome] = useState('');
                 href="https://lastlink.com/p/CE5BD085C/checkout-payment/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center"
+                className="w-full py-4 bg-gray-800 text-white rounded-xl font-bold hover:bg-black transition flex items-center justify-center"
               >
-                Assinar Plano Mensal <ArrowRight className="w-4 h-4 ml-2" />
+                Assinar Mensal <ArrowRight className="w-4 h-4 ml-2" />
               </a>
-              <p className="text-[10px] text-center text-gray-400 mt-3">Pagamento mensal seguro via Lastlink</p>
-            </div>
-
-            {/* Plano Anual */}
-            <div className="bg-white p-10 rounded-3xl border-2 border-green-400 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl">MELHOR CUSTO-BENEFÍCIO</div>
-              
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Anual</h3>
-              <div className="flex items-baseline mb-2">
-                <span className="text-4xl font-bold text-green-500">R$ 149,90</span>
-                <span className="text-gray-500 ml-1">/ano</span>
-              </div>
-              <p className="text-sm text-gray-700 font-bold mb-2">Ou até 5x de R$ 33,66</p>
-              <p className="text-xs text-gray-400 mb-8">Economize mais de 40% em relação ao mensal</p>
-
-              <ul className="space-y-4 mb-8 text-sm text-gray-600">
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Tudo do plano Mensal</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Parcelamento em até 5x</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Suporte prioritário</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Acesso garantido por 12 meses</li>
-              </ul>
-
-              <a 
-                href="https://lastlink.com/p/CA05DE2CE/checkout-payment/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition flex items-center justify-center"
-              >
-                Assinar Plano Anual <ArrowRight className="w-4 h-4 ml-2" />
-              </a>
-              <p className="text-[10px] text-center text-gray-400 mt-3">Pagamento anual com opção de parcelamento</p>
+              <p className="text-[10px] text-center text-gray-400 mt-3">Pagamento recorrente via Lastlink</p>
             </div>
 
           </div>
-        </div>
-      </section>
-
       {/* --- FAQ & OUTRAS SEÇÕES (Mantidas conforme original para brevidade) --- */}
       <section id="faq" className="py-24 px-6">
         <div className="max-w-3xl mx-auto">
