@@ -62,8 +62,8 @@ const [income, setIncome] = useState('');
   try {
     if (email && password) {
       if (isSignUp) {
-        // Envia como um objeto limpo, não como string
-        await onSignUp({
+        // Criamos um objeto limpo com todos os campos que você quer mapear
+        const registrationData = {
           name, 
           email, 
           password, 
@@ -74,19 +74,22 @@ const [income, setIncome] = useState('');
           gender, 
           profession, 
           income
-        } as any);
+        };
+        
+        // Enviamos esse objeto. O erro "scalar field" deve sumir.
+        await onSignUp(registrationData as any);
       } else {
         await onLogin(email, password);
       }
 
       setShowLoginModal(false);
-      // Limpar campos
+      // Limpa os estados para segurança
       setEmail('');
       setPassword('');
     }
   } catch (err: any) {
-    // Exibe o erro real do Firebase para sabermos o que é (ex: senha fraca, email já existe)
-    setFormError(err?.message || 'Erro ao autenticar no sistema.');
+    // Tratamento de erro amigável
+    setFormError(err?.message || 'Erro ao realizar cadastro.');
   }
 };
   return (
