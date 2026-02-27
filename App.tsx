@@ -78,7 +78,11 @@ function App() {
   await authService.signIn(email, password);
 };
 
-const handleSignUp = async (email: string, password: string) => {
+const handleSignUp = async (userData: any) => {
+  // 1. Extraímos email e senha do objeto para o Auth não quebrar
+  const { email, password } = userData;
+
+  // 2. Faz o cadastro no Firebase Auth
   await authService.signUp(email, password);
 
   const u = authService.getCurrentUser();
@@ -87,15 +91,26 @@ const handleSignUp = async (email: string, password: string) => {
   const userRef = doc(db, "users", u.uid);
   const snap = await getDoc(userRef);
 
-  // cria o cadastro do usuário no Firestore (uma única vez)
+  // 3. Cria o cadastro no Firestore com os dados de mapeamento + regras de trial
   if (!snap.exists()) {
     await setDoc(userRef, {
-  email,
-  active: false,
-  plan: "trial",
-  createdAt: serverTimestamp(),
-  trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)),
-}, { merge: true });
+      // Dados básicos e de mapeamento
+      name: userData.name || '',
+      email: email,
+      phone: userData.phone || '',
+      birthDate: userData.birthDate || '',
+      city: userData.city || '',
+      state: userData.state || '',
+      gender: userData.gender || '',
+      profession: userData.profession || '',
+      income: userData.income || '',
+      
+      // MANTÉM AS FUNCIONALIDADES ORIGINAIS (Não afeta o trial)
+      active: false,
+      plan: "trial",
+      createdAt: serverTimestamp(),
+      trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)),
+    }, { merge: true });
   }
 };
 
