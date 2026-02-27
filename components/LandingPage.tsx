@@ -55,34 +55,40 @@ const [income, setIncome] = useState('');
     setOpenFaq(openFaq === index ? null : index);
   };
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+ const handleLoginSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setFormError(null);
 
   try {
     if (email && password) {
       if (isSignUp) {
-        // Envia o objeto completo com os dados de mapeamento
-        await onSignUp(JSON.stringify({
-          name, email, password, phone, birthDate, 
-          city, state, gender, profession, income
-        }) as any);
+        // Envia como um objeto limpo, não como string
+        await onSignUp({
+          name, 
+          email, 
+          password, 
+          phone, 
+          birthDate, 
+          city, 
+          state, 
+          gender, 
+          profession, 
+          income
+        } as any);
       } else {
         await onLogin(email, password);
       }
 
       setShowLoginModal(false);
-      // Limpa os campos após o sucesso
+      // Limpar campos
       setEmail('');
       setPassword('');
-      setName('');
-      setPhone('');
     }
   } catch (err: any) {
-    setFormError(err?.message || 'Erro ao autenticar.');
+    // Exibe o erro real do Firebase para sabermos o que é (ex: senha fraca, email já existe)
+    setFormError(err?.message || 'Erro ao autenticar no sistema.');
   }
 };
-
   return (
     <div className="min-h-screen bg-white font-sans text-gray-800 scroll-smooth">
       
