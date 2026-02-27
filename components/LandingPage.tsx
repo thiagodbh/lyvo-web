@@ -411,7 +411,7 @@ const [income, setIncome] = useState('');
      {/* --- LOGIN/SIGNUP MODAL ATUALIZADO --- */}
       {showLoginModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-white w-full max-w-2xl rounded-3xl p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative max-h-[92vh] overflow-y-auto overscroll-contain">
              <button 
                onClick={() => setShowLoginModal(false)}
                className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200"
