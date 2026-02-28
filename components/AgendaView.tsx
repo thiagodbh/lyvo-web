@@ -250,7 +250,7 @@ const googleSyncFn = httpsCallable(functions, "googleSync");
                                 key={day} 
                                 onClick={() => { setSelectedDate(currentDayDate); /* setViewMode('DAY'); - Don't switch view on desktop */ }}
                                 className={`h-10 sm:h-12 md:h-14 lg:h-16 flex flex-col items-center justify-start pt-1 rounded-xl relative transition-all
-                                    ${isSelected ? 'bg-lyvo-primary/10 ring-1 ring-lyvo-primary' : 'hover:bg-gray-50'}
+                                    ${isSelected ? 'bg-lyvo-primary/30 ring-1 ring-lyvo-primary' : 'hover:bg-gray-50'}
                                     ${isToday ? 'font-bold text-lyvo-primary' : 'text-gray-700'}
                                 `}
                             >
