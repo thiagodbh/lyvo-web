@@ -250,7 +250,7 @@ const googleSyncFn = httpsCallable(functions, "googleSync");
                                 key={day} 
                                 onClick={() => { setSelectedDate(currentDayDate); /* setViewMode('DAY'); - Don't switch view on desktop */ }}
                                 className={`h-10 sm:h-12 md:h-14 lg:h-16 flex flex-col items-center justify-start pt-1 rounded-xl relative transition-all
-                                    ${isSelected ? 'bg-lyvo-primary/30 ring-1 ring-lyvo-primary' : 'hover:bg-gray-50'}
+                                    ${isSelected ? 'bg-lyvo-primary/25 ring-1 ring-lyvo-primary' : 'hover:bg-gray-50'}
                                     ${isToday ? 'font-bold text-lyvo-primary' : 'text-gray-700'}
                                 `}
                             >
@@ -504,7 +504,11 @@ const googleSyncFn = httpsCallable(functions, "googleSync");
                             
                             <div className="flex gap-2">
                                 {(['EVENT', 'TASK', 'REMINDER'] as const).map(t => (
-                                    <button key={t} onClick={() => setEditingEvent({...editingEvent, type: t})} className={`flex-1 py-2 text-xs font-bold rounded-lg border ${editingEvent.type === t ? 'bg-lyvo-primary text-white' : 'bg-white text-gray-400'}`}>
+                                    <button key={t} onClick={() => setEditingEvent({...editingEvent, type: t})} className={`flex-1 py-2 text-xs font-bold rounded-lg border transition ${
+  editingEvent.type === t
+    ? 'bg-lyvo-primary text-white border-lyvo-primary'
+    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+}`}>
                                         {t === 'EVENT' ? 'Evento' : t === 'TASK' ? 'Tarefa' : 'Lembrete'}
                                     </button>
                                 ))}
@@ -553,7 +557,7 @@ const googleSyncFn = httpsCallable(functions, "googleSync");
                                 {editingEvent.id && (
                                     <button onClick={() => handleDeleteEvent(editingEvent.id!)} className="px-5 py-3 rounded-xl bg-red-50 text-red-500 font-bold">Excluir</button>
                                 )}
-                                <button onClick={handleSaveEvent} className="flex-1 bg-lyvo-primary text-white py-3 rounded-xl font-bold shadow-lg">Salvar</button>
+                                <button onClick={handleSaveEvent} className="flex-1 bg-lyvo-primary text-white py-3 rounded-xl font-bold shadow-lg hover:bg-lyvo-primary/90 active:bg-lyvo-primary/80 transition">Salvar</button>
                             </div>
                         </div>
                     </div>
