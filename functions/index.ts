@@ -1,7 +1,11 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import { defineSecret } from "firebase-functions/params";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 admin.initializeApp();
+const GOOGLE_CLIENT_ID = defineSecret("GOOGLE_CLIENT_ID");
+const GOOGLE_CLIENT_SECRET = defineSecret("GOOGLE_CLIENT_SECRET");
 
 export const lastlinkWebhook = functions.https.onRequest(async (req, res) => {
     // 1. Verificação de segurança (Opcional, mas profissional)
@@ -49,26 +53,24 @@ export const lastlinkWebhook = functions.https.onRequest(async (req, res) => {
 // ================= GOOGLE CALENDAR (OAuth + Sync) =================
 
 // Troca "code" por tokens e salva refresh_token no Firestore
-export const googleConnect = onCall(async (request) => {
+export const googleConnect = onCall(
+  { secrets: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET] },
+  async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Usuário não autenticado");
   }
 
   const code = request.data?.code as string | undefined;
   if (!code) {
-    throw new HttpsError("invalid-argument", "Code não fornecido");
-  }
-
-  // ⚠️ Tipagem do v2 está marcando config() como never no seu projeto.
-  // Para não travar o build, usamos cast seguro.
-  const cfg = (functions as any).config?.();
+const clientId = GOOGLE_CLIENT_ID.value();
+const clientSecret = GOOGLE_CLIENT_SECRET.value();
   const clientId = cfg?.google?.client_id;
   const clientSecret = cfg?.google?.client_secret;
 
   if (!clientId || !clientSecret) {
     throw new HttpsError(
       "failed-precondition",
-      "Config google.client_id / google.client_secret não encontrada no Firebase."
+      "Secrets GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET não encontrados no ambiente."
     );
   }
 
@@ -116,7 +118,9 @@ export const googleConnect = onCall(async (request) => {
 });
 
 // Por enquanto: só valida se existe conexão salva.
-export const googleSync = onCall(async (request) => {
+export const googleSync = onCall(
+  { secrets: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET] },
+  async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Usuário não autenticado");
   }
@@ -128,5 +132,5 @@ export const googleSync = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "Google não conectado");
   }
 
-  return { success: true };
+ 
 });
