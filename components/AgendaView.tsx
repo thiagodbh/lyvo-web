@@ -557,7 +557,7 @@ const googleSyncFn = httpsCallable(functions, "googleSync");
                                 {editingEvent.id && (
                                     <button onClick={() => handleDeleteEvent(editingEvent.id!)} className="px-5 py-3 rounded-xl bg-red-50 text-red-500 font-bold">Excluir</button>
                                 )}
-                                <button onClick={handleSaveEvent} className="flex-1 blue-500 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-lyvo-primary/90 active:bg-lyvo-primary/80 transition">Salvar</button>
+                                <button onClick={handleSaveEvent} className="flex-1 bg-blue-50 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-lyvo-primary/90 active:bg-lyvo-primary/80 transition">Salvar</button>
                             </div>
                         </div>
                     </div>
