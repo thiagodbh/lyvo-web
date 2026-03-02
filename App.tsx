@@ -1,7 +1,8 @@
 import { checkUserAccess } from "./services/accessControl";
 import { Timestamp } from "firebase/firestore";
 import Paywall from './components/Paywall';
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import AdminPanel from './components/AdminPanel';
 import { db } from './services/firebase';
 import { store } from './services/firestoreStore';
 import React, { useState } from 'react';
@@ -55,6 +56,32 @@ function App() {
       setIsAuthorized(null);
       return;
     }
+
+    // --- REGISTRO DE ATIVIDADE (ADICIONADO AQUI) ---
+      try {
+        const userRef = doc(db, "users", u.uid);
+        await updateDoc(userRef, {
+          lastActiveAt: serverTimestamp()
+        });
+      } catch (e) {
+        console.error("Erro ao registrar atividade:", e);
+      }
+      // ----------------------------------------------
+
+      store.setUser(u.uid);
+      setIsAuthenticated(true);
+      setIsAuthorized(null);
+
+      try {
+        const allowed = await checkUserAccess(u.uid);
+        setIsAuthorized(allowed);
+      } catch {
+        setIsAuthorized(false);
+      }
+    });
+    
+    return () => unsubscribe();
+  }, []);
 
     store.setUser(u.uid);
     setIsAuthenticated(true);
@@ -137,72 +164,66 @@ if (isAuthenticated && isAuthorized === null) {
   );
 }
 
-if (isAuthenticated && isAuthorized === false) {
-  return <Paywall onLogout={handleLogout} />;
-}
+// --- INÍCIO DA LÓGICA DE TELAS (ORDEM DE PRIORIDADE) ---
 
-  if (isAuthenticated) {
-    const renderContent = () => {
-      switch (currentTab) {
-        case AppTab.CHAT:
-          return <ChatInterface />;
-        case AppTab.FINANCE:
-          return <FinanceDashboard />;
-        case AppTab.AGENDA:
-          return <AgendaView />;
-        case AppTab.PROFILE:
-          return <ProfileScreen onLogout={handleLogout} />;
-        default:
-          return <ChatInterface />;
-      }
-    };
+  // 1. PRIORIDADE MÁXIMA: Detecta se você quer entrar no modo Admin pela URL
+  // Acesso via: seudominio.com/?view=admin
+  const urlParams = new URLSearchParams(window.location.search);
+  const isAdminView = urlParams.get('view') === 'admin';
 
-    const NavButton = ({ tab, icon: Icon, label }: { tab: AppTab; icon: any; label: string }) => {
-      const isActive = currentTab === tab;
-      return (
-        <button 
-          onClick={() => setCurrentTab(tab)}
-          className={`
-            flex flex-col items-center justify-center transition-all duration-200 space-y-1 w-full h-full active:scale-95
-            ${isActive ? 'text-lyvo-primary' : 'text-gray-400 hover:text-gray-600'}
-          `}
-        >
-          <Icon
-            className={`
-              w-6 h-6 
-              ${isActive ? 'fill-current' : ''} transition-all duration-300
-            `}
-            strokeWidth={isActive ? 2.5 : 2}
-          />
-          <span
-            className={`
-              text-[10px] 
-              font-medium ${isActive ? 'font-bold' : ''}
-            `}
-          >
-            {label}
-          </span>
-        </button>
-      );
-    };
-
-    return (
-      <div className="w-full bg-gray-50 relative overflow-hidden flex flex-col min-h-[100dvh] h-[100dvh]">
-        {/* MAIN CONTENT AREA - Padding bottom matched to nav height */}
-        <main className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
-          {renderContent()}
-        </main>
-
-        {/* BOTTOM NAV (STRICTLY FIXED AT BOTTOM) */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-          <NavButton tab={AppTab.CHAT} icon={MessageCircle} label="Chat" />
-          <NavButton tab={AppTab.FINANCE} icon={PieChart} label="Finanças" />
-          <NavButton tab={AppTab.AGENDA} icon={Calendar} label="Agenda" />
-          <NavButton tab={AppTab.PROFILE} icon={User} label="Perfil" />
-        </nav>
-      </div>
-    );
+  if (isAdminView) {
+    return <AdminPanel />;
   }
+
+  // 2. SEGUNDA PRIORIDADE: Se não estiver logado, mostra a Landing Page
+  if (!isAuthenticated) {
+    return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
+  }
+
+  // 3. TERCEIRA PRIORIDADE: Se logado, mas plano vencido/não autorizado, mostra Paywall
+  if (isAuthorized === false) {
+    return <Paywall onLogout={handleLogout} />;
+  }
+
+  // 4. QUARTA PRIORIDADE: Usuário logado e autorizado, mostra o App Principal
+  const renderContent = () => {
+    switch (currentTab) {
+      case AppTab.CHAT: return <ChatInterface />;
+      case AppTab.FINANCE: return <FinanceDashboard />;
+      case AppTab.AGENDA: return <AgendaView />;
+      case AppTab.PROFILE: return <ProfileScreen onLogout={handleLogout} />;
+      default: return <ChatInterface />;
+    }
+  };
+
+  const NavButton = ({ tab, icon: Icon, label }: { tab: AppTab; icon: any; label: string }) => {
+    const isActive = currentTab === tab;
+    return (
+      <button 
+        onClick={() => setCurrentTab(tab)}
+        className={`flex flex-col items-center justify-center transition-all duration-200 space-y-1 w-full h-full active:scale-95 ${isActive ? 'text-lyvo-primary' : 'text-gray-400 hover:text-gray-600'}`}
+      >
+        <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''} transition-all duration-300`} strokeWidth={isActive ? 2.5 : 2} />
+        <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : ''}`}>{label}</span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="w-full bg-gray-50 relative overflow-hidden flex flex-col min-h-[100dvh] h-[100dvh]">
+      <main className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
+        {renderContent()}
+      </main>
+
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <NavButton tab={AppTab.CHAT} icon={MessageCircle} label="Chat" />
+        <NavButton tab={AppTab.FINANCE} icon={PieChart} label="Finanças" />
+        <NavButton tab={AppTab.AGENDA} icon={Calendar} label="Agenda" />
+        <NavButton tab={AppTab.PROFILE} icon={User} label="Perfil" />
+      </nav>
+    </div>
+  );
+  // --- FIM DA LÓGICA DE TELAS ---
 
   // --- Unauthenticated Layout (Landing Page) ---
   return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
