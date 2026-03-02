@@ -49,7 +49,7 @@ function App() {
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
  React.useEffect(() => {
-    // Adicionamos 'async' aqui antes do (u)
+    // É CRUCIAL que o 'async' esteja aqui antes do '(u)'
     const unsubscribe = authService.onChange(async (u) => {
       if (!u?.uid) {
         store.clearUser();
@@ -58,7 +58,7 @@ function App() {
         return;
       }
 
-      // Registro de Atividade
+      // REGISTRO DE ATIVIDADE
       try {
         const userRef = doc(db, "users", u.uid);
         await updateDoc(userRef, {
@@ -72,18 +72,18 @@ function App() {
       setIsAuthenticated(true);
       setIsAuthorized(null);
 
-      // Aqui é onde o erro estava ocorrendo: o await agora tem um async pai
+      // Agora o await abaixo funcionará porque a função pai é async
       try {
         const allowed = await checkUserAccess(u.uid);
         setIsAuthorized(allowed);
-      } catch {
+      } catch (error) {
+        console.error("Erro ao checar acesso:", error);
         setIsAuthorized(false);
       }
     });
     
     return () => unsubscribe();
   }, []);
-
     store.setUser(u.uid);
     setIsAuthenticated(true);
 
