@@ -49,37 +49,39 @@ function App() {
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
  React.useEffect(() => {
-    // É CRUCIAL que o 'async' esteja aqui antes do '(u)'
-    const unsubscribe = authService.onChange(async (u) => {
-      if (!u?.uid) {
-        store.clearUser();
-        setIsAuthenticated(false);
+    const unsubscribe = authService.onChange((u) => {
+      // Criamos uma função interna assíncrona e a executamos imediatamente
+      (async () => {
+        if (!u?.uid) {
+          store.clearUser();
+          setIsAuthenticated(false);
+          setIsAuthorized(null);
+          return;
+        }
+
+        // 1. Registro de Atividade
+        try {
+          const userRef = doc(db, "users", u.uid);
+          await updateDoc(userRef, {
+            lastActiveAt: serverTimestamp()
+          });
+        } catch (e) {
+          console.error("Erro ao registrar atividade:", e);
+        }
+
+        store.setUser(u.uid);
+        setIsAuthenticated(true);
         setIsAuthorized(null);
-        return;
-      }
 
-      // REGISTRO DE ATIVIDADE
-      try {
-        const userRef = doc(db, "users", u.uid);
-        await updateDoc(userRef, {
-          lastActiveAt: serverTimestamp()
-        });
-      } catch (e) {
-        console.error("Erro ao registrar atividade:", e);
-      }
-
-      store.setUser(u.uid);
-      setIsAuthenticated(true);
-      setIsAuthorized(null);
-
-      // Agora o await abaixo funcionará porque a função pai é async
-      try {
-        const allowed = await checkUserAccess(u.uid);
-        setIsAuthorized(allowed);
-      } catch (error) {
-        console.error("Erro ao checar acesso:", error);
-        setIsAuthorized(false);
-      }
+        // 2. Checagem de Acesso (onde dava o erro)
+        try {
+          const allowed = await checkUserAccess(u.uid);
+          setIsAuthorized(allowed);
+        } catch (error) {
+          console.error("Erro no access control:", error);
+          setIsAuthorized(false);
+        }
+      })(); // Os parênteses aqui executam a função
     });
     
     return () => unsubscribe();
