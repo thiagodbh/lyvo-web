@@ -1,7 +1,6 @@
 import { checkUserAccess } from "./services/accessControl";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import Paywall from './components/Paywall';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import AdminPanel from './components/AdminPanel';
 import { db } from './services/firebase';
 import { store } from './services/firestoreStore';
@@ -15,7 +14,6 @@ import LandingPage from './components/LandingPage';
 import { AppTab } from './types';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
-// Placeholder for Profile Screen
 const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
   <div className="flex flex-col items-center justify-center h-full bg-gray-50 p-6">
     <div className="w-24 h-24 bg-lyvo-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
@@ -25,13 +23,11 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
     <p className="text-gray-500 text-center mt-2 max-w-xs">
       Gerencie sua conta, suas conexões bancárias e preferências do Lyvo.
     </p>
-    
     <div className="mt-8 w-full max-w-xs space-y-3">
       <button className="w-full flex items-center justify-center space-x-2 bg-white p-4 rounded-xl shadow-sm text-gray-700 font-medium border border-gray-100 hover:bg-gray-50 transition">
         <Settings className="w-5 h-5" />
         <span>Configurações</span>
       </button>
-      
       <button 
         onClick={onLogout}
         className="w-full bg-red-50 text-red-500 p-4 rounded-xl font-bold hover:bg-red-100 transition flex items-center justify-center space-x-2"
@@ -48,9 +44,8 @@ function App() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
- React.useEffect(() => {
+  React.useEffect(() => {
     const unsubscribe = authService.onChange((u) => {
-      // Criamos uma função interna assíncrona e a executamos imediatamente
       (async () => {
         if (!u?.uid) {
           store.clearUser();
@@ -59,7 +54,6 @@ function App() {
           return;
         }
 
-        // 1. Registro de Atividade
         try {
           const userRef = doc(db, "users", u.uid);
           await updateDoc(userRef, {
@@ -73,7 +67,6 @@ function App() {
         setIsAuthenticated(true);
         setIsAuthorized(null);
 
-        // 2. Checagem de Acesso (onde dava o erro)
         try {
           const allowed = await checkUserAccess(u.uid);
           setIsAuthorized(allowed);
@@ -81,96 +74,57 @@ function App() {
           console.error("Erro no access control:", error);
           setIsAuthorized(false);
         }
-      })(); // Os parênteses aqui executam a função
+      })();
     });
-    
     return () => unsubscribe();
   }, []);
-    store.setUser(u.uid);
-    setIsAuthenticated(true);
-
-    setIsAuthorized(null);
-
-   try {
-  const allowed = await checkUserAccess(u.uid);
-  setIsAuthorized(allowed);
-} catch {
-  setIsAuthorized(false);
-}
-
-  });
-
-  return () => unsubscribe?.();
-}, []);
-
 
   const handleLogin = async (email: string, password: string) => {
-  await authService.signIn(email, password);
-};
+    await authService.signIn(email, password);
+  };
 
-const handleSignUp = async (userData: any) => {
-  // 1. Extraímos email e senha do objeto para o Auth não quebrar
-  const { email, password } = userData;
+  const handleSignUp = async (userData: any) => {
+    const { email, password } = userData;
+    await authService.signUp(email, password);
+    const u = authService.getCurrentUser();
+    if (!u?.uid) return;
 
-  // 2. Faz o cadastro no Firebase Auth
-  await authService.signUp(email, password);
+    const userRef = doc(db, "users", u.uid);
+    const snap = await getDoc(userRef);
 
-  const u = authService.getCurrentUser();
-  if (!u?.uid) return;
-
-  const userRef = doc(db, "users", u.uid);
-  const snap = await getDoc(userRef);
-
-  // 3. Cria o cadastro no Firestore com os dados de mapeamento + regras de trial
-  if (!snap.exists()) {
-    await setDoc(userRef, {
-      // Dados básicos e de mapeamento
-      name: userData.name || '',
-      email: email,
-      phone: userData.phone || '',
-      birthDate: userData.birthDate || '',
-      city: userData.city || '',
-      state: userData.state || '',
-      gender: userData.gender || '',
-      profession: userData.profession || '',
-      income: userData.income || '',
-      
-      // MANTÉM AS FUNCIONALIDADES ORIGINAIS (Não afeta o trial)
-      active: false,
-      plan: "trial",
-      createdAt: serverTimestamp(),
-      trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)),
-    }, { merge: true });
-  }
-};
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        name: userData.name || '',
+        email: email,
+        phone: userData.phone || '',
+        birthDate: userData.birthDate || '',
+        city: userData.city || '',
+        state: userData.state || '',
+        gender: userData.gender || '',
+        profession: userData.profession || '',
+        income: userData.income || '',
+        active: false,
+        plan: "trial",
+        createdAt: serverTimestamp(),
+        trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)),
+      }, { merge: true });
+    }
+  };
 
   const handleLogout = async () => {
-  await authService.signOut();
-  setCurrentTab(AppTab.CHAT);
-  setIsAuthorized(null);
-};
+    await authService.signOut();
+    setCurrentTab(AppTab.CHAT);
+    setIsAuthorized(null);
+  };
 
-
-  // --- Authenticated Layout (Responsive with Fixed Bottom Nav) ---
   if (isAuthenticated === null) {
-  return (
-    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-      <div className="text-gray-500 font-medium">Carregando...</div>
-    </div>
-  );
-}
-if (isAuthenticated && isAuthorized === null) {
-  return (
-    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-      <div className="text-gray-500 font-medium">Verificando acesso...</div>
-    </div>
-  );
-}
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="text-gray-500 font-medium">Carregando...</div>
+      </div>
+    );
+  }
 
-// --- INÍCIO DA LÓGICA DE TELAS (ORDEM DE PRIORIDADE) ---
-
-  // 1. PRIORIDADE MÁXIMA: Detecta se você quer entrar no modo Admin pela URL
-  // Acesso via: seudominio.com/?view=admin
   const urlParams = new URLSearchParams(window.location.search);
   const isAdminView = urlParams.get('view') === 'admin';
 
@@ -178,17 +132,22 @@ if (isAuthenticated && isAuthorized === null) {
     return <AdminPanel />;
   }
 
-  // 2. SEGUNDA PRIORIDADE: Se não estiver logado, mostra a Landing Page
   if (!isAuthenticated) {
     return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
   }
 
-  // 3. TERCEIRA PRIORIDADE: Se logado, mas plano vencido/não autorizado, mostra Paywall
+  if (isAuthorized === null) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="text-gray-500 font-medium">Verificando acesso...</div>
+      </div>
+    );
+  }
+
   if (isAuthorized === false) {
     return <Paywall onLogout={handleLogout} />;
   }
 
-  // 4. QUARTA PRIORIDADE: Usuário logado e autorizado, mostra o App Principal
   const renderContent = () => {
     switch (currentTab) {
       case AppTab.CHAT: return <ChatInterface />;
@@ -217,7 +176,6 @@ if (isAuthenticated && isAuthorized === null) {
       <main className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
         {renderContent()}
       </main>
-
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <NavButton tab={AppTab.CHAT} icon={MessageCircle} label="Chat" />
         <NavButton tab={AppTab.FINANCE} icon={PieChart} label="Finanças" />
@@ -226,11 +184,6 @@ if (isAuthenticated && isAuthorized === null) {
       </nav>
     </div>
   );
-}
-  // --- FIM DA LÓGICA DE TELAS ---
-
-  // --- Unauthenticated Layout (Landing Page) ---
-  return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
 }
 
 const RootApp = () => (
