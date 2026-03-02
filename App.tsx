@@ -223,6 +223,7 @@ if (isAuthenticated && isAuthorized === null) {
       </nav>
     </div>
   );
+}
   // --- FIM DA LÓGICA DE TELAS ---
 
   // --- Unauthenticated Layout (Landing Page) ---
