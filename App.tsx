@@ -49,15 +49,16 @@ function App() {
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
 
  React.useEffect(() => {
-  const unsubscribe = authService.onChange(async (u) => {
-    if (!u?.uid) {
-      store.clearUser();
-      setIsAuthenticated(false);
-      setIsAuthorized(null);
-      return;
-    }
+    // Adicionamos 'async' aqui antes do (u)
+    const unsubscribe = authService.onChange(async (u) => {
+      if (!u?.uid) {
+        store.clearUser();
+        setIsAuthenticated(false);
+        setIsAuthorized(null);
+        return;
+      }
 
-    // --- REGISTRO DE ATIVIDADE (ADICIONADO AQUI) ---
+      // Registro de Atividade
       try {
         const userRef = doc(db, "users", u.uid);
         await updateDoc(userRef, {
@@ -66,12 +67,12 @@ function App() {
       } catch (e) {
         console.error("Erro ao registrar atividade:", e);
       }
-      // ----------------------------------------------
 
       store.setUser(u.uid);
       setIsAuthenticated(true);
       setIsAuthorized(null);
 
+      // Aqui é onde o erro estava ocorrendo: o await agora tem um async pai
       try {
         const allowed = await checkUserAccess(u.uid);
         setIsAuthorized(allowed);
