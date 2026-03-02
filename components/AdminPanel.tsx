@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../firebase'; // Ajuste o caminho conforme seu projeto
+// CORREÇÃO DO CAMINHO: Agora ele aponta para a pasta services correta
+import { db } from '../services/firebase'; 
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
-import { Users, Filter, Download, Activity, CreditCard } from 'lucide-react';
+import { authService } from '../services/authService'; // Para a segurança do admin
+import { Users, Filter, Download, Activity, CreditCard, ChevronLeft } from 'lucide-react';
 
+// O restante do código continua igual...
 const AdminPanel = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
