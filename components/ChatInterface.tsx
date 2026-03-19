@@ -290,7 +290,11 @@ const ChatInterface: React.FC = () => {
     
     setIsLoading(true);
     // If it's a camera upload, the textOverride is "Analisando..."
-    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: text, image: imageDisplay }]);
+    setMessages(prev => {
+      const newMessages = [...prev, { id: Date.now().toString(), role: 'user', content: text, image: imageDisplay }];
+      // Mantém apenas as últimas 10 mensagens para não pesar o navegador
+      return newMessages.length > 10 ? newMessages.slice(newMessages.length - 10) : newMessages;
+    });
     setInputText('');
 
     try {
