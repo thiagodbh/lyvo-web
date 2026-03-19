@@ -50,26 +50,32 @@ export default async function handler(req: any, res: any) {
     if (text) parts.push({ text });
     if (imageBase64) parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
 
+    // ✅ Alterado para o modelo estável 2.0-flash (mais rápido e barato)
     const response = await ai.models.generateContent({
-      // ✅ modelo válido (use um destes)
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash", 
       contents: [{ role: "user", parts }],
       config: {
         responseMimeType: "application/json",
         responseSchema: actionSchema,
-        thinkingConfig: { thinkingBudget: 0 },
       },
     });
 
+    // PEGA O TEXTO BRUTO: Adicionamos uma verificação de segurança
     const raw = response.text || "{}";
-    const parsed = JSON.parse(raw);
-
-    return res.status(200).json({
-      message: parsed.responseMessage || "Ok.",
-      data: parsed,
-    });
-  } catch (error: any) {
-    console.error("Gemini API Error:", error?.message || error);
-    return res.status(500).json({ error: "Gemini processing failed", details: String(error?.message || error) });
-  }
-}
+    
+    try {
+        // Tenta transformar o texto da IA em dados para o App
+        const parsed = JSON.parse(raw);
+        
+        return res.status(200).json({
+          message: parsed.responseMessage || "Comando processado.",
+          data: parsed,
+        });
+    } catch (parseError) {
+        // Se a IA "engasgar" e mandar um texto quebrado, o App não trava mais
+        console.error("Erro de Sintaxe na Resposta da IA:", raw);
+        return res.status(200).json({ 
+            message: "Entendi o seu comando, mas houve uma oscilação na rede. Pode repetir de forma mais curta?",
+            data: { action: "UNKNOWN" } 
+        });
+    }
