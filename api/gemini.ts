@@ -63,7 +63,7 @@ export default async function handler(req: any, res: any) {
     // PEGA O TEXTO BRUTO: Adicionamos uma verificação de segurança
     const raw = response.text || "{}";
     
-    try {
+   try {
         // Tenta transformar o texto da IA em dados para o App
         const parsed = JSON.parse(raw);
         
@@ -79,3 +79,12 @@ export default async function handler(req: any, res: any) {
             data: { action: "UNKNOWN" } 
         });
     }
+  } catch (error: any) { 
+    // ✅ ESTE BLOCO FECHA O TRY GERAL DO INÍCIO DO ARQUIVO
+    console.error("Gemini API Error:", error?.message || error);
+    return res.status(500).json({ 
+        error: "Gemini processing failed", 
+        details: String(error?.message || error) 
+    });
+  }
+} // ✅ ESTA CHAVE FECHA A FUNÇÃO HANDLER (O ARQUIVO INTEIRO)
