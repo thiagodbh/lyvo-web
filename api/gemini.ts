@@ -1,5 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Type } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const actionSchema = {
   type: Type.OBJECT,
@@ -10,6 +9,7 @@ const actionSchema = {
     },
     transactionDetails: {
       type: Type.OBJECT,
+      nullable: true,
       properties: {
         type: { type: Type.STRING, enum: ["INCOME", "EXPENSE"] },
         value: { type: Type.NUMBER },
@@ -19,17 +19,16 @@ const actionSchema = {
         installments: { type: Type.NUMBER },
         date: { type: Type.STRING, description: "Formato YYYY-MM-DD" },
       },
-      nullable: true,
     },
     eventDetails: {
       type: Type.OBJECT,
+      nullable: true,
       properties: {
         title: { type: Type.STRING },
         date: { type: Type.STRING, description: "YYYY-MM-DD" },
         time: { type: Type.STRING, description: "HH:mm" },
         description: { type: Type.STRING },
       },
-      nullable: true,
     },
     responseMessage: { type: Type.STRING },
   },
@@ -37,53 +36,73 @@ const actionSchema = {
 };
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
+    if (!apiKey) {
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
+    }
 
-    const { text, imageBase64 } = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { text, imageBase64 } =
+      typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    // 1. Inicializa a biblioteca oficial (estrada de produção v1)
-    // 1. Voltamos para a v1beta que é a única que aceita o flash com schema agora
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-    }); // Removemos o v1 e o config daqui
+    const ai = new GoogleGenAI({ apiKey });
 
-    const promptReforce = "\nResponda APENAS em JSON seguindo este esquema: " + JSON.stringify(actionSchema);
     const parts: any[] = [];
-    if (text) parts.push({ text: text + promptReforce });
-    if (imageBase64) parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
+    if (text) {
+      parts.push({
+        text:
+          text +
+          "\nExtraia a intenção e responda somente com JSON válido, sem markdown e sem texto extra.",
+      });
+    }
 
-    // 2. Chamada direta
-    const result = await model.generateContent({ contents: [{ role: "user", parts }] });
-    const response = await result.response;
-    const raw = response.text();
+    if (imageBase64) {
+      parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64,
+        },
+      });
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts,
+        },
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: actionSchema,
+      },
+    });
+
+    const raw = response.text ?? "";
 
     try {
-        // Tenta transformar o texto da IA em dados para o App
-        const parsed = JSON.parse(raw);
-        
-        return res.status(200).json({
-          message: parsed.responseMessage || "Comando processado.",
-          data: parsed,
-        });
-    } catch (parseError) {
-        // Se a IA "engasgar" e mandar um texto quebrado, o App não trava mais
-        console.error("Erro de Sintaxe na Resposta da IA:", raw);
-        return res.status(200).json({ 
-            message: "Entendi o seu comando, mas houve uma oscilação na rede. Pode repetir de forma mais curta?",
-            data: { action: "UNKNOWN" } 
-        });
+      const parsed = JSON.parse(raw);
+      return res.status(200).json({
+        message: parsed.responseMessage || "Comando processado.",
+        data: parsed,
+      });
+    } catch {
+      console.error("Erro de parse do JSON:", raw);
+      return res.status(200).json({
+        message: "Houve uma oscilação ao interpretar o comando. Tente novamente.",
+        data: { action: "UNKNOWN" },
+      });
     }
-  } catch (error: any) { 
-    // ✅ ESTE BLOCO FECHA O TRY GERAL DO INÍCIO DO ARQUIVO
-    console.error("Gemini API Error:", error?.message || error);
-    return res.status(500).json({ 
-        error: "Gemini processing failed", 
-        details: String(error?.message || error) 
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+    return res.status(500).json({
+      error: "Gemini processing failed",
+      details: String(error?.message || error),
     });
   }
 }
