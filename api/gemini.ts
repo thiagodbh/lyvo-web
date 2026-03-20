@@ -53,10 +53,10 @@ export default async function handler(req: any, res: any) {
       model: "gemini-1.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
-        // @ts-ignore - Mantém seu esquema original
+        // @ts-ignore
         responseSchema: actionSchema as any, 
       },
-    });
+    }, { apiVersion: 'v1' }); // <--- Isso força a rota do plano pago
 
     const parts: any[] = [];
     if (text) parts.push({ text: text });
