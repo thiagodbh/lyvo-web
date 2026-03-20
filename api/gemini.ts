@@ -46,19 +46,18 @@ export default async function handler(req: any, res: any) {
     const { text, imageBase64 } = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
     // 1. Inicializa a biblioteca oficial (estrada de produção v1)
+    // 1. Voltamos para a v1beta que é a única que aceita o flash com schema agora
     const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // 2. Configura o modelo e a inteligência (actionSchema)
     const model = genAI.getGenerativeModel({
-      model: "models/gemini-1.5-flash", // Adicionamos o prefixo "models/"
-    }, { apiVersion: 'v1' });
+      model: "gemini-1.5-flash",
+    }); // Removemos o v1 e o config daqui
 
-    const promptReforce = "\nResponda estritamente em JSON seguindo este esquema: " + JSON.stringify(actionSchema);
+    const promptReforce = "\nResponda APENAS em JSON seguindo este esquema: " + JSON.stringify(actionSchema);
     const parts: any[] = [];
     if (text) parts.push({ text: text + promptReforce });
     if (imageBase64) parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
 
-    // 3. Executa a chamada oficial para contas pagas
+    // 2. Chamada direta
     const result = await model.generateContent({ contents: [{ role: "user", parts }] });
     const response = await result.response;
     const raw = response.text();
