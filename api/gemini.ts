@@ -1,4 +1,5 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Type } from "@google/genai";
 
 const actionSchema = {
   type: Type.OBJECT,
@@ -44,26 +45,27 @@ export default async function handler(req: any, res: any) {
 
     const { text, imageBase64 } = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    const ai = new GoogleGenAI({ apiKey });
-
-    const parts: any[] = [];
-    if (text) parts.push({ text });
-    if (imageBase64) parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
-
-    // ✅ Alterado para o modelo estável 2.0-flash (mais rápido e barato)
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash", 
-      contents: [{ role: "user", parts }],
-      config: {
+    // 1. Inicializa a biblioteca oficial (estrada de produção v1)
+    const genAI = new GoogleGenerativeAI(apiKey);
+    
+    // 2. Configura o modelo e a inteligência (actionSchema)
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: actionSchema,
+        // @ts-ignore - Mantém seu esquema original
+        responseSchema: actionSchema, 
       },
     });
 
-    // PEGA O TEXTO BRUTO: Adicionamos uma verificação de segurança
-    const raw = response.text || "{}";
-    
-   try {
+    const parts: any[] = [];
+    if (text) parts.push({ text: text });
+    if (imageBase64) parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
+
+    // 3. Executa a chamada oficial para contas pagas
+    const result = await model.generateContent({ contents: [{ role: "user", parts }] });
+    const response = await result.response;
+    const raw = response.text();
         // Tenta transformar o texto da IA em dados para o App
         const parsed = JSON.parse(raw);
         
