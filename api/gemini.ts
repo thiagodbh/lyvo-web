@@ -54,7 +54,7 @@ export default async function handler(req: any, res: any) {
       generationConfig: {
         responseMimeType: "application/json",
         // @ts-ignore - Mantém seu esquema original
-        responseSchema: actionSchema, 
+        responseSchema: actionSchema as any, 
       },
     });
 
@@ -66,6 +66,8 @@ export default async function handler(req: any, res: any) {
     const result = await model.generateContent({ contents: [{ role: "user", parts }] });
     const response = await result.response;
     const raw = response.text();
+
+    try {
         // Tenta transformar o texto da IA em dados para o App
         const parsed = JSON.parse(raw);
         
@@ -89,4 +91,4 @@ export default async function handler(req: any, res: any) {
         details: String(error?.message || error) 
     });
   }
-} // ✅ ESTA CHAVE FECHA A FUNÇÃO HANDLER (O ARQUIVO INTEIRO)
+}
