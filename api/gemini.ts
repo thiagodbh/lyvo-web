@@ -51,15 +51,11 @@ export default async function handler(req: any, res: any) {
     // 2. Configura o modelo e a inteligência (actionSchema)
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-        // @ts-ignore
-        responseSchema: actionSchema as any, 
-      },
-    }, { apiVersion: 'v1' }); // <--- Isso força a rota do plano pago
+    }, { apiVersion: 'v1' });
 
+    const promptReforce = "\nResponda estritamente em JSON seguindo este esquema: " + JSON.stringify(actionSchema);
     const parts: any[] = [];
-    if (text) parts.push({ text: text });
+    if (text) parts.push({ text: text + promptReforce });
     if (imageBase64) parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
 
     // 3. Executa a chamada oficial para contas pagas
