@@ -50,7 +50,7 @@ export default async function handler(req: any, res: any) {
     
     // 2. Configura o modelo e a inteligência (actionSchema)
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "models/gemini-1.5-flash", // Adicionamos o prefixo "models/"
     }, { apiVersion: 'v1' });
 
     const promptReforce = "\nResponda estritamente em JSON seguindo este esquema: " + JSON.stringify(actionSchema);
