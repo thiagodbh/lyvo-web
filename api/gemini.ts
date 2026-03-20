@@ -56,7 +56,7 @@ export default async function handler(req: any, res: any) {
       parts.push({
         text:
           text +
-          "\nExtraia a intenção e responda somente com JSON válido, sem markdown e sem texto extra.",
+          "\nResponda APENAS com JSON válido, sem markdown e sem texto extra.",
       });
     }
 
