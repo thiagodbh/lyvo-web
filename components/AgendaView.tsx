@@ -424,7 +424,7 @@ const AgendaView: React.FC = () => {
                                       <button onClick={() => navigate('next')} className="p-1.5 hover:bg-gray-100 rounded-full">
                                                   <ChevronRight className="w-5 h-5 text-gray-600" />
                                       </button>
-                                      <h2 className="text-xl font-normal text-gray-800 flex-1 capitalize">{headerTitle()}</h2>
+                                      <h2 className="text-sm md:text-xl font-normal text-gray-800 flex-1 capitalize truncate min-w-0">{headerTitle()}</h2>
                             
                                 {/* Seletor de visualizacao */}
                                       <div className="flex border border-gray-300 rounded-lg overflow-hidden">
