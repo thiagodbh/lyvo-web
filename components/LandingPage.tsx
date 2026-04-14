@@ -1,539 +1,1758 @@
-import React, { useState } from 'react';
-import { 
-  MessageCircle, 
-  BarChart2, 
-  Calendar, 
-  Shield, 
-  Zap, 
-  Users, 
-  Check, 
-  X, 
-  ChevronDown, 
-  ChevronUp, 
-  Star,
-  ArrowRight,
-  Menu,
-  Lock
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lyvo™ — Controle financeiro que você não vai abandonar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════
+   LYVO v3 — DESIGN SYSTEM
+   Paleta: Navy + Teal elétrico + Coral + Cream
+═══════════════════════════════════════════ */
+:root{
+  /* Brand */
+  --teal:       #00D9B8;
+  --teal-dark:  #00B89C;
+  --teal-dim:   #00A98D;
+  --teal-glow:  rgba(0,217,184,.18);
+  --teal-light: #E6FAF7;
+  --teal-text:  #006B5E;
 
-interface LandingPageProps {
-  onLogin: (email: string, password: string) => Promise<void> | void;
-  onSignUp: (email: string, password: string) => Promise<void> | void;
+  --coral:      #FF6247;
+  --coral-dark: #E8502F;
+  --coral-light:#FFF0ED;
+  --coral-text: #8B2A18;
+
+  /* Ink (escuro) */
+  --ink:        #0B1426;
+  --ink2:       #132038;
+  --ink3:       #1C2E4A;
+  --ink-muted:  rgba(255,255,255,.55);
+  --ink-faint:  rgba(255,255,255,.12);
+
+  /* Cream (claro) */
+  --cream:      #FAF9F4;
+  --cream2:     #F4F3EC;
+  --cream3:     #ECEAE0;
+
+  /* Text */
+  --text:       #0B1426;
+  --text2:      #3C4F6B;
+  --text3:      #7A8BA3;
+  --text4:      #A8B6C8;
+
+  /* UI */
+  --border:     #E4E2D8;
+  --border2:    #D4D2C8;
+  --chat-bg:    #EDE5D8;
+  --white:      #FFFFFF;
+
+  /* Type */
+  --display: 'Sora', sans-serif;
+  --body:    'DM Sans', -apple-system, sans-serif;
+
+  /* Layout */
+  --max: 1320px;
+  --r:   18px;
+  --r-sm:10px;
+  --pill:999px;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [name, setName] = useState('');
-const [phone, setPhone] = useState('');
-const [birthDate, setBirthDate] = useState('');
-const [city, setCity] = useState('');
-const [state, setState] = useState('');
-const [gender, setGender] = useState('');
-const [profession, setProfession] = useState('');
-const [income, setIncome] = useState('');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--body);color:var(--text);background:var(--white);overflow-x:hidden;-webkit-font-smoothing:antialiased;line-height:1.6}
 
-  // Função para abrir modal direto no Cadastro
-  const openSignUpModal = () => {
-    setIsSignUp(true);
-    setFormError(null);
-    setShowLoginModal(true);
-  };
+/* ── TOPBAR urgência ── */
+.topbar{
+  background:var(--coral);height:44px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:13px;font-weight:600;
+  color:#fff;gap:12px;padding:0 20px;text-align:center;
+}
+.topbar-timer{
+  background:rgba(0,0,0,.2);border-radius:4px;
+  padding:2px 10px;font-size:13px;letter-spacing:.04em;
+  font-weight:700;min-width:60px;text-align:center;
+}
+.topbar a{color:#fff;text-decoration:underline;font-weight:700}
+@media(max-width:560px){.topbar-text-long{display:none}}
 
-  // Função para abrir modal no Login
-  const openLoginModal = () => {
-    setIsSignUp(false);
-    setFormError(null);
-    setShowLoginModal(true);
-  };
+/* ── NAVBAR ── */
+header{
+  background:var(--white);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:200;
+}
+nav{
+  max-width:var(--max);margin:0 auto;
+  padding:0 40px;height:68px;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.logo{
+  text-decoration:none;display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.logo-mark{
+  width:34px;height:34px;background:var(--ink);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;position:relative;
+  overflow:hidden;
+}
+.logo-mark::after{
+  content:'';position:absolute;
+  width:20px;height:20px;background:var(--teal);
+  border-radius:50%;left:-4px;bottom:-4px;opacity:.8;
+}
+.logo-mark svg{width:16px;height:16px;fill:#fff;position:relative;z-index:1}
+.logo-word{
+  font-family:var(--display);font-size:21px;font-weight:900;
+  color:var(--ink);letter-spacing:-0.04em;
+}
+.logo-word sup{font-size:10px;font-weight:600;color:var(--text3);vertical-align:super;letter-spacing:0}
+.nav-links{display:flex;gap:2px;list-style:none;flex:1;justify-content:center}
+.nav-links a{
+  font-family:var(--body);font-size:15px;font-weight:400;color:var(--text2);
+  text-decoration:none;padding:7px 14px;border-radius:var(--r-sm);
+  transition:color .15s,background .15s;
+}
+.nav-links a:hover{color:var(--ink);background:var(--cream)}
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.btn-entrar{
+  font-family:var(--body);font-size:14px;font-weight:500;color:var(--text2);
+  text-decoration:none;padding:8px 16px;border-radius:var(--r-sm);
+  border:1px solid var(--border2);transition:all .15s;
+}
+.btn-entrar:hover{background:var(--cream);color:var(--ink)}
+.btn-comprar{
+  font-family:var(--display);font-size:14px;font-weight:700;
+  color:var(--ink);background:var(--teal);
+  padding:9px 22px;border-radius:var(--pill);
+  text-decoration:none;transition:all .15s;
+  display:flex;align-items:center;gap:6px;
+}
+.btn-comprar:hover{background:var(--teal-dark);transform:translateY(-1px);box-shadow:0 6px 20px var(--teal-glow)}
+@media(max-width:860px){.nav-links{display:none}nav{padding:0 20px}}
 
-  const toggleFaq = (index: number) => {
-    setOpenFaq(openFaq === index ? null : index);
-  };
+/* ── HERO ── */
+.hero{
+  background:var(--ink);
+  padding:80px 24px 0;
+  text-align:center;
+  overflow:hidden;
+  position:relative;
+}
+.hero::before{
+  content:'';position:absolute;
+  width:900px;height:900px;
+  background:radial-gradient(circle, var(--teal-glow) 0%, transparent 65%);
+  top:-300px;left:50%;transform:translateX(-50%);
+  pointer-events:none;
+}
+.hero-inner{max-width:800px;margin:0 auto;position:relative}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(0,217,184,.3);
+  background:rgba(0,217,184,.06);
+  color:var(--teal);border-radius:var(--pill);
+  font-family:var(--display);font-size:12px;font-weight:600;
+  padding:7px 16px;margin-bottom:32px;letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.hero-badge-pulse{
+  width:6px;height:6px;background:var(--teal);border-radius:50%;
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}
 
- const handleLoginSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setFormError(null);
+.hero h1{
+  font-family:var(--display);
+  font-size:clamp(38px,6vw,70px);
+  font-weight:900;
+  line-height:1.05;
+  letter-spacing:-0.045em;
+  color:#fff;
+  margin-bottom:8px;
+}
+.hero h1 .hl{color:var(--teal)}
+.hero h1 .hl-coral{color:var(--coral)}
+.hero-reframe{
+  font-family:var(--display);
+  font-size:clamp(15px,2vw,19px);
+  font-weight:500;
+  color:rgba(255,255,255,.5);
+  margin-bottom:28px;
+  letter-spacing:-0.01em;
+}
+.hero-sub{
+  font-size:18px;color:rgba(255,255,255,.65);
+  line-height:1.7;max-width:560px;margin:0 auto 44px;
+  font-weight:300;
+}
+.hero-ctas{
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  margin-bottom:20px;
+}
+.btn-hero-main{
+  font-family:var(--display);font-size:17px;font-weight:800;
+  color:var(--ink);background:var(--teal);
+  padding:18px 48px;border-radius:var(--pill);
+  text-decoration:none;transition:all .2s;
+  display:inline-flex;align-items:center;gap:10px;
+  letter-spacing:-0.01em;
+}
+.btn-hero-main:hover{background:var(--teal-dark);transform:translateY(-2px);box-shadow:0 14px 40px var(--teal-glow)}
+.btn-hero-main svg{width:18px;height:18px;stroke:var(--ink);stroke-width:2.5;fill:none;transition:transform .2s}
+.btn-hero-main:hover svg{transform:translateX(3px)}
+.hero-trust{
+  display:flex;align-items:center;justify-content:center;
+  gap:20px;flex-wrap:wrap;font-size:13px;color:rgba(255,255,255,.35);
+}
+.hero-trust span{display:flex;align-items:center;gap:5px}
 
-  try {
-    if (email && password) {
-      if (isSignUp) {
-        // Criamos um objeto limpo com todos os campos que você quer mapear
-        const registrationData = {
-          name, 
-          email, 
-          password, 
-          phone, 
-          birthDate, 
-          city, 
-          state, 
-          gender, 
-          profession, 
-          income
-        };
-        
-        // Enviamos esse objeto. O erro "scalar field" deve sumir.
-        await onSignUp(registrationData as any);
-      } else {
-        await onLogin(email, password);
-      }
+/* Hero mockup phone */
+.hero-phone-wrap{
+  position:relative;margin-top:60px;display:inline-block;
+  max-width:360px;width:100%;
+}
+.hero-phone{
+  background:var(--white);border-radius:32px;
+  border:8px solid rgba(255,255,255,.12);
+  overflow:hidden;
+  box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
+}
+.hero-phone-topbar{
+  background:var(--ink2);padding:12px 16px;
+  display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.hpt-avatar{
+  width:32px;height:32px;background:var(--teal);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:13px;font-weight:800;color:var(--ink);flex-shrink:0;
+}
+.hpt-name{font-family:var(--display);font-size:13px;font-weight:700;color:#fff}
+.hpt-status{font-size:11px;color:var(--teal);font-weight:500;display:flex;align-items:center;gap:4px}
+.hpt-status::before{content:'';width:5px;height:5px;background:var(--teal);border-radius:50%}
+.hero-chat-bg{background:var(--chat-bg);padding:16px;min-height:300px;display:flex;flex-direction:column;gap:10px}
+.hcm{max-width:84%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.5}
+.hcm-in{background:#fff;color:var(--text);align-self:flex-start;border-bottom-left-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.hcm-out{background:#D9F7D0;color:var(--text);align-self:flex-end;border-bottom-right-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.hcm-time{font-size:10px;color:var(--text3);margin-top:3px;text-align:right}
+.hero-chat-input{
+  background:var(--white);padding:10px 14px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.hci-field{
+  flex:1;background:var(--cream2);border:none;border-radius:var(--pill);
+  padding:8px 14px;font-size:13px;color:var(--text3);
+  font-family:var(--body);outline:none;
+}
+.hci-ico{width:30px;height:30px;background:var(--cream2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer}
+.hci-send{width:30px;height:30px;background:var(--teal);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.hci-send svg{width:13px;height:13px;stroke:var(--ink);fill:none;stroke-width:2}
+/* bottom nav mockup */
+.hero-phone-nav{
+  background:var(--white);border-top:1px solid var(--border);
+  padding:10px 0 6px;
+  display:grid;grid-template-columns:repeat(4,1fr);
+}
+.hpn-item{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--text3)}
+.hpn-item.active{color:var(--ink)}
+.hpn-icon{font-size:18px}
 
-      setShowLoginModal(false);
-      // Limpa os estados para segurança
-      setEmail('');
-      setPassword('');
-    }
-  } catch (err: any) {
-    // Tratamento de erro amigável
-    setFormError(err?.message || 'Erro ao realizar cadastro.');
+/* fade-in animation */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.hero-inner>*{animation:fadeUp .6s ease both}
+.hero-badge{animation-delay:.05s}
+.hero h1{animation-delay:.15s}
+.hero-reframe{animation-delay:.22s}
+.hero-sub{animation-delay:.28s}
+.hero-ctas{animation-delay:.34s}
+.hero-trust{animation-delay:.4s}
+.hero-phone-wrap{animation-delay:.5s}
+
+/* ── 3 STEPS (Miller plan) ── */
+.steps-section{
+  background:var(--cream);padding:72px 24px;
+  border-bottom:1px solid var(--border);
+}
+.steps-inner{max-width:900px;margin:0 auto;text-align:center}
+.steps-eyebrow{
+  font-family:var(--display);font-size:12px;font-weight:700;
+  color:var(--teal-text);letter-spacing:.1em;text-transform:uppercase;
+  margin-bottom:12px;
+}
+.steps-title{
+  font-family:var(--display);font-size:clamp(22px,2.8vw,32px);font-weight:800;
+  color:var(--ink);letter-spacing:-0.03em;margin-bottom:48px;
+}
+.steps-grid{display:flex;gap:0;position:relative}
+.steps-grid::before{
+  content:'';position:absolute;top:28px;left:calc(16.66% + 16px);right:calc(16.66% + 16px);
+  height:1px;background:var(--teal);opacity:.35;
+}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:14px;padding:0 16px}
+.step-num{
+  width:56px;height:56px;border-radius:50%;
+  background:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:20px;font-weight:900;color:var(--teal);
+  flex-shrink:0;position:relative;z-index:1;
+  border:3px solid var(--cream);
+  box-shadow:0 0 0 1px var(--teal);
+}
+.step-title{font-family:var(--display);font-size:16px;font-weight:800;color:var(--ink)}
+.step-desc{font-size:14px;color:var(--text2);line-height:1.55;text-align:center}
+@media(max-width:600px){
+  .steps-grid{flex-direction:column;align-items:center;gap:32px}
+  .steps-grid::before{display:none}
+  .step{max-width:280px}
+}
+
+/* ── DOR vs SOLUÇÃO ── */
+.dor-section{background:var(--white);padding:80px 24px}
+.dor-inner{max-width:1060px;margin:0 auto}
+.section-eyebrow{
+  font-family:var(--display);font-size:12px;font-weight:700;
+  color:var(--teal-text);letter-spacing:.1em;text-transform:uppercase;
+  display:block;margin-bottom:12px;
+}
+.section-title{
+  font-family:var(--display);font-size:clamp(26px,3.5vw,44px);font-weight:900;
+  color:var(--ink);letter-spacing:-0.04em;line-height:1.1;
+  margin-bottom:48px;
+}
+.dor-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+@media(max-width:700px){.dor-grid{grid-template-columns:1fr}}
+.dor-card{border-radius:var(--r);padding:32px}
+.dor-card.pain{
+  background:var(--cream);border:1px solid var(--border);
+}
+.dor-card.gain{
+  background:var(--ink);border:1px solid transparent;
+}
+.dor-card-label{
+  font-family:var(--display);font-size:13px;font-weight:700;
+  margin-bottom:20px;display:flex;align-items:center;gap:8px;
+}
+.dor-card.pain .dor-card-label{color:var(--text3)}
+.dor-card.gain .dor-card-label{color:var(--teal)}
+.dor-items{display:flex;flex-direction:column;gap:14px}
+.dor-item{display:flex;align-items:flex-start;gap:12px;font-size:15px;line-height:1.5}
+.dor-card.pain .dor-item{color:var(--text2)}
+.dor-card.gain .dor-item{color:rgba(255,255,255,.75)}
+.dor-icon{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;margin-top:1px}
+.dor-icon.x{background:#FFE5E0;color:var(--coral)}
+.dor-icon.ok{background:rgba(0,217,184,.15);color:var(--teal)}
+
+/* ── BANNER INTERNO REFRAME ── */
+.shame-section{
+  background:var(--coral);padding:56px 24px;text-align:center;
+}
+.shame-section h2{
+  font-family:var(--display);font-size:clamp(22px,3.5vw,44px);font-weight:900;
+  color:#fff;letter-spacing:-0.035em;line-height:1.15;margin-bottom:14px;
+}
+.shame-section p{font-size:17px;color:rgba(255,255,255,.82);max-width:600px;margin:0 auto;line-height:1.65}
+
+/* ── CUSTO DA DESORGANIZAÇÃO (Stakes — Kennedy) ── */
+.stakes-section{background:var(--cream);padding:80px 24px}
+.stakes-inner{max-width:940px;margin:0 auto}
+.stakes-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:48px}
+@media(max-width:700px){.stakes-grid{grid-template-columns:1fr}}
+.stake-card{
+  background:var(--white);border:1px solid var(--border);border-radius:var(--r);
+  padding:28px 24px;position:relative;overflow:hidden;
+}
+.stake-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--coral);
+}
+.stake-val{font-family:var(--display);font-size:36px;font-weight:900;color:var(--coral);letter-spacing:-0.04em;line-height:1;margin-bottom:8px}
+.stake-label{font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.stake-desc{font-size:14px;color:var(--text2);line-height:1.55}
+
+/* ── FEATURES ALTERNADAS ── */
+.feat-section{padding:96px 24px}
+.feat-section.dark-bg{background:var(--ink)}
+.feat-section.cream-bg{background:var(--cream)}
+.feat-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.feat-inner.flip{direction:rtl}
+.feat-inner.flip>*{direction:ltr}
+@media(max-width:840px){
+  .feat-inner,.feat-inner.flip{grid-template-columns:1fr;gap:48px;direction:ltr}
+  .feat-inner.flip .feat-copy{order:-1}
+}
+.feat-tag{
+  display:inline-block;
+  font-family:var(--display);font-size:11px;font-weight:700;
+  padding:5px 14px;border-radius:var(--pill);letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:14px;
+}
+.feat-tag.light{background:var(--teal-light);color:var(--teal-text)}
+.feat-tag.dark{background:rgba(0,217,184,.12);color:var(--teal)}
+.feat-h3{
+  font-family:var(--display);
+  font-size:clamp(26px,2.8vw,38px);font-weight:900;
+  letter-spacing:-0.035em;line-height:1.1;margin-bottom:16px;
+}
+.feat-h3.on-dark{color:#fff}
+.feat-h3.on-light{color:var(--ink)}
+.feat-p{font-size:16px;line-height:1.72;margin-bottom:24px}
+.feat-p.on-dark{color:rgba(255,255,255,.6)}
+.feat-p.on-light{color:var(--text2)}
+.feat-list{display:flex;flex-direction:column;gap:11px}
+.feat-li{display:flex;align-items:flex-start;gap:10px;font-size:15px}
+.feat-li.on-dark{color:rgba(255,255,255,.7)}
+.feat-li.on-light{color:var(--text2)}
+.feat-check{
+  width:20px;height:20px;flex-shrink:0;margin-top:1px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+}
+.feat-check.teal{background:rgba(0,217,184,.15)}
+.feat-check.teal svg{stroke:var(--teal)}
+.feat-check.ink{background:var(--teal-light)}
+.feat-check.ink svg{stroke:var(--teal-text)}
+.feat-check svg{width:10px;height:10px;stroke-width:2.5;fill:none}
+
+/* App frame */
+.app-frame{
+  border-radius:24px;overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.2);
+  border:1px solid rgba(255,255,255,.08);
+}
+.app-frame.on-cream{border-color:var(--border);box-shadow:0 12px 40px rgba(11,20,38,.1)}
+
+/* ── SCREEN CHAT ── */
+.s-chat{background:var(--chat-bg)}
+.s-chat-top{background:var(--white);padding:14px 16px;border-bottom:1px solid var(--border);text-align:center}
+.s-chat-top .sct-name{font-family:var(--display);font-size:14px;font-weight:800;color:var(--ink)}
+.s-chat-top .sct-status{font-size:11px;color:#25D366;font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px}
+.s-chat-top .sct-status::before{content:'';width:5px;height:5px;background:#25D366;border-radius:50%}
+.s-actions{background:var(--white);padding:10px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px}
+.s-act{flex:1;padding:8px 4px;border-radius:8px;text-align:center;font-size:11px;font-weight:700;font-family:var(--display);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.s-act.red{background:#FFF0F0;color:#E53935}
+.s-act.green{background:var(--teal-light);color:var(--teal-text)}
+.s-act.blue{background:#EEF2FF;color:#4F46E5}
+.s-body{padding:14px;display:flex;flex-direction:column;gap:9px;min-height:240px}
+.sm{max-width:82%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5}
+.sm-in{background:var(--white);color:var(--text);align-self:flex-start;border-bottom-left-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.sm-out{background:#D9F7D0;color:var(--text);align-self:flex-end;border-bottom-right-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.sm-t{font-size:10px;color:var(--text3);margin-top:2px;text-align:right}
+.s-input{background:var(--white);padding:9px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.si-field{flex:1;background:var(--cream2);border:none;border-radius:var(--pill);padding:7px 12px;font-size:12px;color:var(--text3);outline:none;font-family:var(--body)}
+.si-btn{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;background:var(--cream2);flex-shrink:0}
+.si-send{background:var(--teal)}
+.si-send svg{width:12px;height:12px;stroke:var(--ink);fill:none;stroke-width:2}
+
+/* ── SCREEN FINANCEIRO ── */
+.s-fin{background:var(--cream2);padding:16px 14px}
+.sf-head h4{font-family:var(--display);font-size:20px;font-weight:900;color:var(--ink)}
+.sf-head p{font-size:12px;color:var(--text3);margin-top:1px}
+.sf-month{display:inline-flex;align-items:center;gap:7px;background:var(--cream3);border-radius:var(--pill);padding:5px 12px;font-size:12px;font-weight:700;color:#3B82F6;margin-top:8px;margin-bottom:14px}
+.sf-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.sf-c{background:var(--white);border-radius:12px;padding:12px 14px;border-left:3px solid transparent;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.sf-c.g{border-color:#22C55E}
+.sf-c.r{border-color:#EF4444}
+.sf-c.b{border-color:#3B82F6}
+.sf-cl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:3px}
+.sf-cv{font-family:var(--display);font-size:20px;font-weight:900}
+.sf-c.r .sf-cv{color:#EF4444}
+.sf-c.b .sf-cv{color:#3B82F6}
+.sf-c.g .sf-cv{color:var(--ink)}
+.previs{background:var(--white);border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.previs-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.previs-name{font-family:var(--display);font-size:13px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:5px}
+.previs-tag{font-size:10px;font-weight:800;padding:2px 8px;border-radius:var(--pill)}
+.pt-pos{background:var(--teal-light);color:var(--teal-text)}
+.pt-neg{background:var(--coral-light);color:var(--coral-text)}
+.previs-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.previs-val{font-family:var(--display);font-size:26px;font-weight:900;color:var(--ink);letter-spacing:-0.03em;margin-bottom:10px}
+.previs-row{display:flex;gap:8px}
+.pm{flex:1;border-radius:8px;padding:9px 10px}
+.pm.green{background:var(--teal-light)}
+.pm.red{background:var(--coral-light)}
+.pm-l{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px}
+.pm.green .pm-l{color:var(--teal-text)}
+.pm.red .pm-l{color:var(--coral-text)}
+.pm-v{font-family:var(--display);font-size:13px;font-weight:900}
+.pm.green .pm-v{color:var(--teal-text)}
+.pm.red .pm-v{color:var(--coral-text)}
+
+/* ── SCREEN CARTÕES ── */
+.s-card-bg{background:var(--cream2);padding:14px}
+.s-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.s-card-head h4{font-family:var(--display);font-size:16px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:6px}
+.s-card-novo{background:var(--cream3);border-radius:8px;font-size:12px;font-weight:700;color:var(--text2);padding:6px 12px}
+.card-strip{
+  background:var(--white);border-radius:14px;padding:16px 16px;
+  margin-bottom:10px;border:1px solid var(--border);
+  box-shadow:0 1px 3px rgba(0,0,0,.05);position:relative;overflow:hidden;
+}
+.card-strip-accent{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px}
+.cs-inter{background:#F97316}
+.cs-nu{background:#820AD1}
+.cs-info{padding-left:14px}
+.cs-name{font-family:var(--display);font-size:15px;font-weight:900;color:var(--ink)}
+.cs-best{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:8px}
+.cs-flabel{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:2px}
+.cs-fval{font-family:var(--display);font-size:22px;font-weight:900;color:var(--ink);margin-bottom:8px;letter-spacing:-0.02em}
+.cs-limit-row{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px}
+.cs-limit-free{font-weight:700;color:var(--text2)}
+.cs-bar{height:4px;background:var(--cream2);border-radius:2px;overflow:hidden}
+.cs-bar-fill{height:100%;border-radius:2px}
+
+/* ── SCREEN CONTAS FIXAS ── */
+.s-cf-bg{background:var(--cream2);padding:14px}
+.s-cf-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.s-cf-head h4{font-family:var(--display);font-size:16px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:6px}
+.s-cf-add{background:var(--cream3);border-radius:8px;font-size:12px;font-weight:700;color:var(--text2);padding:6px 12px}
+.cf-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)}
+.cf-row:last-child{border-bottom:none}
+.cf-icons-g{display:flex;gap:4px}
+.cf-ico-btn{width:24px;height:24px;background:var(--cream3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text4)}
+.cf-info-g{flex:1}
+.cf-name-g{font-family:var(--display);font-size:13px;font-weight:800;color:var(--ink)}
+.cf-meta-g{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-top:1px}
+.cf-right-g{display:flex;align-items:center;gap:6px}
+.cf-status-g{font-size:10px;font-weight:800;color:#F59E0B;letter-spacing:.04em}
+.cf-toggle-g{width:34px;height:20px;background:var(--cream3);border-radius:var(--pill);border:1px solid var(--border);position:relative;flex-shrink:0}
+.cf-toggle-g::after{content:'';position:absolute;left:2px;top:2px;width:14px;height:14px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+
+/* ── MARQUEE ── */
+.marquee-wrap{background:var(--ink);padding:56px 0;overflow:hidden}
+.marquee-wrap .mq-label{text-align:center;font-family:var(--display);font-size:11px;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:28px}
+.mq-row{overflow:hidden;margin-bottom:12px}
+.mq-track{display:flex;gap:12px;width:max-content;animation:mq 32s linear infinite}
+.mq-track.rev{animation-direction:reverse}
+@keyframes mq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.mq-chip{white-space:nowrap;padding:10px 20px;border-radius:var(--pill);font-family:var(--body);font-size:14px;font-weight:500}
+.mq-chip.d{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.1)}
+.mq-chip.g{background:rgba(0,217,184,.1);color:var(--teal);border:1px solid rgba(0,217,184,.2)}
+
+/* ── DEPOIMENTOS ── */
+.dep-section{background:var(--cream);padding:80px 24px}
+.dep-section .section-title{text-align:center;margin-bottom:48px}
+.dep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1060px;margin:0 auto}
+@media(max-width:800px){.dep-grid{grid-template-columns:1fr}}
+.dep-card{
+  background:var(--white);border:1px solid var(--border);border-radius:var(--r);
+  padding:28px;display:flex;flex-direction:column;gap:16px;
+  box-shadow:0 2px 12px rgba(0,0,0,.05);
+}
+.dep-stars{color:var(--coral);font-size:15px;letter-spacing:2px}
+.dep-text{font-size:15px;color:var(--text2);line-height:1.7;font-style:italic;flex:1}
+.dep-text::before{content:'"'}
+.dep-text::after{content:'"'}
+.dep-author{display:flex;align-items:center;gap:12px}
+.dep-avatar{
+  width:42px;height:42px;border-radius:50%;
+  font-family:var(--display);font-size:14px;font-weight:800;color:#fff;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.da-1{background:var(--coral)}
+.da-2{background:var(--teal-text)}
+.da-3{background:var(--ink3)}
+.dep-name{font-family:var(--display);font-size:14px;font-weight:800;color:var(--ink)}
+.dep-role{font-size:13px;color:var(--text3)}
+.dep-highlight{
+  background:var(--teal-light);border-radius:8px;padding:8px 12px;
+  font-size:13px;font-weight:600;color:var(--teal-text);margin-top:4px;
+  display:flex;align-items:center;gap:6px;
+}
+
+/* ── NÚMEROS ── */
+.num-section{background:var(--white);padding:80px 24px;text-align:center}
+.num-section .section-title{margin-bottom:48px}
+.num-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:20px;max-width:860px;margin:0 auto}
+.num-card{
+  background:var(--cream);border:1px solid var(--border);border-radius:var(--r);
+  padding:32px 28px;flex:1;min-width:180px;max-width:215px;
+}
+.num-val{font-family:var(--display);font-size:48px;font-weight:900;color:var(--teal-text);line-height:1;letter-spacing:-0.05em}
+.num-label{font-size:14px;color:var(--text2);margin-top:10px;line-height:1.45}
+
+/* ── GARANTIA ── */
+.garantia-section{background:var(--ink);padding:72px 24px;text-align:center}
+.garantia-inner{max-width:660px;margin:0 auto}
+.garantia-badge{
+  width:90px;height:90px;border-radius:50%;background:var(--teal);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:11px;font-weight:900;color:var(--ink);
+  text-align:center;line-height:1.2;letter-spacing:.02em;text-transform:uppercase;
+  margin:0 auto 28px;
+  box-shadow:0 0 0 8px rgba(0,217,184,.15);
+}
+.garantia-section h2{
+  font-family:var(--display);font-size:clamp(24px,3.5vw,38px);font-weight:900;
+  color:#fff;letter-spacing:-0.035em;margin-bottom:16px;line-height:1.15;
+}
+.garantia-section h2 span{color:var(--teal)}
+.garantia-section p{font-size:17px;color:rgba(255,255,255,.55);line-height:1.7;margin-bottom:16px}
+.garantia-legal{font-size:13px;color:rgba(255,255,255,.25)}
+
+/* ── PRICING ── */
+.pricing-section{background:var(--cream);padding:96px 24px}
+.pricing-intro{text-align:center;max-width:620px;margin:0 auto}
+.pricing-value-anchor{
+  background:var(--white);border:1px solid var(--border);border-radius:var(--r);
+  padding:24px 28px;margin:40px auto 48px;max-width:560px;
+  display:flex;align-items:center;gap:18px;
+  box-shadow:0 2px 12px rgba(0,0,0,.05);
+}
+.pva-icon{font-size:36px;flex-shrink:0}
+.pva-text{font-size:15px;color:var(--text2);line-height:1.6}
+.pva-text strong{color:var(--coral);font-weight:800}
+.pricing-grid{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;max-width:820px;margin:0 auto}
+.plan{
+  background:var(--white);border:1.5px solid var(--border);border-radius:24px;
+  padding:36px 32px;flex:1;min-width:300px;max-width:380px;position:relative;
+}
+.plan.feat{border-color:var(--teal);box-shadow:0 0 0 4px var(--teal-glow)}
+.plan-star{
+  position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+  background:var(--teal);color:var(--ink);
+  font-family:var(--display);font-size:12px;font-weight:800;
+  padding:5px 18px;border-radius:var(--pill);white-space:nowrap;
+  letter-spacing:.02em;
+}
+.plan-name{font-family:var(--display);font-size:15px;font-weight:700;color:var(--text2);margin-bottom:8px}
+.plan-p-row{display:flex;align-items:baseline;gap:1px}
+.plan-cur{font-family:var(--display);font-size:20px;font-weight:800;color:var(--ink)}
+.plan-price{font-family:var(--display);font-size:52px;font-weight:900;color:var(--ink);line-height:1;letter-spacing:-0.05em}
+.plan-dec{font-family:var(--display);font-size:24px;font-weight:700;color:var(--ink)}
+.plan-period{font-size:13px;color:var(--text3);margin-bottom:6px}
+.plan-economy{
+  display:inline-block;background:var(--teal-light);color:var(--teal-text);
+  font-family:var(--display);font-size:12px;font-weight:700;
+  padding:3px 10px;border-radius:var(--pill);margin-bottom:24px;
+}
+.plan-features{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.pf{display:flex;align-items:flex-start;gap:9px;font-size:14px;color:var(--text2)}
+.pf-check{color:var(--teal-text);font-weight:700;flex-shrink:0}
+.plan-cta{
+  display:block;text-align:center;padding:15px;border-radius:var(--pill);
+  font-family:var(--display);font-size:15px;font-weight:800;text-decoration:none;
+  transition:all .2s;letter-spacing:-.01em;
+}
+.plan-cta-solid{background:var(--teal);color:var(--ink)}
+.plan-cta-solid:hover{background:var(--teal-dark);transform:translateY(-1px);box-shadow:0 8px 28px var(--teal-glow)}
+.plan-cta-outline{border:1.5px solid var(--border2);color:var(--text2)}
+.plan-cta-outline:hover{border-color:var(--teal);color:var(--teal-text)}
+.plan-note{text-align:center;font-size:12px;color:var(--text4);margin-top:10px}
+
+/* ── FAQ ── */
+.faq-section{padding:80px 24px;background:var(--white)}
+.faq-inner{max-width:660px;margin:0 auto}
+.faq-item{border-bottom:1px solid var(--border)}
+.faq-q{
+  padding:20px 0;display:flex;justify-content:space-between;align-items:center;gap:16px;
+  cursor:pointer;user-select:none;font-family:var(--display);font-size:16px;font-weight:700;color:var(--ink);
+  transition:color .15s;
+}
+.faq-q:hover{color:var(--teal-text)}
+.faq-icon{
+  width:26px;height:26px;flex-shrink:0;background:var(--cream);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);font-size:16px;font-weight:400;transition:transform .3s,background .2s;
+}
+.faq-item.open .faq-icon{transform:rotate(45deg);background:var(--teal-light);color:var(--teal-text)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.faq-a-inner{padding:0 0 20px;font-size:15px;color:var(--text2);line-height:1.7}
+.faq-item.open .faq-a{max-height:400px}
+
+/* ── CTA FINAL ── */
+.cta-final{
+  background:var(--ink);padding:100px 24px;text-align:center;
+  position:relative;overflow:hidden;
+}
+.cta-final::before{
+  content:'';position:absolute;
+  width:700px;height:700px;
+  background:radial-gradient(circle, rgba(0,217,184,.1) 0%, transparent 65%);
+  top:-200px;left:50%;transform:translateX(-50%);pointer-events:none;
+}
+.cta-final::after{
+  content:'';position:absolute;
+  width:400px;height:400px;
+  background:radial-gradient(circle, rgba(255,98,71,.08) 0%, transparent 65%);
+  bottom:-100px;right:10%;pointer-events:none;
+}
+.cta-final h2{
+  font-family:var(--display);font-size:clamp(30px,5vw,58px);font-weight:900;
+  color:#fff;letter-spacing:-0.045em;line-height:1.05;margin-bottom:20px;
+  position:relative;
+}
+.cta-final h2 span{color:var(--teal)}
+.cta-final p{
+  font-size:18px;color:rgba(255,255,255,.5);max-width:480px;
+  margin:0 auto 44px;line-height:1.65;position:relative;
+}
+.cta-final-note{margin-top:20px;font-size:13px;color:rgba(255,255,255,.25);position:relative}
+.cta-final>*{position:relative}
+
+/* ── FOOTER ── */
+footer{background:var(--ink2);border-top:1px solid rgba(255,255,255,.05);padding:52px 24px 32px}
+.footer-grid{max-width:var(--max);margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr;gap:48px;margin-bottom:48px}
+@media(max-width:700px){.footer-grid{grid-template-columns:1fr;gap:32px}}
+.footer-brand .fb-name{
+  font-family:var(--display);font-size:22px;font-weight:900;color:#fff;
+  letter-spacing:-0.04em;margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.fb-dot{width:8px;height:8px;background:var(--teal);border-radius:50%}
+.footer-brand p{font-size:14px;color:rgba(255,255,255,.3);max-width:260px;line-height:1.65}
+.footer-col h5{font-family:var(--display);font-size:11px;font-weight:700;color:rgba(255,255,255,.25);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+.footer-col a{display:block;font-size:14px;color:rgba(255,255,255,.35);text-decoration:none;margin-bottom:10px;transition:color .15s}
+.footer-col a:hover{color:rgba(255,255,255,.75)}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.06);padding-top:24px;text-align:center;font-size:13px;color:rgba(255,255,255,.18)}
+
+/* ── COMPARATIVO ── */
+.compare-section{padding:80px 24px;background:var(--cream)}
+.compare-inner{max-width:800px;margin:0 auto}
+table.cmp{width:100%;border-collapse:collapse;font-size:15px}
+table.cmp th{font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:13px 20px;text-align:left;color:var(--text3);border-bottom:2px solid var(--border)}
+table.cmp th:not(:first-child){text-align:center}
+table.cmp td{padding:12px 20px;border-bottom:1px solid var(--border);color:var(--text2)}
+table.cmp td:not(:first-child){text-align:center}
+table.cmp tr:last-child td{border-bottom:none}
+.cmp-lyvo th,.cmp-lyvo td{background:var(--teal-light)}
+.cmp-lyvo th{color:var(--teal-text);border-bottom-color:rgba(0,217,184,.25);border-radius:var(--r-sm) var(--r-sm) 0 0}
+.ck{color:var(--teal-text);font-size:17px;font-weight:900}
+.cx{color:var(--text4);font-size:17px}
+/* ══════════════════════════════════════════
+   RESPONSIVO COMPLETO
+══════════════════════════════════════════ */
+
+/* ── Mobile hamburger menu ── */
+.nav-hamburger{
+  display:none;
+  flex-direction:column;gap:5px;cursor:pointer;
+  background:none;border:none;padding:4px;
+}
+.nav-hamburger span{
+  display:block;width:22px;height:2px;
+  background:var(--ink);border-radius:2px;
+  transition:all .3s;
+}
+.mobile-menu{
+  display:none;
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:var(--white);z-index:300;
+  flex-direction:column;padding:24px;
+}
+.mobile-menu.open{display:flex}
+.mobile-menu-head{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:40px;
+}
+.mobile-menu-close{
+  background:var(--cream2);border:none;border-radius:50%;
+  width:36px;height:36px;cursor:pointer;font-size:18px;
+  display:flex;align-items:center;justify-content:center;
+}
+.mobile-menu-links{
+  display:flex;flex-direction:column;gap:4px;flex:1;
+}
+.mobile-menu-links a{
+  font-family:var(--display);font-size:22px;font-weight:800;
+  color:var(--ink);text-decoration:none;padding:12px 0;
+  border-bottom:1px solid var(--border);letter-spacing:-0.02em;
+  transition:color .15s;
+}
+.mobile-menu-links a:hover{color:var(--teal-text)}
+.mobile-menu-actions{
+  display:flex;flex-direction:column;gap:12px;
+  padding-top:32px;
+}
+.mobile-menu-actions .btn-hero-main{
+  display:flex;justify-content:center;
+  font-family:var(--display);font-size:16px;font-weight:800;
+  color:var(--ink);background:var(--teal);
+  padding:16px;border-radius:var(--pill);
+  text-decoration:none;
+}
+.mobile-menu-actions .btn-entrar-mobile{
+  display:block;text-align:center;
+  font-family:var(--display);font-size:15px;font-weight:700;
+  color:var(--text2);border:1.5px solid var(--border2);
+  padding:14px;border-radius:var(--pill);text-decoration:none;
+}
+
+/* ── Tablet (≤1024px) ── */
+@media(max-width:1024px){
+  nav{padding:0 24px}
+  .nav-links{gap:0}
+  .nav-links a{padding:7px 10px;font-size:14px}
+  .feat-inner,.feat-inner.flip{gap:48px}
+}
+
+/* ── Mobile landscape / small tablet (≤860px) ── */
+@media(max-width:860px){
+  .nav-links{display:none}
+  .btn-entrar{display:none}
+  .nav-hamburger{display:flex}
+
+  .feat-inner,.feat-inner.flip{
+    grid-template-columns:1fr;gap:40px;direction:ltr
   }
-};
-  return (
-    <div className="min-h-screen bg-white font-sans text-gray-800 scroll-smooth">
-      
-      {/* --- HEADER --- */}
-      <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-green-400"></div>
-            <span className="text-2xl font-bold tracking-tight text-gray-900">LYVO<span className="text-blue-500">™</span></span>
-          </div>
-          
-          <nav className="hidden md:flex space-x-8 text-sm font-medium text-gray-600">
-            <a href="#recursos" className="hover:text-blue-600 transition">Recursos</a>
-            <a href="#como-funciona" className="hover:text-blue-600 transition">Como Funciona</a>
-            <a href="#depoimentos" className="hover:text-blue-600 transition">Depoimentos</a>
-            <a href="#planos" className="hover:text-blue-600 transition">Preços</a>
-            <a href="#faq" className="hover:text-blue-600 transition">FAQ</a>
-          </nav>
+  .feat-inner.flip .feat-copy{order:-1}
 
-          <div className="flex items-center space-x-4">
-             <button 
-               onClick={openLoginModal}
-               className="text-sm font-bold text-gray-700 hover:text-blue-600 transition"
-             >
-               Entrar
-             </button>
-             <a 
-               href="#planos"
-               className="bg-green-500 text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-green-600 transition shadow-lg shadow-green-200"
-             >
-               Comprar
-             </a>
-          </div>
-        </div>
-      </header>
+  .stakes-grid{grid-template-columns:1fr}
+  .dor-grid{grid-template-columns:1fr}
+  .pricing-grid{flex-direction:column;align-items:center}
+  .plan{min-width:unset;width:100%;max-width:500px}
+}
 
-      {/* --- HERO SECTION --- */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
-            Controle Financeiro e Agenda <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-green-400">Inteligente</span>
-          </h1>
-          <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
-            Organize suas finanças e compromissos em um só lugar. Com inteligência artificial que entende linguagem natural e salva tudo automaticamente.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <button 
-              onClick={openSignUpModal}
-              className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white rounded-full font-bold text-lg shadow-xl hover:bg-blue-700 transition transform hover:-translate-y-1"
-            >
-              Começar Agora — 7 dias grátis
-            </button>
-          </div>
+/* ── Mobile portrait (≤600px) ── */
+@media(max-width:600px){
+  /* Nav */
+  nav{padding:0 16px;height:60px}
+  .logo-word{font-size:18px}
 
-          <div className="mt-8 flex items-center justify-center space-x-6 text-xs text-gray-400 font-medium uppercase tracking-wide">
-             <span className="flex items-center">🔒 Dados seguros</span>
-             <span className="flex items-center">📱 Funciona em qualquer dispositivo</span>
-          </div>
-        </div>
-      </section>
+  /* Topbar */
+  .topbar{font-size:11px;gap:8px;height:auto;padding:8px 12px;flex-wrap:wrap;min-height:40px}
+  .topbar-timer{font-size:11px;padding:2px 8px}
 
-      {/* --- PROBLEM VS SOLUTION --- */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100">
-               <h3 className="text-2xl font-bold text-gray-800 mb-6 leading-snug">
-                 Cansado de planilhas complicadas e apps que não conversam entre si?
-               </h3>
-               <ul className="space-y-4">
-                 {[
-                   "Perder tempo organizando dados em planilhas diferentes",
-                   "Esquecer compromissos importantes por falta de organização",
-                   "Não saber para onde vai seu dinheiro no final do mês",
-                   "Apps complexos que exigem muito tempo para configurar"
-                 ].map((item, i) => (
-                   <li key={i} className="flex items-start">
-                     <div className="bg-red-100 p-1 rounded-full mr-3 mt-0.5 flex-shrink-0">
-                       <X className="w-4 h-4 text-red-500" />
-                     </div>
-                     <span className="text-gray-600">{item}</span>
-                   </li>
-                 ))}
-               </ul>
-            </div>
+  /* Hero */
+  .hero{padding:48px 16px 0}
+  .hero h1{font-size:clamp(30px,9vw,42px);letter-spacing:-0.04em}
+  .hero-sub{font-size:16px;margin-bottom:32px}
+  .hero-badge{font-size:11px;padding:6px 12px}
+  .btn-hero-main{font-size:15px;padding:15px 28px;width:100%;justify-content:center}
+  .hero-trust{font-size:12px;gap:12px}
+  .hero-phone-wrap{max-width:100%}
 
-            <div className="bg-green-50/50 p-10 rounded-3xl border border-green-100">
-               <h3 className="text-2xl font-bold text-gray-800 mb-6 leading-snug">
-                 Com o LYVO™, você tem:
-               </h3>
-               <ul className="space-y-4">
-                 {[
-                   "Controle financeiro e agenda em um só lugar",
-                   "Inteligência artificial que entende linguagem natural",
-                   "Tudo salvo automaticamente em tempo real",
-                   "Interface simples que qualquer pessoa usa"
-                 ].map((item, i) => (
-                   <li key={i} className="flex items-start">
-                     <div className="bg-green-100 p-1 rounded-full mr-3 mt-0.5 flex-shrink-0">
-                       <Check className="w-4 h-4 text-green-600" />
-                     </div>
-                     <span className="text-gray-800 font-medium">{item}</span>
-                   </li>
-                 ))}
-               </ul>
-            </div>
-          </div>
-        </div>
-      </section>
+  /* Steps */
+  .steps-section{padding:48px 16px}
+  .steps-grid{flex-direction:column;align-items:center;gap:28px}
+  .steps-grid::before{display:none}
+  .step{max-width:100%;padding:0 8px}
+  .steps-title{font-size:22px}
 
-      {/* --- RECURSOS --- */}
-      <section id="recursos" className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Recursos que Fazem a Diferença</h2>
-            <p className="text-gray-500">Tudo que você precisa para organizar sua vida financeira e pessoal</p>
-          </div>
+  /* Sections */
+  .dor-section{padding:48px 16px}
+  .shame-section{padding:40px 16px}
+  .shame-section h2{font-size:clamp(22px,7vw,36px)}
+  .stakes-section{padding:48px 16px}
+  .stakes-grid{grid-template-columns:1fr;gap:14px}
+  .stake-val{font-size:30px}
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: MessageCircle, color: "bg-blue-500", 
-                title: "Chat Inteligente", 
-                desc: "Converse naturalmente: \"gastei 50 reais no mercado hoje\" e pronto! O sistema entende e organiza automaticamente."
-              },
-              {
-                icon: BarChart2, color: "bg-green-500", 
-                title: "Relatórios Visuais", 
-                desc: "Gráficos bonitos e fáceis de entender mostram exatamente para onde vai seu dinheiro e como está sua evolução."
-              },
-              {
-                icon: Calendar, color: "bg-purple-500", 
-                title: "Agenda Integrada", 
-                desc: "Seus compromissos e finanças conectados. Nunca mais esqueça de pagar uma conta ou perder um compromisso importante."
-              },
-              {
-                icon: Shield, color: "bg-red-500", 
-                title: "Dados Seguros", 
-                desc: "Seus dados ficam salvos localmente no seu dispositivo. Privacidade total e controle completo sobre suas informações."
-              },
-              {
-                icon: Zap, color: "bg-yellow-500", 
-                title: "Tempo Real", 
-                desc: "Tudo é salvo instantaneamente. Sem perder dados, sem sincronização complicada. Funciona offline e online."
-              },
-              {
-                icon: Users, color: "bg-cyan-500", 
-                title: "Para Toda Família", 
-                desc: "Interface simples que qualquer pessoa consegue usar. Desde adolescentes até pessoas mais experientes."
-              }
-            ].map((feature, i) => (
-              <div key={i} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition">
-                <div className={`w-12 h-12 rounded-xl ${feature.color} flex items-center justify-center text-white mb-6 shadow-lg`}>
-                  <feature.icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+  /* Features */
+  .feat-section{padding:56px 16px}
+  .feat-h3{font-size:clamp(22px,7vw,32px)}
+  .feat-desc{font-size:15px}
 
-      {/* --- PLANOS --- */}
-      <section id="planos" className="py-20 bg-gray-50">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Planos Simples e Transparentes</h2>
-            <p className="text-gray-500">Escolha o que faz mais sentido para você</p>
-          </div>
+  /* Marquee */
+  .mq-chip{font-size:13px;padding:8px 16px}
 
-          <div className="grid md:grid-cols-2 gap-8 items-start">
-            
-            {/* Plano Anual - AGORA PRIMEIRO E EM DESTAQUE */}
-            <div className="bg-white p-10 rounded-3xl border-2 border-green-400 shadow-xl relative overflow-hidden order-1 md:order-1">
-              <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl">MELHOR CUSTO-BENEFÍCIO</div>
-              
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Plano Anual</h3>
-              <div className="flex items-baseline mb-2">
-                <span className="text-4xl font-bold text-green-500">R$ 12,49</span>
-                <span className="text-gray-500 ml-1">/mês*</span>
-              </div>
-              <p className="text-sm text-gray-700 font-bold mb-2">Equivalente a R$ 149,90 por ano</p>
-              <p className="text-xs text-blue-600 font-medium mb-8 italic">Pague em até 5x de R$ 33,66 no cartão</p>
+  /* Testimonials */
+  .dep-section{padding:48px 16px}
+  .dep-grid{grid-template-columns:1fr;gap:16px}
 
-              <ul className="space-y-4 mb-8 text-sm text-gray-600">
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> <strong>Economize 50%</strong> ao ano</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Parcelamento em até 5x</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Suporte prioritário</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Acesso garantido por 12 meses</li>
-              </ul>
+  /* Compare */
+  .compare-section{padding:48px 16px}
+  table.cmp{font-size:13px}
+  table.cmp th,table.cmp td{padding:10px 12px}
 
-              <a 
-                href="https://lastlink.com/p/CA05DE2CE/checkout-payment/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition flex items-center justify-center"
-              >
-                Aproveitar Desconto Anual <ArrowRight className="w-4 h-4 ml-2" />
-              </a>
-              <p className="text-[10px] text-center text-gray-400 mt-3">*Valor total de R$ 149,90 cobrado anualmente</p>
-            </div>
+  /* Numbers */
+  .num-section{padding:48px 16px}
+  .num-grid{gap:14px}
+  .num-card{min-width:calc(50% - 7px);max-width:calc(50% - 7px);padding:24px 16px}
+  .num-val{font-size:38px}
 
-            {/* Plano Mensal - AGORA SEGUNDO */}
-            <div className="bg-white p-10 rounded-3xl border border-gray-200 shadow-sm order-2 md:order-2">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Plano Mensal</h3>
-              <div className="flex items-baseline mb-2">
-                <span className="text-4xl font-bold text-gray-400">R$ 24,90</span>
-                <span className="text-gray-500 ml-1">/mês</span>
-              </div>
-              <p className="text-sm text-gray-500 font-medium mb-8">Sem fidelidade - cancele quando quiser</p>
+  /* Garantia */
+  .garantia-section{padding:48px 16px}
 
-              <ul className="space-y-4 mb-8 text-sm text-gray-600">
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Chat inteligente ilimitado</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Controle financeiro completo</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Agenda integrada</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" /> Relatórios e gráficos</li>
-              </ul>
+  /* Pricing */
+  .pricing-section{padding:56px 16px}
+  .plan{padding:28px 20px}
+  .plan-price{font-size:42px}
+  .pricing-value-anchor{flex-direction:column;gap:12px;padding:20px}
 
-              <a 
-                href="https://lastlink.com/p/CE5BD085C/checkout-payment/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-4 bg-gray-800 text-white rounded-xl font-bold hover:bg-black transition flex items-center justify-center"
-              >
-                Assinar Mensal <ArrowRight className="w-4 h-4 ml-2" />
-              </a>
-              <p className="text-[10px] text-center text-gray-400 mt-3">Pagamento recorrente via Lastlink</p>
-            </div>
-          </div>
-        </div>
-      </section>
-      {/* --- FAQ & OUTRAS SEÇÕES (Mantidas conforme original para brevidade) --- */}
-      <section id="faq" className="py-24 px-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Perguntas Frequentes</h2>
-            <p className="text-gray-500">Tire suas dúvidas sobre o LYVO™</p>
-          </div>
-          <div className="space-y-4">
-            {[
-              { q: "Como funciona o período gratuito?", a: "Você tem 7 dias para testar todas as funcionalidades sem pagar nada. Não pedimos cartão de crédito para começar. Após o período, você escolhe se quer continuar." },
-              { q: "Meus dados ficam seguros?", a: "Sim! Seus dados ficam salvos localmente no seu dispositivo. Você tem controle total sobre suas informações e pode fazer backup quando quiser." },
-              { q: "Funciona em qualquer dispositivo?", a: "Sim! O LYVO™ funciona em computadores, tablets e celulares. A interface se adapta automaticamente ao seu dispositivo." },
-              { q: "Posso cancelar a qualquer momento?", a: "Claro! Não há fidelidade no plano mensal. Você pode cancelar quando quiser." },
-              { q: "Como funciona a inteligência artificial?", a: "Você escreve ou fala naturalmente, como \"gastei 50 no mercado\" ou \"reunião amanhã às 14h\". O sistema entende, categoriza e organiza automaticamente." },
-            ].map((item, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-                <button 
-                  onClick={() => toggleFaq(i)}
-                  className="w-full p-6 text-left flex justify-between items-center focus:outline-none"
-                >
-                  <span className="font-bold text-gray-800 text-sm">{item.q}</span>
-                  {openFaq === i ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-                </button>
-                {openFaq === i && (
-                  <div className="px-6 pb-6 text-sm text-gray-500 leading-relaxed">
-                    {item.a}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+  /* FAQ */
+  .faq-section{padding:48px 16px}
+  .faq-q{font-size:15px}
 
-      {/* --- FINAL CTA --- */}
-      <section className="py-20 px-6">
-        <div className="max-w-5xl mx-auto bg-gradient-to-r from-blue-500 to-green-400 rounded-[3rem] p-10 md:p-20 text-center text-white shadow-2xl relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">Pronto para Organizar sua Vida?</h2>
-            <p className="text-lg opacity-90 mb-10 max-w-2xl mx-auto">Junte-se a milhares de pessoas que já simplificaram suas finanças e agenda com o LYVO™</p>
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <button 
-                onClick={openSignUpModal}
-                className="w-full sm:w-auto px-8 py-4 bg-white text-blue-600 rounded-lg font-bold text-lg hover:bg-gray-100 transition shadow-lg"
-              >
-                Começar Agora — 7 dias grátis
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+  /* CTA Final */
+  .cta-final{padding:64px 16px}
+  .cta-final h2{font-size:clamp(26px,8vw,44px)}
+  .cta-final p{font-size:16px}
+  .cta-final .btn-hero-main{width:100%;justify-content:center;font-size:15px;padding:16px 24px}
+  .cta-final-note{font-size:12px}
 
-      {/* --- FOOTER --- */}
-      <footer className="bg-gray-900 text-white py-16 px-6">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-12 text-sm">
-          <div className="col-span-2">
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-500 to-green-400"></div>
-              <span className="text-xl font-bold">LYVO<span className="text-blue-500">™</span></span>
-            </div>
-            <p className="text-gray-400 max-w-xs leading-relaxed">
-              Controle financeiro e agenda inteligente em um só lugar.
-            </p>
-            <p className="text-gray-500 mt-6 text-xs">© 2026 LYVO™ - CNPJ 36.989.165/0001-85</p>
-          </div>
-          <div>
-            <h4 className="font-bold mb-6 text-gray-200">Links Úteis</h4>
-            <ul className="space-y-3 text-gray-400">
-              <li><a href="#" className="hover:text-white">Política de Privacidade</a></li>
-              <li><a href="#" className="hover:text-white">Termos de Uso</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold mb-6 text-gray-200">Contato</h4>
-            <ul className="space-y-3 text-gray-400">
-              <li>contato@lyvo.com.br</li>
-            </ul>
-          </div>
-        </div>
-      </footer>
+  /* Footer */
+  footer{padding:40px 16px 24px}
+  .footer-grid{grid-template-columns:1fr;gap:28px}
 
-     {/* --- LOGIN/SIGNUP MODAL ATUALIZADO --- */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative max-h-[92vh] overflow-y-auto overscroll-contain">
-             <button 
-               onClick={() => setShowLoginModal(false)}
-               className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200"
-             >
-               <X className="w-5 h-5" />
-             </button>
+  /* Google Agenda section */
+  .feat-section .feat-inner[style*="grid-template-columns"]{
+    display:flex!important;flex-direction:column!important;gap:40px!important;
+  }
+}
 
-             <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Lock className="w-6 h-6" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">
-                  {isSignUp ? 'Crie sua Conta Grátis' : 'Acesse sua Conta'}
-                </h3>
-                <p className="text-gray-500 text-sm mt-2">
-                  {isSignUp ? 'Personalize sua experiência no LYVO™' : 'Bem-vindo de volta'}
-                </p>
-             </div>
+/* ── Muito pequeno (≤380px) ── */
+@media(max-width:380px){
+  .hero h1{font-size:28px}
+  .num-card{min-width:100%;max-width:100%}
+  .hero-trust{flex-direction:column;gap:8px;align-items:center}
+}
 
-             <form onSubmit={handleLoginSubmit} className="space-y-4">
-                {isSignUp && (
-  /* Mudança: grid-cols-1 por padrão, md:grid-cols-2 apenas em telas maiores */
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 animate-fade-in text-left">
-    <div className="md:col-span-2">
-      <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">Nome Completo</label>
-      <input type="text" required value={name} onChange={e => setName(e.target.value)}
-        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base" 
-        placeholder="Como quer ser chamado?" />
-    </div>
-    
-    {/* WhatsApp e Nascimento agora ficam um embaixo do outro no celular */}
-    <div>
-      <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">WhatsApp</label>
-      <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)}
-        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base" 
-        placeholder="(00) 00000-0000" />
-    </div>
+/* ── Tabela comparativa responsiva ── */
+@media(max-width:640px){
+  .compare-inner{overflow-x:auto}
+  table.cmp{min-width:480px}
+}
 
-    <div>
-      <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">Data de Nascimento</label>
-      <input type="date" required value={birthDate} onChange={e => setBirthDate(e.target.value)}
-        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20 text-base" />
-    </div>
+/* ── Scroll offset para header fixo ── */
+#recursos,#como-funciona,#depoimentos,#planos,#faq{
+  scroll-margin-top:72px;
+}
+@media(max-width:600px){
+  #recursos,#como-funciona,#depoimentos,#planos,#faq{
+    scroll-margin-top:60px;
+  }
+}
+</style>
 
-    {/* Cidade e Estado lado a lado apenas se houver espaço, ou empilhados */}
-    <div className="grid grid-cols-3 gap-2 md:block">
-      <div className="col-span-2 md:mb-4">
-        <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">Cidade</label>
-        <input type="text" required value={city} onChange={e => setCity(e.target.value)}
-          className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base" 
-          placeholder="Sua cidade" />
+</head>
+<body>
+
+<!-- ▌TOPBAR URGÊNCIA ▌ -->
+<div class="topbar">
+  <span class="topbar-text-long">⚡ Oferta por tempo limitado — 3 dias grátis +</span>
+  <span>30 dias de garantia total.</span>
+  <div class="topbar-timer" id="timer">00:00:00</div>
+  <a href="#planos">Aproveitar →</a>
+</div>
+
+<!-- ▌NAVBAR ▌ -->
+<header>
+  <nav>
+    <a href="#" class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 20 20"><path d="M10 2L4 6v7l6 4 6-4V6L10 2z"/></svg>
       </div>
-      <div className="md:block">
-        <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">UF</label>
-        <input type="text" maxLength={2} required value={state} onChange={e => setState(e.target.value)}
-          className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base text-center" 
-          placeholder="MG" />
+      <span class="logo-word">LYVO<sup>™</sup></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#recursos">Recursos</a></li>
+      <li><a href="#como-funciona">Como Funciona</a></li>
+      <li><a href="#depoimentos">Depoimentos</a></li>
+      <li><a href="#planos">Preços</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+    <div class="nav-right">
+      <a href="https://meulyvo.com" target="_blank" rel="noopener" class="btn-entrar">Entrar</a>
+      <a href="#planos" class="btn-comprar">Comprar</a>
+      <button class="nav-hamburger" onclick="document.getElementById('mobileMenu').classList.toggle('open')" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<!-- ▌MOBILE MENU ▌ -->
+<div class="mobile-menu" id="mobileMenu">
+  <div class="mobile-menu-head">
+    <a href="#" class="logo" onclick="document.getElementById('mobileMenu').classList.remove('open')">
+      <div class="logo-mark" style="width:30px;height:30px;background:var(--ink);border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="white"><path d="M10 2L4 6v7l6 4 6-4V6L10 2z"/></svg>
+      </div>
+      <span class="logo-word">LYVO<sup>™</sup></span>
+    </a>
+    <button class="mobile-menu-close" onclick="document.getElementById('mobileMenu').classList.remove('open')">✕</button>
+  </div>
+  <div class="mobile-menu-links">
+    <a href="#recursos" onclick="document.getElementById('mobileMenu').classList.remove('open')">Recursos</a>
+    <a href="#como-funciona" onclick="document.getElementById('mobileMenu').classList.remove('open')">Como Funciona</a>
+    <a href="#depoimentos" onclick="document.getElementById('mobileMenu').classList.remove('open')">Depoimentos</a>
+    <a href="#planos" onclick="document.getElementById('mobileMenu').classList.remove('open')">Preços</a>
+    <a href="#faq" onclick="document.getElementById('mobileMenu').classList.remove('open')">FAQ</a>
+  </div>
+  <div class="mobile-menu-actions">
+    <a href="https://meulyvo.com" target="_blank" rel="noopener" class="btn-hero-main" onclick="document.getElementById('mobileMenu').classList.remove('open')">Começar — 3 dias grátis</a>
+    <a href="https://meulyvo.com" target="_blank" rel="noopener" class="btn-entrar-mobile">Entrar na minha conta</a>
+  </div>
+</div>
+
+<!-- ▌HERO ▌ -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <div class="hero-badge-pulse"></div>
+      único app de finanças por chat do Brasil
+    </div>
+
+    <h1>Você não é<br><span class="hl-coral">ruim com dinheiro.</span><br>O app anterior<br>é que era <span class="hl">chato demais.</span></h1>
+
+    <p class="hero-reframe">E você já sabe disso — por isso abandonou todos.</p>
+
+    <p class="hero-sub">O Lyvo é o único app financeiro que funciona por conversa — como o WhatsApp, mas dentro do próprio site. Registre gastos em 3 segundos. Feche o mês sem angústia.</p>
+
+    <div class="hero-ctas">
+      <a href="https://meulyvo.com" target="_blank" rel="noopener" class="btn-hero-main">
+        Começar Agora — 3 dias grátis
+        <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <div class="hero-trust">
+        <span>✓ Sem cartão de crédito</span>
+        <span>✓ 3 dias grátis para testar</span>
+        <span>✓ 30 dias de garantia</span>
       </div>
     </div>
 
-    {/* Faixa de Renda ocupando a largura total para facilitar a seleção */}
-    <div className="md:col-span-2">
-      <label className="block text-xs font-bold text-gray-700 uppercase mb-1 ml-1">Renda Mensal Média</label>
-      <select value={income} onChange={e => setIncome(e.target.value)} required
-        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 text-base appearance-none">
-        <option value="">Selecione a faixa...</option>
-        <option value="Até 3k">Até R$ 3.000</option>
-        <option value="3k-7k">R$ 3.001 a R$ 7.000</option>
-        <option value="7k-15k">R$ 7.001 a R$ 15.000</option>
-        <option value="15k-30k">R$ 15.001 a R$ 30.000</option>
-        <option value="Acima 30k">Acima de R$ 30.000</option>
-      </select>
+    <div class="hero-phone-wrap">
+      <div class="hero-phone">
+        <div class="hero-phone-topbar">
+          <div class="hpt-avatar">L</div>
+          <div>
+            <div class="hpt-name">Lyvo Assistente 🤖</div>
+            <div class="hpt-status">ATIVO</div>
+          </div>
+        </div>
+        <div class="hero-chat-bg">
+          <div class="hcm hcm-in">
+            Olá! Sou o Lyvo. Estou pronto para ouvir você ou analisar seus recibos. O que vamos organizar hoje?
+            <div class="hcm-time">19:08</div>
+          </div>
+          <div class="hcm hcm-out">
+            gastei 89 reais no mercado no cartão inter
+            <div class="hcm-time">19:09</div>
+          </div>
+          <div class="hcm hcm-in">
+            ✅ R$89,00 em Alimentação — Inter.<br>Fatura atual: <strong>R$2.655,67</strong><br>Limite livre: R$344,33
+            <div class="hcm-time">19:09</div>
+          </div>
+          <div class="hcm hcm-out">
+            como vou fechar o mês?
+            <div class="hcm-time">19:09</div>
+          </div>
+          <div class="hcm hcm-in">
+            📊 Projeção de Abril:<br>Receitas: R$4.200 · Saídas: R$3.417<br><strong>Saldo previsto: +R$783 ✅ POSITIVO</strong>
+            <div class="hcm-time">19:09</div>
+          </div>
+        </div>
+        <div class="hero-chat-input">
+          <input class="hci-field" type="text" placeholder="Digite ou use áudio/câmera" readonly/>
+          <div class="hci-ico">📷</div>
+          <div class="hci-ico">🎤</div>
+          <div class="hci-send"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+        </div>
+        <div class="hero-phone-nav">
+          <div class="hpn-item active"><div class="hpn-icon">💬</div>Chat</div>
+          <div class="hpn-item"><div class="hpn-icon">📊</div>Finanças</div>
+          <div class="hpn-item"><div class="hpn-icon">📅</div>Agenda</div>
+          <div class="hpn-item"><div class="hpn-icon">👤</div>Perfil</div>
+        </div>
+      </div>
     </div>
   </div>
-)}
-                <div className="space-y-4 text-left">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase mb-2">E-mail</label>
-                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                      className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="seu@email.com" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Senha</label>
-                    <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                      className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 ring-blue-500/20" placeholder="••••••••" />
-                  </div>
-                </div>
+</section>
 
-                {!isSignUp && (
-                  <div className="flex justify-end">
-                    <a href="#" className="text-xs font-bold text-blue-600 hover:underline">Esqueci minha senha</a>
-                  </div>
-                )}
+<!-- ▌PLANO DE 3 PASSOS (Miller) ▌ -->
+<section class="steps-section" id="recursos">
+  <div class="steps-inner">
+    <div class="steps-eyebrow">Como funciona</div>
+    <div class="steps-title">Em 3 passos você já está no controle</div>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-title">Cadastre-se em 30 segundos</div>
+        <div class="step-desc">Crie sua conta. Nenhum formulário longo, nenhuma configuração complicada. Pode entrar do celular agora — 3 dias grátis.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-title">Mande uma mensagem</div>
+        <div class="step-desc">Texto, áudio ou foto do comprovante. O Lyvo entende e categoriza automaticamente. Três segundos por gasto.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-title">Feche o mês no positivo</div>
+        <div class="step-desc">Veja a projeção exata antes do dia 30. Sem surpresa na fatura. Sem angústia. Só controle.</div>
+      </div>
+    </div>
+  </div>
+</section>
 
-                <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg mt-6 shadow-blue-200">
-                  {isSignUp ? 'Criar minha conta grátis' : 'Entrar'}
-                </button>
-             </form>
+<!-- ▌DOR vs SOLUÇÃO ▌ -->
+<section class="dor-section">
+  <div class="dor-inner">
+    <div class="dor-grid">
+      <div class="dor-card pain">
+        <div class="dor-card-label">😮‍💨 &nbsp;O que você vivia antes</div>
+        <div class="dor-items">
+          <div class="dor-item"><div class="dor-icon x">✗</div>Abria o app, via 20 campos pra preencher, fechava</div>
+          <div class="dor-item"><div class="dor-icon x">✗</div>Fatura chegava sempre como surpresa</div>
+          <div class="dor-item"><div class="dor-icon x">✗</div>Ficava no negativo sem entender onde o dinheiro foi</div>
+          <div class="dor-item"><div class="dor-icon x">✗</div>Abandonava o app em 2 semanas e se sentia culpado</div>
+          <div class="dor-item"><div class="dor-icon x">✗</div>Medo de olhar o extrato bancário</div>
+        </div>
+      </div>
+      <div class="dor-card gain">
+        <div class="dor-card-label">✦ &nbsp;O que o Lyvo faz por você</div>
+        <div class="dor-items">
+          <div class="dor-item"><div class="dor-icon ok">✓</div>Registra qualquer gasto em 3 segundos por mensagem</div>
+          <div class="dor-item"><div class="dor-icon ok">✓</div>Você sabe o valor da fatura antes de fechar o mês</div>
+          <div class="dor-item"><div class="dor-icon ok">✓</div>Projeção de saldo atualizada em tempo real</div>
+          <div class="dor-item"><div class="dor-icon ok">✓</div>Interface que você não abandona porque não dá trabalho</div>
+          <div class="dor-item"><div class="dor-icon ok">✓</div>Clareza financeira todos os dias</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-             {formError && (
-               <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium">
-                 {formError}
-               </div>
-             )}
+<!-- ▌REFRAME DE CULPA ▌ -->
+<section class="shame-section">
+  <h2>Você nunca foi ruim com dinheiro.<br>Você só nunca teve<br>o app certo.</h2>
+  <p>Disciplina financeira não é falta de vontade — é falta de ferramenta. O Lyvo não exige que você mude. Ele se adapta à forma como você já vive.</p>
+</section>
 
-             <div className="mt-8 text-center border-t border-gray-100 pt-6">
-                <p className="text-sm text-gray-500">
-                  {isSignUp ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
-                  <button
-                    type="button"
-                    onClick={() => { setIsSignUp(!isSignUp); setFormError(null); }}
-                    className="text-blue-600 font-bold hover:underline"
-                  >
-                    {isSignUp ? 'Entrar' : 'Criar conta grátis'}
-                  </button>
-                </p>
-             </div>
+<!-- ▌STAKES — CUSTO DA DESORGANIZAÇÃO ▌ -->
+<section class="stakes-section">
+  <div class="stakes-inner">
+    <span class="section-eyebrow">O custo real de não controlar</span>
+    <div class="section-title" style="max-width:620px">O que a desorganização<br>financeira custa por mês</div>
+    <div class="stakes-grid">
+      <div class="stake-card">
+        <div class="stake-val">R$380</div>
+        <div class="stake-label">Gastos invisíveis</div>
+        <div class="stake-desc">Média mensal de compras duplicadas, assinaturas esquecidas e taxas evitáveis que passam despercebidas sem controle ativo.</div>
+      </div>
+      <div class="stake-card">
+        <div class="stake-val">R$620</div>
+        <div class="stake-label">Juros de fatura</div>
+        <div class="stake-desc">Quem não tem previsão da fatura paga o mínimo por desconhecimento. Juros do cartão chegam a 400% ao ano.</div>
+      </div>
+      <div class="stake-card">
+        <div class="stake-val">R$1.000</div>
+        <div class="stake-label">Total evitável por mês</div>
+        <div class="stake-desc">Com controle real, a maioria das pessoas identifica e elimina esse vazamento nos primeiros 30 dias de uso.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ▌FEATURE 1: CHAT ▌ -->
+<section class="feat-section dark-bg" id="como-funciona">
+  <div class="feat-inner">
+    <div class="feat-copy">
+      <div class="feat-tag dark">Chat Inteligente</div>
+      <h3 class="feat-h3 on-dark">Fale com o Lyvo.<br>Ele cuida do resto.</h3>
+      <p class="feat-p on-dark">Nada de clicar em 10 campos para registrar um gasto. Manda uma mensagem — o Lyvo categoriza, lança no cartão certo e atualiza a previsão do mês no mesmo segundo.</p>
+      <div class="feat-list">
+        <div class="feat-li on-dark"><div class="feat-check teal"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Texto, áudio ou foto do comprovante</div>
+        <div class="feat-li on-dark"><div class="feat-check teal"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Chat próprio dentro do app — sem WhatsApp</div>
+        <div class="feat-li on-dark"><div class="feat-check teal"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Categorização automática em tempo real</div>
+        <div class="feat-li on-dark"><div class="feat-check teal"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Funciona no celular pelo navegador, sem baixar nada</div>
+      </div>
+    </div>
+    <div class="app-frame">
+      <div class="s-chat">
+        <div class="s-chat-top">
+          <div class="sct-name">Lyvo Assistente 🤖</div>
+          <div class="sct-status">ATIVO</div>
+        </div>
+        <div class="s-actions">
+          <div class="s-act red"><span>↙</span>DESPESA</div>
+          <div class="s-act green"><span>↗</span>RECEITA</div>
+          <div class="s-act blue"><span>📅</span>EVENTO</div>
+        </div>
+        <div class="s-body">
+          <div class="sm sm-out">gastei 89 no mercado no cartão inter<div class="sm-t">19:08</div></div>
+          <div class="sm sm-in">✅ R$89,00 em Alimentação — Inter.<br>Fatura atual: <strong>R$2.655,67</strong><br>Limite livre: R$344,33<div class="sm-t">19:08</div></div>
+          <div class="sm sm-out">paguei o boleto de internet de 200<div class="sm-t">19:09</div></div>
+          <div class="sm sm-in">📌 Conta fixa <strong>Internet</strong> confirmada ✓<br>R$200,00 baixado do fluxo geral.<div class="sm-t">19:09</div></div>
+          <div class="sm sm-out">como tô no mês?<div class="sm-t">19:10</div></div>
+          <div class="sm sm-in">📊 Abril — projeção <strong>POSITIVO</strong><br>Receita: R$4.200 · Saída: R$3.417<br>Saldo previsto: <strong>+R$783</strong> ✅<div class="sm-t">19:10</div></div>
+        </div>
+        <div class="s-input">
+          <input class="si-field" type="text" placeholder="Digite ou use áudio/câmera" readonly/>
+          <div class="si-btn">📷</div>
+          <div class="si-btn">🎤</div>
+          <div class="si-btn si-send"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ▌FEATURE 2: CARTÃO ▌ -->
+<section class="feat-section cream-bg">
+  <div class="feat-inner flip">
+    <div class="feat-copy">
+      <div class="feat-tag light">Cartão de Crédito</div>
+      <h3 class="feat-h3 on-light">Nunca mais tome<br>susto na fatura.</h3>
+      <p class="feat-p on-light">O Lyvo aprende o ciclo de cada cartão: melhor dia de compra, limite e vencimento. Cada compra é identificada para a fatura certa — e você sabe ao centavo quanto vai chegar antes de fechar o mês.</p>
+      <div class="feat-list">
+        <div class="feat-li on-light"><div class="feat-check ink"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Cadastre quantos cartões quiser</div>
+        <div class="feat-li on-light"><div class="feat-check ink"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Melhor dia de compra definido por você</div>
+        <div class="feat-li on-light"><div class="feat-check ink"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Limite disponível atualizado após cada compra</div>
+        <div class="feat-li on-light"><div class="feat-check ink"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Após o pagamento, entra no fluxo geral automaticamente</div>
+      </div>
+    </div>
+    <div class="app-frame on-cream">
+      <div class="s-card-bg">
+        <div style="margin-bottom:12px">
+          <div style="font-family:var(--display);font-size:20px;font-weight:900;color:var(--ink)">Financeiro</div>
+          <div style="font-size:12px;color:var(--text3)">Controle sua saúde financeira</div>
+          <div class="sf-month"><span style="color:var(--text3)">‹</span>&nbsp;Abril De 2026&nbsp;<span style="color:var(--text3)">›</span></div>
+        </div>
+        <div class="s-card-head">
+          <h4>🪪 Meus Cartões</h4>
+          <div class="s-card-novo">+ Novo</div>
+        </div>
+        <div class="card-strip">
+          <div class="card-strip-accent cs-inter"></div>
+          <div class="cs-info">
+            <div class="cs-name">Inter</div>
+            <div class="cs-best">MELHOR COMPRA: DIA 8</div>
+            <div class="cs-flabel">FATURA ATUAL</div>
+            <div class="cs-fval">R$ 2.566,67</div>
+            <div class="cs-limit-row">
+              <span>Limite</span><span class="cs-limit-free">R$ 433,33 livres</span>
+            </div>
+            <div class="cs-bar"><div class="cs-bar-fill" style="width:86%;background:#F97316"></div></div>
           </div>
         </div>
-      )}
+        <div class="card-strip">
+          <div class="card-strip-accent cs-nu"></div>
+          <div class="cs-info">
+            <div class="cs-name">Nubank</div>
+            <div class="cs-best">MELHOR COMPRA: DIA 15</div>
+            <div class="cs-flabel">FATURA ATUAL</div>
+            <div class="cs-fval">R$ 840,00</div>
+            <div class="cs-limit-row">
+              <span>Limite</span><span class="cs-limit-free">R$ 2.160,00 livres</span>
+            </div>
+            <div class="cs-bar"><div class="cs-bar-fill" style="width:28%;background:#820AD1"></div></div>
+          </div>
+        </div>
+      </div>
     </div>
-  );
-};
+  </div>
+</section>
 
-export default LandingPage;
+<!-- ▌FEATURE GOOGLE AGENDA ▌ -->
+<section class="feat-section" style="background:var(--ink);padding:96px 24px">
+  <div class="feat-inner" style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center">
+    <div class="feat-copy">
+      <div class="feat-tag" style="background:rgba(66,133,244,.15);color:#93C5FD;font-family:var(--display);font-size:11px;font-weight:700;padding:5px 14px;border-radius:var(--pill);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;display:inline-block">
+        🗓 Google Agenda
+      </div>
+      <h3 style="font-family:var(--display);font-size:clamp(26px,2.8vw,38px);font-weight:900;letter-spacing:-0.035em;line-height:1.1;margin-bottom:16px;color:#fff">
+        Seus compromissos e<br>finanças no mesmo lugar.<br><span style="color:var(--teal)">Com notificação real.</span>
+      </h3>
+      <p style="font-size:16px;line-height:1.72;margin-bottom:24px;color:rgba(255,255,255,.6)">
+        O Lyvo se integra diretamente com o Google Agenda. Cadastre um compromisso numa mensagem — ele aparece no seu calendário. E você recebe notificação no celular antes de acontecer. Nunca mais perca uma reunião, consulta ou vencimento.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:15px;color:rgba(255,255,255,.7)">
+          <div style="width:20px;height:20px;flex-shrink:0;margin-top:1px;border-radius:50%;background:rgba(0,217,184,.15);display:flex;align-items:center;justify-content:center">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#00D9B8" stroke-width="2.5"><polyline points="2,6 5,9 10,3"/></svg>
+          </div>
+          Sincronização automática com seu Google Agenda
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:15px;color:rgba(255,255,255,.7)">
+          <div style="width:20px;height:20px;flex-shrink:0;margin-top:1px;border-radius:50%;background:rgba(0,217,184,.15);display:flex;align-items:center;justify-content:center">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#00D9B8" stroke-width="2.5"><polyline points="2,6 5,9 10,3"/></svg>
+          </div>
+          Notificação no celular antes de cada compromisso
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:15px;color:rgba(255,255,255,.7)">
+          <div style="width:20px;height:20px;flex-shrink:0;margin-top:1px;border-radius:50%;background:rgba(0,217,184,.15);display:flex;align-items:center;justify-content:center">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#00D9B8" stroke-width="2.5"><polyline points="2,6 5,9 10,3"/></svg>
+          </div>
+          Cadastro por conversa: "reunião amanhã às 14h com João"
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:15px;color:rgba(255,255,255,.7)">
+          <div style="width:20px;height:20px;flex-shrink:0;margin-top:1px;border-radius:50%;background:rgba(0,217,184,.15);display:flex;align-items:center;justify-content:center">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#00D9B8" stroke-width="2.5"><polyline points="2,6 5,9 10,3"/></svg>
+          </div>
+          Vencimentos de contas fixas também viram eventos no calendário
+        </div>
+      </div>
+    </div>
+
+    <!-- Mockup Agenda -->
+    <div style="border-radius:24px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08)">
+      <!-- Header Google-style -->
+      <div style="background:#1E293B;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#4285F4,#34A853);display:flex;align-items:center;justify-content:center;font-size:14px">📅</div>
+          <div>
+            <div style="font-family:var(--display);font-size:13px;font-weight:800;color:#fff">Google Agenda</div>
+            <div style="font-size:10px;color:var(--teal);font-weight:600">● Sincronizado com Lyvo</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.35);font-weight:600">Abril 2026</div>
+      </div>
+
+      <!-- Notificação push mockup -->
+      <div style="background:#132038;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="background:rgba(66,133,244,.12);border:1px solid rgba(66,133,244,.25);border-radius:12px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px">
+          <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#4285F4,#34A853);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🔔</div>
+          <div>
+            <div style="font-family:var(--display);font-size:12px;font-weight:800;color:#93C5FD">Lembrete em 15 minutos</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:2px">Consulta médica — Dr. Carlos · 14:00</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px">Clínica Centro · Av. Paulista, 1000</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Eventos do dia -->
+      <div style="background:#0D1A2D;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Hoje — Terça, 14 de Abril</div>
+
+        <div style="background:#1E293B;border-radius:10px;padding:10px 12px;border-left:3px solid #4285F4">
+          <div style="font-size:11px;color:#93C5FD;font-weight:700;margin-bottom:2px">09:00</div>
+          <div style="font-size:13px;font-weight:700;color:#fff">Reunião de projeto</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4)">Google Meet · 1h</div>
+        </div>
+
+        <div style="background:#1E293B;border-radius:10px;padding:10px 12px;border-left:3px solid var(--coral)">
+          <div style="font-size:11px;color:#FCA5A5;font-weight:700;margin-bottom:2px">12:00 — Vencimento</div>
+          <div style="font-size:13px;font-weight:700;color:#fff">💳 Fatura Inter — R$ 2.566</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4)">Criado automaticamente pelo Lyvo</div>
+        </div>
+
+        <div style="background:#1E293B;border-radius:10px;padding:10px 12px;border-left:3px solid #34A853">
+          <div style="font-size:11px;color:#86EFAC;font-weight:700;margin-bottom:2px">14:00</div>
+          <div style="font-size:13px;font-weight:700;color:#fff">Consulta médica — Dr. Carlos</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4)">Clínica Centro · 🔔 Lembrete ativo</div>
+        </div>
+
+        <div style="background:#1E293B;border-radius:10px;padding:10px 12px;border-left:3px solid var(--teal)">
+          <div style="font-size:11px;color:var(--teal);font-weight:700;margin-bottom:2px">18:30</div>
+          <div style="font-size:13px;font-weight:700;color:#fff">Pilates — Studio Flex</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4)">Recorrente toda terça e quinta</div>
+        </div>
+
+        <!-- Mensagem enviada pro Lyvo -->
+        <div style="margin-top:4px;background:#132038;border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px">
+          <div style="font-size:10px;color:rgba(255,255,255,.3);font-weight:600;margin-bottom:5px;letter-spacing:.05em">ADICIONADO VIA LYVO CHAT</div>
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <div style="background:#D9F7D0;border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text);align-self:flex-end">reunião com João sexta às 10h<div style="font-size:9px;color:var(--text3);margin-top:1px;text-align:right">19:22</div></div>
+          </div>
+          <div style="margin-top:6px;display:flex;gap:8px;align-items:flex-start">
+            <div style="background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text)">📅 Adicionado ao Google Agenda!<br><span style="font-weight:700">Sexta, 18 Abr · 10:00</span> — Reunião com João<div style="font-size:9px;color:var(--text3);margin-top:1px;text-align:right">19:22</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ▌FEATURE 3: PREVISIBILIDADE ▌ -->
+<section class="feat-section dark-bg">
+  <div class="feat-inner">
+    <div class="feat-copy">
+      <div class="feat-tag dark">Previsibilidade</div>
+      <h3 class="feat-h3 on-dark">Sabe como vai fechar<br>o mês antes do dia 30.</h3>
+      <p class="feat-p on-dark">O Lyvo soma tudo: receitas previstas, despesas pagas, contas fixas pendentes e faturas a vencer. Te dá um número exato. POSITIVO ou CRÍTICO — sem chute, sem surpresa.</p>
+      <div class="feat-list">
+        <div class="feat-li on-dark"><div class="feat-check teal"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>PIX, Dinheiro e Cartão separados e rastreados</div>
+        <div class="feat-li on-dark"><div class="feat-check teal"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Receitas e despesas pagas vs. pendentes</div>
+        <div class="feat-li on-dark"><div class="feat-check teal"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Projeção de saldo atualizada em tempo real</div>
+        <div class="feat-li on-dark"><div class="feat-check teal"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Alerta CRÍTICO quando os gastos passam da receita</div>
+      </div>
+    </div>
+    <div class="app-frame">
+      <div class="s-fin">
+        <div class="sf-head">
+          <h4>Financeiro</h4>
+          <p>Controle sua saúde financeira</p>
+          <div class="sf-month"><span style="color:var(--text3)">‹</span>&nbsp;Abril De 2026&nbsp;<span style="color:var(--text3)">›</span></div>
+        </div>
+        <div class="sf-cards">
+          <div class="sf-c g"><div class="sf-cl">Receitas (mês)</div><div class="sf-cv">R$ 4.200,00</div></div>
+          <div class="sf-c r"><div class="sf-cl">Despesas (mês)</div><div class="sf-cv">R$ 3.416,67</div></div>
+          <div class="sf-c b"><div class="sf-cl">Saldo Acumulado</div><div class="sf-cv">R$ 783,33</div></div>
+        </div>
+        <div class="previs">
+          <div class="previs-top">
+            <div class="previs-name">📈 Previsibilidade</div>
+            <div class="previs-tag pt-pos">POSITIVO</div>
+          </div>
+          <div class="previs-lbl">PROJEÇÃO DE SALDO</div>
+          <div class="previs-val">R$ 783,33</div>
+          <div class="previs-row">
+            <div class="pm green"><div class="pm-l">Prev. Receita</div><div class="pm-v">+R$ 4.200</div></div>
+            <div class="pm red"><div class="pm-l">Prev. Saída</div><div class="pm-v">-R$ 3.417</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ▌FEATURE 4: CONTAS FIXAS ▌ -->
+<section class="feat-section cream-bg">
+  <div class="feat-inner flip">
+    <div class="feat-copy">
+      <div class="feat-tag light">Contas Fixas</div>
+      <h3 class="feat-h3 on-light">Suas contas fixas<br>já te esperam<br>todo mês.</h3>
+      <p class="feat-p on-light">Cadastre uma vez. O Lyvo relança automaticamente todo mês. Você só confirma o pagamento quando fizer — sem redigitar, sem esquecer, sem susto no saldo.</p>
+      <div class="feat-list">
+        <div class="feat-li on-light"><div class="feat-check ink"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Internet, aluguel, academia, streaming...</div>
+        <div class="feat-li on-light"><div class="feat-check ink"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Status "ABERTO" até você confirmar</div>
+        <div class="feat-li on-light"><div class="feat-check ink"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Aviso no dia do vencimento</div>
+        <div class="feat-li on-light"><div class="feat-check ink"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Tudo já entra na projeção do mês automaticamente</div>
+      </div>
+    </div>
+    <div class="app-frame on-cream">
+      <div class="s-cf-bg">
+        <div class="s-cf-head">
+          <h4>🪪 Contas Fixas</h4>
+          <div class="s-cf-add">+ Adicionar</div>
+        </div>
+        <div>
+          <div class="cf-row"><div class="cf-icons-g"><div class="cf-ico-btn">🗑</div><div class="cf-ico-btn">✏</div></div><div class="cf-info-g"><div class="cf-name-g">Internet</div><div class="cf-meta-g">Vence Dia 3 · R$ 200,00</div></div><div class="cf-right-g"><div class="cf-status-g">ABERTO</div><div class="cf-toggle-g"></div></div></div>
+          <div class="cf-row"><div class="cf-icons-g"><div class="cf-ico-btn">🗑</div><div class="cf-ico-btn">✏</div></div><div class="cf-info-g"><div class="cf-name-g">Água</div><div class="cf-meta-g">Vence Dia 5 · R$ 100,00</div></div><div class="cf-right-g"><div class="cf-status-g">ABERTO</div><div class="cf-toggle-g"></div></div></div>
+          <div class="cf-row"><div class="cf-icons-g"><div class="cf-ico-btn">🗑</div><div class="cf-ico-btn">✏</div></div><div class="cf-info-g"><div class="cf-name-g">Inglês</div><div class="cf-meta-g">Vence Dia 8 · R$ 350,00</div></div><div class="cf-right-g"><div class="cf-status-g">ABERTO</div><div class="cf-toggle-g"></div></div></div>
+          <div class="cf-row"><div class="cf-icons-g"><div class="cf-ico-btn">🗑</div><div class="cf-ico-btn">✏</div></div><div class="cf-info-g"><div class="cf-name-g">Condomínio</div><div class="cf-meta-g">Vence Dia 12 · R$ 400,00</div></div><div class="cf-right-g"><div class="cf-status-g">ABERTO</div><div class="cf-toggle-g"></div></div></div>
+        </div>
+        <div style="text-align:center;padding:14px 0 4px;font-family:var(--display);font-size:12px;font-weight:800;color:var(--text2);letter-spacing:.06em">VER MAIS</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ▌MARQUEE ▌ -->
+<section class="marquee-wrap">
+  <div class="mq-label">O que os usuários mandam pro Lyvo</div>
+  <div class="mq-row">
+    <div class="mq-track">
+      <div class="mq-chip d">gastei 45 no iFood 🍔</div><div class="mq-chip g">✅ Lançado — Alimentação</div>
+      <div class="mq-chip d">paguei o boleto de internet</div><div class="mq-chip g">✅ Conta fixa confirmada</div>
+      <div class="mq-chip d">comprei no inter 299 reais</div><div class="mq-chip g">✅ Fatura maio — R$299</div>
+      <div class="mq-chip d">qual minha previsão esse mês?</div><div class="mq-chip g">📊 Saldo previsto: +R$783</div>
+      <div class="mq-chip d">recebi meu salário de 4200</div><div class="mq-chip g">✅ Receita registrada</div>
+      <div class="mq-chip d">gastei 45 no iFood 🍔</div><div class="mq-chip g">✅ Lançado — Alimentação</div>
+      <div class="mq-chip d">paguei o boleto de internet</div><div class="mq-chip g">✅ Conta fixa confirmada</div>
+      <div class="mq-chip d">comprei no inter 299 reais</div><div class="mq-chip g">✅ Fatura maio — R$299</div>
+      <div class="mq-chip d">qual minha previsão esse mês?</div><div class="mq-chip g">📊 Saldo previsto: +R$783</div>
+      <div class="mq-chip d">recebi meu salário de 4200</div><div class="mq-chip g">✅ Receita registrada</div>
+    </div>
+  </div>
+  <div class="mq-row">
+    <div class="mq-track rev">
+      <div class="mq-chip d">vou fechar o mês bem?</div><div class="mq-chip g">🎯 Projeção: POSITIVO ✓</div>
+      <div class="mq-chip d">tira foto do meu recibo</div><div class="mq-chip g">✅ Registrado em 3 segundos</div>
+      <div class="mq-chip d">quanto gastei em alimentação?</div><div class="mq-chip g">🍽 R$860 em 12 lançamentos</div>
+      <div class="mq-chip d">cadastra academia smartfit 110</div><div class="mq-chip g">📌 Conta fixa adicionada</div>
+      <div class="mq-chip d">minha fatura do nubank?</div><div class="mq-chip g">💳 R$840 · vence dia 22</div>
+      <div class="mq-chip d">vou fechar o mês bem?</div><div class="mq-chip g">🎯 Projeção: POSITIVO ✓</div>
+      <div class="mq-chip d">tira foto do meu recibo</div><div class="mq-chip g">✅ Registrado em 3 segundos</div>
+      <div class="mq-chip d">quanto gastei em alimentação?</div><div class="mq-chip g">🍽 R$860 em 12 lançamentos</div>
+      <div class="mq-chip d">cadastra academia smartfit 110</div><div class="mq-chip g">📌 Conta fixa adicionada</div>
+      <div class="mq-chip d">minha fatura do nubank?</div><div class="mq-chip g">💳 R$840 · vence dia 22</div>
+    </div>
+  </div>
+</section>
+
+<!-- ▌DEPOIMENTOS ▌ -->
+<section class="dep-section" id="depoimentos">
+  <span class="section-eyebrow" style="display:block;text-align:center">Depoimentos</span>
+  <div class="section-title" style="text-align:center;margin-bottom:0">Quem usou, não voltou<br>para planilha.</div>
+  <div style="height:48px"></div>
+  <div class="dep-grid">
+    <div class="dep-card">
+      <div class="dep-stars">★★★★★</div>
+      <div class="dep-text">Tentei Organizze, Mobills e até planilha do Excel. Abandonei todos em 2 semanas. Com o Lyvo são 47 dias e ainda estou usando todos os dias.</div>
+      <div class="dep-author">
+        <div class="dep-avatar da-1">CM</div>
+        <div>
+          <div class="dep-name">Carla Mendes</div>
+          <div class="dep-role">Professora, 34 anos · São Paulo</div>
+        </div>
+      </div>
+      <div class="dep-highlight">🔑 &nbsp;"O segredo é não ter formulário. É só mandar mensagem."</div>
+    </div>
+    <div class="dep-card">
+      <div class="dep-stars">★★★★★</div>
+      <div class="dep-text">Minha fatura do cartão sempre chegava como surpresa. Agora eu sei o valor exato antes de fechar. Mês passado economizei R$340 só porque vi o estouro antes de acontecer.</div>
+      <div class="dep-author">
+        <div class="dep-avatar da-2">RS</div>
+        <div>
+          <div class="dep-name">Rafael Sousa</div>
+          <div class="dep-role">Autônomo, 28 anos · Belo Horizonte</div>
+        </div>
+      </div>
+      <div class="dep-highlight">💳 &nbsp;"Não tomo mais susto na fatura. Ponto final."</div>
+    </div>
+    <div class="dep-card">
+      <div class="dep-stars">★★★★★</div>
+      <div class="dep-text">O que mais me impressionou: mandei uma foto do recibo do restaurante e ele registrou sozinho, com categoria e tudo. Levei literalmente 3 segundos. Isso é diferente de tudo.</div>
+      <div class="dep-author">
+        <div class="dep-avatar da-3">JO</div>
+        <div>
+          <div class="dep-name">Juliana Oliveira</div>
+          <div class="dep-role">Empreendedora, 41 anos · Rio de Janeiro</div>
+        </div>
+      </div>
+      <div class="dep-highlight">📷 &nbsp;"Foto do recibo e pronto. Que diferença."</div>
+    </div>
+  </div>
+</section>
+
+<!-- ▌COMPARATIVO ▌ -->
+<section class="compare-section">
+  <div class="compare-inner">
+    <span class="section-eyebrow" style="display:block;text-align:center">Comparativo</span>
+    <div class="section-title" style="text-align:center;font-size:clamp(24px,3vw,38px)">O Lyvo contra<br>tudo que você já tentou</div>
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th>Funcionalidade</th>
+          <th>Apps comuns</th>
+          <th class="cmp-lyvo">LYVO™</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Registrar por mensagem de texto</td><td><span class="cx">✗</span></td><td class="cmp-lyvo"><span class="ck">✓</span></td></tr>
+        <tr><td>Registrar por áudio ou foto</td><td><span class="cx">✗</span></td><td class="cmp-lyvo"><span class="ck">✓</span></td></tr>
+        <tr><td>Fatura prevista automaticamente</td><td><span class="cx">✗</span></td><td class="cmp-lyvo"><span class="ck">✓</span></td></tr>
+        <tr><td>PIX / Dinheiro / Cartão separados</td><td><span class="cx">✗</span></td><td class="cmp-lyvo"><span class="ck">✓</span></td></tr>
+        <tr><td>Contas fixas relançadas todo mês</td><td><span class="cx">✗</span></td><td class="cmp-lyvo"><span class="ck">✓</span></td></tr>
+        <tr><td>Projeção de fechamento do mês</td><td><span class="cm">Parcial</span></td><td class="cmp-lyvo"><span class="ck">100%</span></td></tr>
+        <tr><td>Agenda integrada com finanças</td><td><span class="cx">✗</span></td><td class="cmp-lyvo"><span class="ck">✓</span></td></tr>
+        <tr><td>Sincronização com Google Agenda</td><td><span class="cx">✗</span></td><td class="cmp-lyvo"><span class="ck">✓</span></td></tr>
+        <tr><td>Notificação de compromissos no celular</td><td><span class="cx">✗</span></td><td class="cmp-lyvo"><span class="ck">✓</span></td></tr>
+        <tr><td>Tempo para registrar um gasto</td><td style="color:var(--text3)">45–90 segundos</td><td class="cmp-lyvo" style="font-family:var(--display);font-weight:800;color:var(--teal-text)">3–5 segundos</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ▌NÚMEROS ▌ -->
+<section class="num-section">
+  <span class="section-eyebrow" style="display:block;text-align:center">Resultados</span>
+  <div class="section-title" style="text-align:center;font-size:clamp(26px,3.5vw,42px)">Números que comprovam</div>
+  <div class="num-grid">
+    <div class="num-card"><div class="num-val">3s</div><div class="num-label">para registrar qualquer gasto via chat</div></div>
+    <div class="num-card"><div class="num-val">100%</div><div class="num-label">previsibilidade no fechamento do mês</div></div>
+    <div class="num-card"><div class="num-val">∞</div><div class="num-label">cartões cadastrados sem custo no Pro</div></div>
+    <div class="num-card"><div class="num-val">0</div><div class="num-label">formulários para preencher em qualquer momento</div></div>
+  </div>
+</section>
+
+<!-- ▌GARANTIA ▌ -->
+<section class="garantia-section">
+  <div class="garantia-inner">
+    <div class="garantia-badge">30 DIAS<br>GARANTIA<br>TOTAL</div>
+    <h2>Risco zero.<br><span>Você tem 30 dias.</span></h2>
+    <p>Se em 30 dias você não sentir que o Lyvo mudou sua relação com o dinheiro, devolvemos cada centavo — sem perguntas, sem ligação de retenção, sem formulário de cancelamento complicado.</p>
+    <p>Basta mandar uma mensagem. Como tudo no Lyvo.</p>
+    <div class="garantia-legal">* Válido para todos os planos pagos · 30 dias corridos a partir da compra</div>
+  </div>
+</section>
+
+<!-- ▌PRICING ▌ -->
+<section class="pricing-section" id="planos">
+  <div class="pricing-intro">
+    <span class="section-eyebrow" style="display:block;text-align:center">Planos</span>
+    <div class="section-title" style="text-align:center;font-size:clamp(26px,3.5vw,42px)">Simples assim.<br>Sem pegadinha.</div>
+  </div>
+
+  <!-- ÂNCORA DE VALOR — Kennedy -->
+  <div class="pricing-value-anchor">
+    <div class="pva-icon">🧮</div>
+    <div class="pva-text">
+      A desorganização financeira custa em média <strong>R$1.000 por mês</strong> em gastos evitáveis e juros de cartão. O Lyvo custa <strong>R$12,49/mês</strong>. Ou seja: você gasta R$12 para não perder R$1.000.
+    </div>
+  </div>
+
+  <div class="pricing-grid">
+    <div class="plan feat">
+      <div class="plan-star">Melhor custo-benefício</div>
+    <div class="plan-name">Plano Anual</div>
+      <div class="plan-p-row">
+        <span class="plan-cur">R$</span>
+        <span class="plan-price">12</span>
+        <span class="plan-dec">,49</span>
+      </div>
+      <div class="plan-period">/mês — cobrado anualmente</div>
+      <div class="plan-economy">Equivalente a R$ 149,90/ano · Economia de 50%</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:24px">Parcelamos em até 5x de R$29,98 · 3 dias grátis para testar</div>
+      <div class="plan-features">
+        <div class="pf"><span class="pf-check">✓</span>Chat inteligente completo (texto, áudio, foto)</div>
+        <div class="pf"><span class="pf-check">✓</span>Cartões de crédito ilimitados</div>
+        <div class="pf"><span class="pf-check">✓</span>Contas fixas ilimitadas</div>
+        <div class="pf"><span class="pf-check">✓</span>Agenda integrada</div>
+        <div class="pf"><span class="pf-check">✓</span>Relatórios e gráficos</div>
+        <div class="pf"><span class="pf-check">✓</span>Suporte prioritário</div>
+        <div class="pf"><span class="pf-check">✓</span>30 dias de garantia total</div>
+      </div>
+      <a href="https://lastlink.com/p/CA05DE2CE/checkout-payment/" target="_blank" rel="noopener" class="plan-cta plan-cta-solid">Aproveitar Desconto Anual →</a>
+      <div class="plan-note">* R$149,90 cobrado uma vez por ano</div>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Plano Mensal</div>
+      <div class="plan-p-row">
+        <span class="plan-cur">R$</span>
+        <span class="plan-price">24</span>
+        <span class="plan-dec">,90</span>
+      </div>
+      <div class="plan-period">/mês — sem fidelidade</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:24px">Cancele quando quiser, sem burocracia</div>
+      <div class="plan-features">
+        <div class="pf"><span class="pf-check">✓</span>Chat inteligente (texto)</div>
+        <div class="pf"><span class="pf-check">✓</span>Controle financeiro completo</div>
+        <div class="pf"><span class="pf-check">✓</span>Agenda integrada</div>
+        <div class="pf"><span class="pf-check">✓</span>Relatórios e gráficos</div>
+        <div class="pf"><span class="pf-check">✓</span>30 dias de garantia total</div>
+      </div>
+      <a href="https://lastlink.com/p/CE5BD085C/checkout-payment/" target="_blank" rel="noopener" class="plan-cta plan-cta-outline">Assinar Mensal →</a>
+      <div class="plan-note">Pagamento mensal recorrente no cartão</div>
+    </div>
+  </div>
+</section>
+
+<!-- ▌FAQ ▌ -->
+<section class="faq-section" id="faq">
+  <div class="faq-inner">
+    <span class="section-eyebrow" style="display:block;text-align:center">FAQ</span>
+    <div class="section-title" style="text-align:center;font-size:clamp(24px,3vw,36px)">Tire suas dúvidas<br>sobre o LYVO™</div>
+
+    <div class="faq-item">
+      <div class="faq-q">Como funciona a integração com o Google Agenda?<div class="faq-icon">+</div></div>
+      <div class="faq-a"><div class="faq-a-inner">O Lyvo se conecta diretamente com o seu Google Agenda. Quando você cadastra um compromisso por mensagem — "reunião amanhã às 14h" — ele é criado automaticamente no seu calendário. Você recebe a notificação no celular como qualquer evento do Google. Os vencimentos das suas contas fixas também podem virar eventos, para você nunca esquecer de pagar.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Como funciona o período de 3 dias grátis?<div class="faq-icon">+</div></div>
+      <div class="faq-a"><div class="faq-a-inner">Você acessa todos os recursos do Lyvo por 3 dias sem precisar informar cartão de crédito. Ao final, escolhe o plano que preferir — ou não contrata nada, sem pressão.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Precisa conectar meu WhatsApp?<div class="faq-icon">+</div></div>
+      <div class="faq-a"><div class="faq-a-inner">Não. O chat do Lyvo é 100% próprio, dentro do site meulyvo.com. A experiência é inspirada no WhatsApp — mas completamente independente. Nenhum acesso ao seu telefone ou aplicativos.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Como o Lyvo sabe em qual fatura lançar a compra?<div class="faq-icon">+</div></div>
+      <div class="faq-a"><div class="faq-a-inner">Ao cadastrar o cartão, você informa o melhor dia de compra, o limite e a data de vencimento. Com esses dados, o Lyvo identifica automaticamente se a compra vai para a fatura atual ou a próxima — sempre com 100% de precisão.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Posso cancelar a qualquer momento?<div class="faq-icon">+</div></div>
+      <div class="faq-a"><div class="faq-a-inner">Sim. No plano mensal você cancela quando quiser, sem multa. No plano anual, a cobrança é feita uma vez e você usa por 12 meses. Em ambos, se cancelar nos primeiros 30 dias, reembolsamos 100%.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Funciona no celular sem baixar aplicativo?<div class="faq-icon">+</div></div>
+      <div class="faq-a"><div class="faq-a-inner">Sim. O Lyvo é um app web — você acessa pelo navegador do celular ou do computador, sem instalar nada. Digite meulyvo.com e está dentro.</div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">A garantia de 30 dias é real?<div class="faq-icon">+</div></div>
+      <div class="faq-a"><div class="faq-a-inner">100% real. Mande uma mensagem em até 30 dias corridos após a compra. Devolvemos cada centavo sem perguntas, sem ligação de retenção, sem formulário complicado. Só uma mensagem — como tudo no Lyvo.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ▌CTA FINAL ▌ -->
+<section class="cta-final">
+  <h2>Pronto para organizar<br>sua vida de vez?</h2>
+  <p>Junte-se a quem parou de adivinhar onde o dinheiro vai e começou a fechar o mês no positivo.</p>
+  <a href="https://meulyvo.com" target="_blank" rel="noopener" class="btn-hero-main" style="display:inline-flex;align-items:center;gap:10px;font-family:var(--display);font-size:17px;font-weight:800;color:var(--ink);background:var(--teal);padding:18px 48px;border-radius:var(--pill);text-decoration:none;transition:all .2s">
+    Começar Agora — 3 dias grátis
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+  </a>
+  <div class="cta-final-note">✓ Sem cartão de crédito &nbsp;·&nbsp; ✓ 30 dias de garantia &nbsp;·&nbsp; ✓ Cancele quando quiser</div>
+</section>
+
+<!-- ▌FOOTER ▌ -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div class="fb-name">LYVO<sup style="font-size:10px;vertical-align:super;font-weight:600;color:rgba(255,255,255,.2)">™</sup> <div class="fb-dot"></div></div>
+      <p>Controle financeiro e agenda inteligente em um só lugar. O único app de finanças que funciona por conversa.</p>
+    </div>
+    <div class="footer-col">
+      <h5>Links Úteis</h5>
+      <a href="https://meulyvo.com" target="_blank">Política de Privacidade</a>
+      <a href="https://meulyvo.com" target="_blank">Termos de Uso</a>
+      <a href="https://meulyvo.com" target="_blank">Suporte</a>
+      <a href="https://meulyvo.com" target="_blank">Blog</a>
+    </div>
+    <div class="footer-col">
+      <h5>Contato</h5>
+      <a href="mailto:contato@lyvo.com.br">contato@lyvo.com.br</a>
+      <a href="https://www.instagram.com/lyvo_assistente?igsh=MWpyOThrZXo2azZxcg%3D%3D&utm_source=qr" target="_blank" rel="noopener">Instagram @lyvo_assistente</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © 2026 LYVO™ · CNPJ: 36.989.165/0001-85 · <a href="https://meulyvo.com" style="color:rgba(255,255,255,.15);text-decoration:none">meulyvo.com</a>
+  </div>
+</footer>
+
+<script>
+/* ── FAQ ── */
+document.querySelectorAll('.faq-item').forEach(item=>{
+  item.querySelector('.faq-q').addEventListener('click',()=>item.classList.toggle('open'));
+});
+
+/* ── COUNTDOWN ── */
+(function(){
+  const end=new Date();
+  end.setHours(23,59,59,0);
+  function tick(){
+    const diff=end-new Date();
+    if(diff<0){document.getElementById('timer').textContent='EXPIRANDO';return}
+    const h=Math.floor(diff/3600000).toString().padStart(2,'0');
+    const m=Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
+    const s=Math.floor((diff%60000)/1000).toString().padStart(2,'0');
+    document.getElementById('timer').textContent=h+':'+m+':'+s;
+  }
+  tick();setInterval(tick,1000);
+})();
+
+/* ── SMOOTH SCROLL com offset do header fixo ── */
+(function(){
+  // Altura do header: 68px desktop, 60px mobile
+  function headerH(){return window.innerWidth<=600?60:68}
+
+  // Intercepta todos os links âncora internos
+  document.querySelectorAll('a[href^="#"]').forEach(function(link){
+    link.addEventListener('click',function(e){
+      const id=this.getAttribute('href');
+      if(id==='#'||!id)return;
+      const target=document.querySelector(id);
+      if(!target)return;
+      e.preventDefault();
+      const top=target.getBoundingClientRect().top+window.scrollY-headerH()-8;
+      window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+    });
+  });
+})();
+
+/* ── ACTIVE NAV ao scrollar ── */
+(function(){
+  const sections=['recursos','como-funciona','depoimentos','planos','faq'];
+  const links=document.querySelectorAll('.nav-links a');
+
+  function setActive(){
+    let current='';
+    sections.forEach(function(id){
+      const el=document.getElementById(id);
+      if(!el)return;
+      if(window.scrollY>=el.offsetTop-120)current=id;
+    });
+    links.forEach(function(a){
+      const href=a.getAttribute('href').replace('#','');
+      a.style.color=href===current?'var(--teal-text)':'';
+      a.style.fontWeight=href===current?'600':'';
+    });
+  }
+  window.addEventListener('scroll',setActive,{passive:true});
+  setActive();
+})();
+
+/* ── FECHAR MENU MOBILE ao clicar fora ── */
+document.addEventListener('click',function(e){
+  const menu=document.getElementById('mobileMenu');
+  if(menu.classList.contains('open')&&!menu.contains(e.target)&&!e.target.closest('.nav-hamburger')){
+    menu.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>
