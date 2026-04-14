@@ -116,6 +116,7 @@ nav{
   font-family:var(--body);font-size:14px;font-weight:500;color:var(--text2);
   text-decoration:none;padding:8px 16px;border-radius:var(--r-sm);
   border:1px solid var(--border2);transition:all .15s;
+  background:none;cursor:pointer;
 }
 .btn-entrar:hover{background:var(--cream);color:var(--ink)}
 .btn-comprar{
@@ -194,6 +195,7 @@ nav{
   text-decoration:none;transition:all .2s;
   display:inline-flex;align-items:center;gap:10px;
   letter-spacing:-0.01em;
+  border:none;cursor:pointer;
 }
 .btn-hero-main:hover{background:var(--teal-dark);transform:translateY(-2px);box-shadow:0 14px 40px var(--teal-glow)}
 .btn-hero-main svg{width:18px;height:18px;stroke:var(--ink);stroke-width:2.5;fill:none;transition:transform .2s}
@@ -771,6 +773,7 @@ table.cmp tr:last-child td{border-bottom:none}
   font-family:var(--display);font-size:15px;font-weight:700;
   color:var(--text2);border:1.5px solid var(--border2);
   padding:14px;border-radius:var(--pill);text-decoration:none;
+  background:none;cursor:pointer;width:100%;
 }
 
 /* ── Tablet (≤1024px) ── */
@@ -911,14 +914,46 @@ table.cmp tr:last-child td{border-bottom:none}
 `;
 
 interface LandingPageProps {
-  onLogin?: (email: string, password: string) => Promise<void> | void;
-  onSignUp?: (email: string, password: string) => Promise<void> | void;
+  onLogin: (email: string, password: string) => Promise<void> | void;
+  onSignUp: (data: any) => Promise<void> | void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = () => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [timerText, setTimerText] = useState('00:00:00');
+
+  /* ── Modal states ── */
+  const [showModal, setShowModal] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [city, setCity] = useState('');
+  const [userState, setUserState] = useState('');
+  const [income, setIncome] = useState('');
+
+  const openLoginModal = () => { setIsSignUp(false); setFormError(null); setShowModal(true); };
+  const openSignUpModal = () => { setIsSignUp(true); setFormError(null); setShowModal(true); };
+  const closeModal = () => { setShowModal(false); setEmail(''); setPassword(''); setFormError(null); };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    try {
+      if (isSignUp) {
+        await onSignUp({ name, email, password, phone, birthDate, city, state: userState, income });
+      } else {
+        await onLogin(email, password);
+      }
+      closeModal();
+    } catch (err: any) {
+      setFormError(err?.message || 'Erro ao realizar operação.');
+    }
+  };
 
   /* ── Inject CSS ── */
   useEffect(() => {
@@ -1044,7 +1079,7 @@ const LandingPage: React.FC<LandingPageProps> = () => {
             <li><a href="#faq" onClick={goTo('faq')}>FAQ</a></li>
           </ul>
           <div className="nav-right">
-            <a href="https://meulyvo.com" target="_blank" rel="noopener noreferrer" className="btn-entrar">Entrar</a>
+            <button onClick={openLoginModal} className="btn-entrar">Entrar</button>
             <a href="#planos" onClick={goTo('planos')} className="btn-comprar">Comprar</a>
             <button className="nav-hamburger" onClick={() => setMobileMenuOpen(v => !v)} aria-label="Menu">
               <span /><span /><span />
@@ -1072,8 +1107,8 @@ const LandingPage: React.FC<LandingPageProps> = () => {
           <a href="#faq" onClick={goTo('faq')}>FAQ</a>
         </div>
         <div className="mobile-menu-actions">
-          <a href="https://meulyvo.com" target="_blank" rel="noopener noreferrer" className="btn-hero-main" onClick={() => setMobileMenuOpen(false)}>Começar — 3 dias grátis</a>
-          <a href="https://meulyvo.com" target="_blank" rel="noopener noreferrer" className="btn-entrar-mobile">Entrar na minha conta</a>
+          <button onClick={() => { openSignUpModal(); setMobileMenuOpen(false); }} className="btn-hero-main">Começar — 3 dias grátis</button>
+          <button onClick={() => { openLoginModal(); setMobileMenuOpen(false); }} className="btn-entrar-mobile">Entrar na minha conta</button>
         </div>
       </div>
 
@@ -1088,10 +1123,10 @@ const LandingPage: React.FC<LandingPageProps> = () => {
           <p className="hero-reframe">E você já sabe disso — por isso abandonou todos.</p>
           <p className="hero-sub">O Lyvo é o único app financeiro que funciona por conversa — como o WhatsApp, mas dentro do próprio site. Registre gastos em 3 segundos. Feche o mês sem angústia.</p>
           <div className="hero-ctas">
-            <a href="https://meulyvo.com" target="_blank" rel="noopener noreferrer" className="btn-hero-main">
+            <button onClick={openSignUpModal} className="btn-hero-main">
               Começar Agora — 3 dias grátis
               <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
-            </a>
+            </button>
             <div className="hero-trust">
               <span>✓ Sem cartão de crédito</span>
               <span>✓ 3 dias grátis para testar</span>
@@ -1626,10 +1661,10 @@ const LandingPage: React.FC<LandingPageProps> = () => {
       <section className="cta-final">
         <h2>Pronto para organizar<br />sua vida de vez?</h2>
         <p>Junte-se a quem parou de adivinhar onde o dinheiro vai e começou a fechar o mês no positivo.</p>
-        <a href="https://meulyvo.com" target="_blank" rel="noopener noreferrer" className="btn-hero-main" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 17, padding: '18px 48px' }}>
+        <button onClick={openSignUpModal} className="btn-hero-main" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 17, padding: '18px 48px', border: 'none', cursor: 'pointer' }}>
           Começar Agora — 3 dias grátis
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
-        </a>
+        </button>
         <div className="cta-final-note">✓ Sem cartão de crédito &nbsp;·&nbsp; ✓ 30 dias de garantia &nbsp;·&nbsp; ✓ Cancele quando quiser</div>
       </section>
 
@@ -1657,6 +1692,117 @@ const LandingPage: React.FC<LandingPageProps> = () => {
           © 2026 LYVO™ · CNPJ: 36.989.165/0001-85 · <a href="https://meulyvo.com" style={{ color: 'rgba(255,255,255,.15)', textDecoration: 'none' }}>meulyvo.com</a>
         </div>
       </footer>
+      {/* ── MODAL LOGIN / CADASTRO ── */}
+      {showModal && (
+        <div onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(11,20,38,.7)', backdropFilter: 'blur(4px)', padding: '16px' }}>
+          <div style={{ background: '#fff', width: '100%', maxWidth: 560, borderRadius: 28, padding: '36px 32px', boxShadow: '0 32px 80px rgba(0,0,0,.3)', position: 'relative', maxHeight: '92vh', overflowY: 'auto' }}>
+
+            {/* Close */}
+            <button onClick={closeModal} style={{ position: 'absolute', top: 20, right: 20, background: 'var(--cream2)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text2)' }}>✕</button>
+
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <div style={{ width: 52, height: 52, background: 'var(--teal-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 24 }}>
+                {isSignUp ? '🚀' : '👋'}
+              </div>
+              <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 900, color: 'var(--ink)', letterSpacing: '-0.03em', marginBottom: 6 }}>
+                {isSignUp ? 'Crie sua conta grátis' : 'Acesse sua conta'}
+              </div>
+              <div style={{ fontSize: 15, color: 'var(--text3)' }}>
+                {isSignUp ? '3 dias grátis — sem cartão de crédito' : 'Bem-vindo de volta ao Lyvo'}
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              {/* Signup fields */}
+              {isSignUp && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Nome Completo</label>
+                    <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="Como quer ser chamado?"
+                      style={{ width: '100%', padding: '12px 16px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', fontFamily: 'var(--body)', color: 'var(--text)' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>WhatsApp</label>
+                    <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000"
+                      style={{ width: '100%', padding: '12px 16px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', fontFamily: 'var(--body)', color: 'var(--text)' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Data de Nascimento</label>
+                    <input type="date" required value={birthDate} onChange={e => setBirthDate(e.target.value)}
+                      style={{ width: '100%', padding: '12px 16px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', fontFamily: 'var(--body)', color: 'var(--text)' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Cidade</label>
+                    <input type="text" required value={city} onChange={e => setCity(e.target.value)} placeholder="Sua cidade"
+                      style={{ width: '100%', padding: '12px 16px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', fontFamily: 'var(--body)', color: 'var(--text)' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>UF</label>
+                    <input type="text" maxLength={2} required value={userState} onChange={e => setUserState(e.target.value)} placeholder="MG"
+                      style={{ width: '100%', padding: '12px 16px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', fontFamily: 'var(--body)', color: 'var(--text)', textAlign: 'center' }} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Renda Mensal Média</label>
+                    <select required value={income} onChange={e => setIncome(e.target.value)}
+                      style={{ width: '100%', padding: '12px 16px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', fontFamily: 'var(--body)', color: income ? 'var(--text)' : 'var(--text3)', appearance: 'none' }}>
+                      <option value="">Selecione a faixa...</option>
+                      <option value="Até 3k">Até R$ 3.000</option>
+                      <option value="3k-7k">R$ 3.001 a R$ 7.000</option>
+                      <option value="7k-15k">R$ 7.001 a R$ 15.000</option>
+                      <option value="15k-30k">R$ 15.001 a R$ 30.000</option>
+                      <option value="Acima 30k">Acima de R$ 30.000</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Email + Senha (ambos login e cadastro) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 8 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>E-mail</label>
+                  <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com"
+                    style={{ width: '100%', padding: '12px 16px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', fontFamily: 'var(--body)', color: 'var(--text)' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Senha</label>
+                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
+                    style={{ width: '100%', padding: '12px 16px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', fontFamily: 'var(--body)', color: 'var(--text)' }} />
+                </div>
+              </div>
+
+              {!isSignUp && (
+                <div style={{ textAlign: 'right', marginBottom: 20 }}>
+                  <a href="#" style={{ fontSize: 13, fontWeight: 600, color: 'var(--teal-text)', textDecoration: 'none' }}>Esqueci minha senha</a>
+                </div>
+              )}
+
+              {/* Error */}
+              {formError && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', fontSize: 14, color: '#B91C1C', marginBottom: 16 }}>{formError}</div>
+              )}
+
+              {/* Submit */}
+              <button type="submit"
+                style={{ width: '100%', padding: '15px', background: 'var(--teal)', color: 'var(--ink)', border: 'none', borderRadius: 'var(--pill)', fontFamily: 'var(--display)', fontSize: 16, fontWeight: 800, cursor: 'pointer', marginTop: isSignUp ? 4 : 0, transition: 'background .15s' }}>
+                {isSignUp ? 'Criar minha conta — 3 dias grátis' : 'Entrar na minha conta'}
+              </button>
+            </form>
+
+            {/* Toggle login/signup */}
+            <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: 14, color: 'var(--text3)' }}>
+              {isSignUp ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
+              <button onClick={() => { setIsSignUp(!isSignUp); setFormError(null); }}
+                style={{ background: 'none', border: 'none', fontFamily: 'var(--display)', fontWeight: 700, color: 'var(--teal-text)', cursor: 'pointer', fontSize: 14 }}>
+                {isSignUp ? 'Entrar' : 'Criar conta grátis'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
