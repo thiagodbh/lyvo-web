@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import { defineSecret } from "firebase-functions/params";
 import { onCall, HttpsError, onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 
 admin.initializeApp();
 
@@ -281,3 +282,52 @@ export const googleDeleteEvent = onCall(
     return { success: true };
   }
 );
+
+// ─── sendEventReminders (roda a cada 5 minutos) ──────────────────────────────
+export const sendEventReminders = onSchedule("every 5 minutes", async () => {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - 5 * 60 * 1000);
+  const windowEnd   = new Date(now.getTime() + 5 * 60 * 1000);
+
+  // Busca eventos com lembrete que disparam dentro da janela de 5 minutos
+  const snap = await admin.firestore().collection("events")
+    .where("reminderMinutes", ">", 0)
+    .get();
+
+  for (const docSnap of snap.docs) {
+    const ev = docSnap.data();
+    if (!ev.dateTime || !ev.reminderMinutes || !ev.uid) continue;
+
+    const eventTime  = new Date(ev.dateTime);
+    const reminderAt = new Date(eventTime.getTime() - ev.reminderMinutes * 60 * 1000);
+
+    if (reminderAt < windowStart || reminderAt > windowEnd) continue;
+
+    // Busca FCM token do usuário
+    const userDoc = await admin.firestore().collection("users").doc(ev.uid).get();
+    const fcmToken = userDoc.data()?.fcmToken as string | undefined;
+    if (!fcmToken) continue;
+
+    const minLabel = ev.reminderMinutes < 60
+      ? `${ev.reminderMinutes} min`
+      : `${ev.reminderMinutes / 60}h`;
+
+    try {
+      await admin.messaging().send({
+        token: fcmToken,
+        notification: {
+          title: `⏰ ${ev.title}`,
+          body: `Começa em ${minLabel}${ev.location ? ' · ' + ev.location : ''}`,
+        },
+        data: { eventId: docSnap.id },
+        webpush: {
+          notification: {
+            icon: "https://meulyvo.com/favicon.ico",
+            badge: "https://meulyvo.com/favicon.ico",
+            requireInteraction: false,
+          },
+        },
+      });
+    } catch { /* token inválido ou expirado, ignora */ }
+  }
+});

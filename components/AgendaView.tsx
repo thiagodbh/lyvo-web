@@ -156,11 +156,30 @@ const AgendaView: React.FC = () => {
               return () => window.removeEventListener('lyvo:data-changed', handler);
       }, []);
 
-      // Pede permissão de notificações
+      // Pede permissão e configura FCM push
       useEffect(() => {
-              if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
-              }
+              const setupPush = async () => {
+                if (!('Notification' in window)) return;
+                const permission = Notification.permission === 'default'
+                  ? await Notification.requestPermission()
+                  : Notification.permission;
+                if (permission !== 'granted') return;
+
+                try {
+                  const { getFirebaseMessaging } = await import('../services/firebase');
+                  const { getToken } = await import('firebase/messaging');
+                  const messaging = await getFirebaseMessaging();
+                  if (!messaging) return;
+
+                  // VAPID_KEY: gere em Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+                  const VAPID_KEY = (window as any).__LYVO_VAPID_KEY__ || '';
+                  if (!VAPID_KEY) return;
+
+                  const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+                  if (token) await store.saveFcmToken(token);
+                } catch { /* browser não suporta, ignora */ }
+              };
+              setupPush();
       }, []);
 
       // Verifica lembretes a cada minuto
@@ -319,6 +338,33 @@ const AgendaView: React.FC = () => {
               setConnections([...store.calendarConnections]);
       };
     
+      // ─── Vencimentos financeiros do dia ──────────────────────────────────────
+      const getFinanceItemsForDate = (date: Date) => {
+              const pad = (n: number) => String(n).padStart(2, '0');
+              const monthStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+              const items: Array<{ id: string; title: string; value: number; isPaid: boolean }> = [];
+
+              store.fixedBills.forEach(bill => {
+                if (bill.dueDay !== date.getDate()) return;
+                if (monthStr < bill.startMonth) return;
+                if ((bill as any).endedAt && monthStr >= (bill as any).endedAt) return;
+                if (bill.skippedMonths.includes(monthStr)) return;
+                items.push({ id: `bill-${bill.id}`, title: bill.name, value: bill.baseValue, isPaid: bill.paidMonths.includes(monthStr) });
+              });
+
+              store.forecasts.forEach(f => {
+                if (!f.expectedDate) return;
+                const fd = new Date(f.expectedDate);
+                if (fd.getDate() !== date.getDate()) return;
+                if (f.skippedMonths.includes(monthStr)) return;
+                if ((f as any).endedAt && monthStr >= (f as any).endedAt) return;
+                if (!f.isRecurring && f.startMonth !== monthStr) return;
+                items.push({ id: `forecast-${f.id}`, title: f.description, value: f.value, isPaid: f.status !== 'PENDING' });
+              });
+
+              return items;
+      };
+
       // ─── Titulo do header ──────────────────────────────────────────────────────
       const headerTitle = () => {
               if (viewMode === 'MONTH')
@@ -366,6 +412,29 @@ const AgendaView: React.FC = () => {
                                           );
               })}
                     </div>
+                  {/* Faixa de vencimentos */}
+                  {days.some(d => getFinanceItemsForDate(d).length > 0) && (
+                    <div className="flex border-b border-amber-100 bg-amber-50/40 shrink-0">
+                      <div className="w-14 shrink-0 flex items-start justify-end pr-2 pt-1.5">
+                        <span className="text-[9px] font-bold text-amber-500 uppercase">Venc.</span>
+                      </div>
+                      {days.map((day, i) => {
+                        const items = getFinanceItemsForDate(day);
+                        return (
+                          <div key={i} className="flex-1 border-l border-amber-100 first:border-l-0 px-1 py-1 space-y-0.5 min-h-[28px]">
+                            {items.map(item => (
+                              <div key={item.id} title={`R$ ${item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded truncate flex items-center gap-1 ${item.isPaid ? 'bg-gray-200 text-gray-400 line-through' : 'bg-amber-200 text-amber-800'}`}>
+                                <span>💳</span>
+                                <span className="truncate">{item.title}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {/* Grade com scroll */}
                     <div ref={gridRef} className="flex-1 overflow-y-auto relative">
                             <div className="flex" style={{ minHeight: `${24 * 60}px` }}>
@@ -436,6 +505,7 @@ const AgendaView: React.FC = () => {
                                         const isSelected = isSameDate(d, selectedDate);
                                         const isToday = isSameDate(d, today);
                                         const dayEvts = getEventsForDate(d);
+                                        const finItems = getFinanceItemsForDate(d);
                                         return (
                                                           <div key={day}
                                                                               onClick={() => { setSelectedDate(d); setViewMode('DAY'); }}
@@ -446,8 +516,8 @@ const AgendaView: React.FC = () => {
                                                                                                                                         isSelected ? 'text-blue-600 font-bold' : 'text-gray-700'}`}>
                                                                                                 {day}
                                                                                                 </span>
-                                                                              {dayEvts.length > 3 && (
-                                                                                                      <span className="text-[10px] text-blue-500 font-medium">+{dayEvts.length - 3}</span>
+                                                                              {(dayEvts.length + finItems.length) > 3 && (
+                                                                                                      <span className="text-[10px] text-blue-500 font-medium">+{dayEvts.length + finItems.length - 3}</span>
                                                                                             )}
                                                                           </div>
                                                                           <div className="space-y-0.5">
@@ -461,6 +531,12 @@ const AgendaView: React.FC = () => {
                                                                                                                                     </div>
                                                                                                                               );
                                                                                   })}
+                                                                              {finItems.slice(0, Math.max(0, 3 - dayEvts.length)).map(item => (
+                                                                                <div key={item.id}
+                                                                                  className={`truncate text-[11px] font-medium px-1.5 rounded leading-5 ${item.isPaid ? 'bg-gray-200 text-gray-400 line-through' : 'bg-amber-200 text-amber-800'}`}>
+                                                                                  💳 {item.title}
+                                                                                </div>
+                                                                              ))}
                                                                           </div>
                                                           </div>
                                                         );

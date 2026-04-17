@@ -735,6 +735,15 @@ class FirestoreStore {
     }
   }
 
+  async saveFcmToken(token: string) {
+    if (!this.uid) return;
+    await updateDoc(doc(db, "users", this.uid), { fcmToken: token, fcmUpdatedAt: Timestamp.now() } as any).catch(async () => {
+      // Se o doc não existir, cria
+      const { setDoc } = await import("firebase/firestore");
+      await setDoc(doc(db, "users", this.uid!), { fcmToken: token, fcmUpdatedAt: Timestamp.now() }, { merge: true });
+    });
+  }
+
   async deleteEvent(id: string, googleEventId?: string) {
     if (!this.uid) return;
     await deleteDoc(doc(db, "events", id));
