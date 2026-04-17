@@ -927,7 +927,7 @@ const EditTransactionModal: React.FC<{ transaction: Transaction, onSave: (id: st
             </div>
             <div className="flex gap-3 mt-8">
               <button onClick={onCancel} className="flex-1 py-3 text-gray-400 font-bold">Voltar</button>
-              <button onClick={() => onSave(transaction.id, new Date(date).toISOString(), parseFloat(value))} className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold">Salvar</button>
+              <button onClick={() => onSave(transaction.id, new Date(date + 'T12:00:00').toISOString(), parseFloat(value))} className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold">Salvar</button>
             </div>
           </div>
         </div>
@@ -1107,7 +1107,7 @@ const AddForecastModal: React.FC<{ selectedMonth: number, selectedYear: number, 
                 description, 
                 value: parseFloat(value), 
                 category, 
-                expectedDate: new Date(expectedDate).toISOString(),
+                expectedDate: new Date(expectedDate + 'T12:00:00').toISOString(),
                 isRecurring 
             };
             if (initialData) store.updateForecast(initialData.id, payload);

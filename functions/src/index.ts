@@ -194,3 +194,90 @@ export const googleSync = onCall(
         return { success: true, count: items.length };
       }
     );
+
+// ─── Helpers de token ────────────────────────────────────────────────────────
+async function getAccessToken(uid: string, clientId: string, clientSecret: string): Promise<string> {
+  const snap = await admin.firestore().collection("googleConnections").doc(uid).get();
+  if (!snap.exists) throw new HttpsError("failed-precondition", "Google nao conectado");
+  const refreshToken = snap.data()?.refresh_token as string | undefined;
+  if (!refreshToken) throw new HttpsError("failed-precondition", "Refresh token ausente");
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, refresh_token: refreshToken, grant_type: "refresh_token" }),
+  });
+  const data: any = await res.json();
+  if (!res.ok || !data.access_token) throw new HttpsError("unknown", data?.error_description || "Falha ao obter access_token");
+  return data.access_token;
+}
+
+// ─── googlePushEvent ─────────────────────────────────────────────────────────
+export const googlePushEvent = onCall(
+  { secrets: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET] },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Nao autenticado");
+    const uid = request.auth.uid;
+    const event = request.data?.event as any;
+    if (!event) throw new HttpsError("invalid-argument", "Evento nao fornecido");
+
+    const accessToken = await getAccessToken(uid, GOOGLE_CLIENT_ID.value(), GOOGLE_CLIENT_SECRET.value());
+
+    const startDt = new Date(event.dateTime);
+    const endDt = new Date(startDt.getTime() + 60 * 60 * 1000);
+    const gEvent = {
+      summary: event.title || "(Sem titulo)",
+      description: event.description || "",
+      location: event.location || "",
+      start: { dateTime: startDt.toISOString() },
+      end: { dateTime: endDt.toISOString() },
+    };
+
+    let googleEventId = event.googleEventId as string | null | undefined;
+
+    if (googleEventId) {
+      const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(gEvent),
+      });
+      if (res.status === 404) googleEventId = null;
+      else if (!res.ok) { const e: any = await res.json(); throw new HttpsError("unknown", e?.error?.message || "Falha ao atualizar evento"); }
+    }
+
+    if (!googleEventId) {
+      const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(gEvent),
+      });
+      const data: any = await res.json();
+      if (!res.ok) throw new HttpsError("unknown", data?.error?.message || "Falha ao criar evento");
+      googleEventId = data.id;
+      if (event.id) await admin.firestore().collection("events").doc(event.id).update({ googleEventId });
+    }
+
+    return { success: true, googleEventId };
+  }
+);
+
+// ─── googleDeleteEvent ───────────────────────────────────────────────────────
+export const googleDeleteEvent = onCall(
+  { secrets: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET] },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Nao autenticado");
+    const uid = request.auth.uid;
+    const googleEventId = request.data?.googleEventId as string | undefined;
+    if (!googleEventId) return { success: true };
+
+    try {
+      const accessToken = await getAccessToken(uid, GOOGLE_CLIENT_ID.value(), GOOGLE_CLIENT_SECRET.value());
+      await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    } catch { /* se não conectado ou evento não existe, ignorar */ }
+
+    return { success: true };
+  }
+);

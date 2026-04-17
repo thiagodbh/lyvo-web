@@ -691,13 +691,21 @@ class FirestoreStore {
       } as any);
     }
   }
-  addEvent(e: Omit<CalendarEvent, "id" | "source">) {
+  async addEvent(e: Omit<CalendarEvent, "id" | "source">) {
     if (!this.uid) return null;
     const payload: Omit<CalendarEvent, "id"> = { ...(e as any), source: "INTERNAL" };
-    return addDoc(this.col("events"), { ...payload, uid: this.uid, createdAt: Timestamp.now() }).then((ref) => ({
-      ...(payload as any),
-      id: ref.id,
-    }));
+    const ref = await addDoc(this.col("events"), { ...payload, uid: this.uid, createdAt: Timestamp.now() });
+    const newEvent = { ...(payload as any), id: ref.id } as CalendarEvent;
+
+    const isGoogleConnected = this.calendarConnections.some(
+      c => c.source === "GOOGLE" && c.connectionStatus === "CONNECTED"
+    );
+    if (isGoogleConnected) {
+      const fn = httpsCallable(getFunctions(), "googlePushEvent");
+      fn({ event: newEvent }).catch(() => {});
+    }
+
+    return newEvent;
   }
 
   toggleConnection(id: string) {
@@ -715,14 +723,31 @@ class FirestoreStore {
   async updateEvent(event: CalendarEvent) {
     if (!this.uid || !event.id) return;
     const docRef = doc(db, "events", event.id);
-    // Removemos o id do objeto para não gravar o ID dentro do documento do Firebase
-    const { id, ...data } = event; 
+    const { id, ...data } = event;
     await updateDoc(docRef, data as any);
+
+    const isGoogleConnected = this.calendarConnections.some(
+      c => c.source === "GOOGLE" && c.connectionStatus === "CONNECTED"
+    );
+    if (isGoogleConnected) {
+      const fn = httpsCallable(getFunctions(), "googlePushEvent");
+      fn({ event }).catch(() => {});
+    }
   }
 
-  async deleteEvent(id: string) {
+  async deleteEvent(id: string, googleEventId?: string) {
     if (!this.uid) return;
     await deleteDoc(doc(db, "events", id));
+
+    if (googleEventId) {
+      const isGoogleConnected = this.calendarConnections.some(
+        c => c.source === "GOOGLE" && c.connectionStatus === "CONNECTED"
+      );
+      if (isGoogleConnected) {
+        const fn = httpsCallable(getFunctions(), "googleDeleteEvent");
+        fn({ googleEventId }).catch(() => {});
+      }
+    }
   }
 }
 

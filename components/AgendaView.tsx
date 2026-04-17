@@ -10,6 +10,13 @@ import { getApp } from "firebase/app";
 const isSameDate = (a: Date, b: Date) =>
       a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
 
+// Converte ISO UTC para string local compatível com datetime-local input
+const toLocalDatetimeInput = (iso: string): string => {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 const formatHour = (h: number) => {
@@ -19,18 +26,26 @@ const formatHour = (h: number) => {
       return `${h - 12} PM`;
 };
 
-const EVENT_COLORS = [
-    { bg: 'bg-blue-500', text: 'text-white' },
-    { bg: 'bg-green-500', text: 'text-white' },
-    { bg: 'bg-red-500', text: 'text-white' },
-    { bg: 'bg-purple-500', text: 'text-white' },
-    { bg: 'bg-yellow-400', text: 'text-gray-800' },
-    ];
+const COLOR_OPTIONS = [
+  { id: 'blue',   bg: 'bg-blue-500',   ring: 'ring-blue-500',   hex: '#3b82f6' },
+  { id: 'green',  bg: 'bg-green-500',  ring: 'ring-green-500',  hex: '#22c55e' },
+  { id: 'red',    bg: 'bg-red-500',    ring: 'ring-red-500',    hex: '#ef4444' },
+  { id: 'purple', bg: 'bg-purple-500', ring: 'ring-purple-500', hex: '#a855f7' },
+  { id: 'yellow', bg: 'bg-yellow-400', ring: 'ring-yellow-400', hex: '#facc15' },
+  { id: 'pink',   bg: 'bg-pink-500',   ring: 'ring-pink-500',   hex: '#ec4899' },
+  { id: 'orange', bg: 'bg-orange-500', ring: 'ring-orange-500', hex: '#f97316' },
+  { id: 'teal',   bg: 'bg-teal-500',   ring: 'ring-teal-500',   hex: '#14b8a6' },
+];
+
+const DEFAULT_COLOR = { bg: 'bg-blue-500', text: 'text-white' };
 
 const getEventColor = (event: CalendarEvent) => {
-      if (event.source === 'GOOGLE') return EVENT_COLORS[0];
-      if (event.source === 'INTERNAL') return EVENT_COLORS[1];
-      return EVENT_COLORS[2];
+  if (event.color) {
+    const found = COLOR_OPTIONS.find(c => c.hex === event.color);
+    if (found) return { bg: found.bg, text: 'text-white' };
+  }
+  if (event.source === 'GOOGLE') return DEFAULT_COLOR;
+  return { bg: 'bg-green-500', text: 'text-white' };
 };
 
 // ─── Mini-calendario (sidebar) ────────────────────────────────────────────────
@@ -99,6 +114,7 @@ const AgendaView: React.FC = () => {
       const [forceUpdate, setForceUpdate] = useState(0);
       const [isSyncing, setIsSyncing] = useState(false);
       const gridRef = useRef<HTMLDivElement>(null);
+      const hasAutoSynced = useRef(false);
     
       const fns = getFunctions(getApp(), "us-central1");
       const googleConnectFn = httpsCallable(fns, "googleConnect");
@@ -112,10 +128,23 @@ const AgendaView: React.FC = () => {
               }
       }, [viewMode]);
     
-      // Carrega dados do store
+      // Carrega dados do store + auto-sync Google na primeira carga
       useEffect(() => {
               setEvents(store.getConsolidatedEvents());
-              setConnections([...store.calendarConnections]);
+              const conns = [...store.calendarConnections];
+              setConnections(conns);
+
+              if (!hasAutoSynced.current) {
+                const googleConn = conns.find(c => c.source === 'GOOGLE' && c.connectionStatus === 'CONNECTED');
+                if (googleConn) {
+                  hasAutoSynced.current = true;
+                  setIsSyncing(true);
+                  googleSyncFn({})
+                    .then(() => setForceUpdate(p => p + 1))
+                    .catch(() => {})
+                    .finally(() => setIsSyncing(false));
+                }
+              }
       }, [forceUpdate, showSyncModal]);
     
       // Escuta mudancas do Firestore em tempo real
@@ -216,7 +245,8 @@ const AgendaView: React.FC = () => {
     
       const handleDelete = async (id: string) => {
               if (!confirm('Excluir este compromisso?')) return;
-              await store.deleteEvent(id);
+              const googleEventId = (editingEvent as any)?.googleEventId;
+              await store.deleteEvent(id, googleEventId);
               setShowEditModal(false);
               setForceUpdate(p => p + 1);
       };
@@ -530,6 +560,18 @@ const AgendaView: React.FC = () => {
                                               ))}
                                                               </div>
                                                 
+                                                              {/* Cor do evento */}
+                                                              <div>
+                                                                <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">Cor</label>
+                                                                <div className="flex gap-2 flex-wrap px-1">
+                                                                  {COLOR_OPTIONS.map(c => (
+                                                                    <button key={c.id} type="button"
+                                                                      onClick={() => setEditingEvent({ ...editingEvent, color: c.hex })}
+                                                                      className={`w-7 h-7 rounded-full ${c.bg} transition-all ${(editingEvent as any).color === c.hex ? `ring-2 ring-offset-2 ${c.ring}` : 'opacity-70 hover:opacity-100'}`} />
+                                                                  ))}
+                                                                </div>
+                                                              </div>
+
                                                               <input type="text" placeholder="Localizacao (opcional)"
                                                                                   className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:border-blue-400 text-gray-800"
                                                                                   value={(editingEvent as any).location || ''}
@@ -537,7 +579,7 @@ const AgendaView: React.FC = () => {
                                                 
                                                               <input type="datetime-local"
                                                                                   className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:border-blue-400 text-gray-800"
-                                                                                  value={editingEvent.dateTime ? new Date(editingEvent.dateTime).toISOString().slice(0, 16) : ''}
+                                                                                  value={editingEvent.dateTime ? toLocalDatetimeInput(editingEvent.dateTime) : ''}
                                                                                   onChange={e => setEditingEvent({ ...editingEvent, dateTime: new Date(e.target.value).toISOString() })} />
                                                 
                                                     {/* Recorrencia semanal */}

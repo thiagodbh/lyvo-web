@@ -71,7 +71,11 @@ export interface CalendarEvent {
   description?: string;
   location?: string;
   source: EventSource;
-  color?: string; // Hex code or tailwind class reference
+  color?: string; // Hex color (e.g. '#3b82f6')
+  type?: 'EVENT' | 'TASK' | 'REMINDER';
+  status?: string;
+  recurringDays?: number[];
+  googleEventId?: string;
 }
 
 export interface CalendarConnection {
