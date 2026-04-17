@@ -171,9 +171,7 @@ const AgendaView: React.FC = () => {
                   const messaging = await getFirebaseMessaging();
                   if (!messaging) return;
 
-                  // VAPID_KEY: gere em Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
-                  const VAPID_KEY = (window as any).__LYVO_VAPID_KEY__ || '';
-                  if (!VAPID_KEY) return;
+                  const VAPID_KEY = 'BLPQrUn_Ku0BhKVvTyWPUZJPpKiq_OFQpT_J0VqIoNUZnxlerJG4knf-Uo7bcVuTplV4jhSPLp_hj1OrLnenmmo';
 
                   const token = await getToken(messaging, { vapidKey: VAPID_KEY });
                   if (token) await store.saveFcmToken(token);
