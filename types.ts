@@ -75,7 +75,9 @@ export interface CalendarEvent {
   type?: 'EVENT' | 'TASK' | 'REMINDER';
   status?: string;
   recurringDays?: number[];
+  recurringExceptions?: string[]; // 'YYYY-MM-DD' dates to skip
   googleEventId?: string;
+  reminderMinutes?: number;
 }
 
 export interface CalendarConnection {

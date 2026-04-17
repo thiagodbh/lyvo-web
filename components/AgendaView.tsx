@@ -113,6 +113,8 @@ const AgendaView: React.FC = () => {
       const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent> | null>(null);
       const [forceUpdate, setForceUpdate] = useState(0);
       const [isSyncing, setIsSyncing] = useState(false);
+      const [showDeleteRecurringModal, setShowDeleteRecurringModal] = useState(false);
+      const [currentOccurrenceDate, setCurrentOccurrenceDate] = useState<Date | null>(null);
       const gridRef = useRef<HTMLDivElement>(null);
       const hasAutoSynced = useRef(false);
     
@@ -153,6 +155,37 @@ const AgendaView: React.FC = () => {
               window.addEventListener('lyvo:data-changed', handler);
               return () => window.removeEventListener('lyvo:data-changed', handler);
       }, []);
+
+      // Pede permissão de notificações
+      useEffect(() => {
+              if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+              }
+      }, []);
+
+      // Verifica lembretes a cada minuto
+      useEffect(() => {
+              const checkReminders = () => {
+                if (!('Notification' in window) || Notification.permission !== 'granted') return;
+                const now = new Date();
+                events.forEach(event => {
+                  const rem = event.reminderMinutes;
+                  if (!rem) return;
+                  const eventTime = new Date(event.dateTime);
+                  const minutesUntil = (eventTime.getTime() - now.getTime()) / 60000;
+                  if (minutesUntil > rem - 1 && minutesUntil <= rem) {
+                    const n = new Notification(`⏰ ${event.title}`, {
+                      body: `Começa em ${rem < 60 ? rem + ' min' : rem / 60 + 'h'}${event.location ? ' · ' + event.location : ''}`,
+                      icon: '/favicon.ico',
+                      tag: `${event.id}-${rem}`,
+                    });
+                    n.onclick = () => window.focus();
+                  }
+                });
+              };
+              const interval = setInterval(checkReminders, 60000);
+              return () => clearInterval(interval);
+      }, [events]);
     
       // ─── Google OAuth ──────────────────────────────────────────────────────────
       const loginComGoogle = useGoogleLogin({
@@ -204,13 +237,19 @@ const AgendaView: React.FC = () => {
       const goToday = () => setSelectedDate(new Date());
     
       // ─── Helpers de eventos ───────────────────────────────────────────────────
-      const getEventsForDate = (date: Date) =>
-              events.filter(e => {
+      const getEventsForDate = (date: Date) => {
+              const pad = (n: number) => String(n).padStart(2, '0');
+              const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+              return events.filter(e => {
                         const ed = new Date(e.dateTime);
                         if (isSameDate(ed, date)) return true;
-                        if ((e as any).recurringDays?.includes(date.getDay())) return true;
+                        if (e.recurringDays?.includes(date.getDay())) {
+                          if (e.recurringExceptions?.includes(dateStr)) return false;
+                          return true;
+                        }
                         return false;
               });
+      };
     
       const getWeekDays = (date: Date): Date[] => {
               const start = new Date(date);
@@ -230,7 +269,11 @@ const AgendaView: React.FC = () => {
               setShowEditModal(true);
       };
     
-      const handleEditEvent = (event: CalendarEvent) => { setEditingEvent(event); setShowEditModal(true); };
+      const handleEditEvent = (event: CalendarEvent, occurrenceDate?: Date) => {
+              setCurrentOccurrenceDate(occurrenceDate || null);
+              setEditingEvent(event);
+              setShowEditModal(true);
+      };
     
       const handleSaveEvent = async () => {
               if (!editingEvent?.title || !editingEvent.dateTime) return;
@@ -244,9 +287,29 @@ const AgendaView: React.FC = () => {
       };
     
       const handleDelete = async (id: string) => {
+              const ev = editingEvent as any;
+              if (ev?.recurringDays?.length > 0) {
+                setShowDeleteRecurringModal(true);
+                return;
+              }
               if (!confirm('Excluir este compromisso?')) return;
-              const googleEventId = (editingEvent as any)?.googleEventId;
-              await store.deleteEvent(id, googleEventId);
+              await store.deleteEvent(id, ev?.googleEventId);
+              setShowEditModal(false);
+              setForceUpdate(p => p + 1);
+      };
+
+      const handleDeleteRecurring = async (mode: 'THIS' | 'ALL') => {
+              setShowDeleteRecurringModal(false);
+              if (!editingEvent?.id) return;
+              const ev = editingEvent as any;
+              if (mode === 'ALL') {
+                await store.deleteEvent(editingEvent.id, ev.googleEventId);
+              } else if (mode === 'THIS' && currentOccurrenceDate) {
+                const pad = (n: number) => String(n).padStart(2, '0');
+                const dateStr = `${currentOccurrenceDate.getFullYear()}-${pad(currentOccurrenceDate.getMonth() + 1)}-${pad(currentOccurrenceDate.getDate())}`;
+                const exceptions = [...(ev.recurringExceptions || []), dateStr];
+                await store.updateEvent({ ...editingEvent as CalendarEvent, recurringExceptions: exceptions });
+              }
               setShowEditModal(false);
               setForceUpdate(p => p + 1);
       };
@@ -333,7 +396,7 @@ const AgendaView: React.FC = () => {
                                                                       const clr = getEventColor(event);
                                                                       return (
                                                                                               <div key={event.id}
-                                                                                                                        onClick={(e) => { e.stopPropagation(); handleEditEvent(event); }}
+                                                                                                                        onClick={(e) => { e.stopPropagation(); handleEditEvent(event, day); }}
                                                                                                                         className={`absolute left-1 right-1 rounded-md px-1.5 py-1 cursor-pointer overflow-hidden ${clr.bg} ${clr.text} shadow-sm hover:brightness-90 transition-all z-10`}
                                                                                                                         style={{ top: `${top}px`, minHeight: '22px', maxHeight: '54px' }}>
                                                                                                                     <p className="text-[11px] font-semibold truncate leading-tight">{event.title}</p>
@@ -392,7 +455,7 @@ const AgendaView: React.FC = () => {
                                                                                                       const clr = getEventColor(evt);
                                                                                                       return (
                                                                                                                                 <div key={evt.id}
-                                                                                                                                                            onClick={(e) => { e.stopPropagation(); handleEditEvent(evt); }}
+                                                                                                                                                            onClick={(e) => { e.stopPropagation(); handleEditEvent(evt, d); }}
                                                                                                                                                             className={`truncate text-[11px] font-medium px-1.5 rounded ${clr.bg} ${clr.text} leading-5`}>
                                                                                                                                     {evt.title}
                                                                                                                                     </div>
@@ -582,6 +645,20 @@ const AgendaView: React.FC = () => {
                                                                                   value={editingEvent.dateTime ? toLocalDatetimeInput(editingEvent.dateTime) : ''}
                                                                                   onChange={e => setEditingEvent({ ...editingEvent, dateTime: new Date(e.target.value).toISOString() })} />
                                                 
+                                                              {/* Lembrete */}
+                                                              <select
+                                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:border-blue-400 text-gray-800"
+                                                                value={editingEvent.reminderMinutes ?? ''}
+                                                                onChange={e => setEditingEvent({ ...editingEvent, reminderMinutes: e.target.value !== '' ? parseInt(e.target.value) : undefined })}>
+                                                                <option value="">🔔 Sem lembrete</option>
+                                                                <option value="5">🔔 5 minutos antes</option>
+                                                                <option value="15">🔔 15 minutos antes</option>
+                                                                <option value="30">🔔 30 minutos antes</option>
+                                                                <option value="60">🔔 1 hora antes</option>
+                                                                <option value="120">🔔 2 horas antes</option>
+                                                                <option value="1440">🔔 1 dia antes</option>
+                                                              </select>
+
                                                     {/* Recorrencia semanal */}
                                                               <div>
                                                                               <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Repetir Semanalmente</label>
@@ -619,6 +696,29 @@ const AgendaView: React.FC = () => {
                                     </div>
                           </div>
                     )}
+                  {/* Modal exclusão recorrente */}
+                  {showDeleteRecurringModal && (
+                          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                                    <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+                                                <h3 className="text-lg font-bold text-gray-800 mb-1">Evento recorrente</h3>
+                                                <p className="text-sm text-gray-500 mb-5">Este evento se repete. O que deseja excluir?</p>
+                                                <div className="space-y-3">
+                                                              <button onClick={() => handleDeleteRecurring('THIS')}
+                                                                                  className="w-full py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                                                                              Só este dia
+                                                              </button>
+                                                              <button onClick={() => handleDeleteRecurring('ALL')}
+                                                                                  className="w-full py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors">
+                                                                              Todos os eventos
+                                                              </button>
+                                                              <button onClick={() => setShowDeleteRecurringModal(false)}
+                                                                                  className="w-full py-3 text-gray-400 font-medium">
+                                                                              Cancelar
+                                                              </button>
+                                                </div>
+                                    </div>
+                          </div>
+                  )}
               </div>
             );
 };
