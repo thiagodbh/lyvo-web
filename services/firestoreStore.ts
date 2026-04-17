@@ -20,6 +20,7 @@ import {
   BudgetLimit,
   CalendarEvent,
   CalendarConnection,
+  CalendarCategory,
 } from "../types";
 
 import { db, auth } from "./firebase";
@@ -66,6 +67,7 @@ class FirestoreStore {
   budgetLimits: BudgetLimit[] = [];
   events: CalendarEvent[] = [];
   calendarConnections: CalendarConnection[] = [];
+  categories: CalendarCategory[] = [];
 
   private uid: string | null = null;
   private unsubs: Unsub[] = [];
@@ -96,6 +98,7 @@ class FirestoreStore {
     this.budgetLimits = [];
     this.events = [];
     this.calendarConnections = [];
+    this.categories = [];
     this.seeded = false;
   }
 
@@ -141,6 +144,7 @@ class FirestoreStore {
     bind<BudgetLimit>("budgetLimits", (items) => (this.budgetLimits = items));
     bind<CalendarEvent>("events", (items) => (this.events = items));
     bind<CalendarConnection>("calendarConnections", (items) => (this.calendarConnections = items));
+    bind<CalendarCategory>("calendarCategories", (items) => (this.categories = items));
   }
 
   private async seedDefaultsOnce() {
@@ -757,6 +761,24 @@ class FirestoreStore {
         fn({ googleEventId }).catch(() => {});
       }
     }
+  }
+
+  // ---------------- CATEGORIAS DE AGENDA ----------------
+
+  async addCategory(name: string, color: string): Promise<CalendarCategory | null> {
+    if (!this.uid) return null;
+    const ref = await addDoc(this.col("calendarCategories"), {
+      name, color, uid: this.uid, createdAt: Timestamp.now(),
+    });
+    return { id: ref.id, name, color };
+  }
+
+  async updateCategory(id: string, name: string, color: string) {
+    await updateDoc(doc(db, "calendarCategories", id), { name, color } as any);
+  }
+
+  async deleteCategory(id: string) {
+    await deleteDoc(doc(db, "calendarCategories", id));
   }
 }
 

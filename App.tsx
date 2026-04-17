@@ -6,7 +6,7 @@ import { db } from './services/firebase';
 import { store } from './services/firestoreStore';
 import React, { useState } from 'react';
 import { authService } from './services/authService';
-import { MessageCircle, PieChart, Calendar, User, Settings, LogOut } from 'lucide-react';
+import { Settings, LogOut } from 'lucide-react';
 import ChatInterface from './components/ChatInterface';
 import FinanceDashboard from './components/FinanceDashboard';
 import AgendaView from './components/AgendaView';
@@ -14,10 +14,58 @@ import LandingPage from './components/LandingPage';
 import { AppTab } from './types';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
+// ─── Ícones do menu ──────────────────────────────────────────────────────────
+const ChatNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <path d="M14 3C8.477 3 4 7.477 4 13c0 1.74.448 3.377 1.237 4.8L3.9 22.5a.8.8 0 001 1l4.9-1.32A10 10 0 1014 3z"
+      fill={active ? '#111827' : '#9ca3af'} />
+    <circle cx="10" cy="13" r="1.3" fill="white" />
+    <circle cx="14" cy="13" r="1.3" fill="white" />
+    <circle cx="18" cy="13" r="1.3" fill="white" />
+  </svg>
+);
+
+const FinancasNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <rect x="3" y="15" width="6" height="9" rx="1.5" fill={active ? '#16a34a' : '#86efac'} />
+    <rect x="11" y="8" width="6" height="16" rx="1.5" fill={active ? '#c2410c' : '#fdba74'} />
+    <rect x="19" y="11" width="6" height="13" rx="1.5" fill={active ? '#1d4ed8' : '#93c5fd'} />
+    <line x1="2" y1="25" x2="26" y2="25" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
+const AgendaNavIcon = ({ active }: { active: boolean }) => {
+  const now = new Date();
+  const day = String(now.getDate());
+  const months = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  const month = months[now.getMonth()];
+  return (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect x="2" y="4" width="24" height="22" rx="3.5" fill="white" stroke="#e5e7eb" strokeWidth="1" />
+      <path d="M2 7.5A3.5 3.5 0 015.5 4h17A3.5 3.5 0 0126 7.5V12H2V7.5z" fill={active ? '#b91c1c' : '#ef4444'} />
+      <rect x="8" y="2.5" width="2.5" height="5.5" rx="1.25" fill="#6b7280" />
+      <rect x="17.5" y="2.5" width="2.5" height="5.5" rx="1.25" fill="#6b7280" />
+      <text x="14" y="10.5" textAnchor="middle" fill="white" fontSize="4.5" fontWeight="700" fontFamily="Arial,sans-serif">{month}</text>
+      <text x="14" y="22.5" textAnchor="middle" fill="#111827" fontSize="10" fontWeight="700" fontFamily="Arial,sans-serif">{day}</text>
+    </svg>
+  );
+};
+
+const PerfilNavIcon = ({ active }: { active: boolean }) => (
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <circle cx="14" cy="10" r="5.5" fill={active ? '#374151' : '#9ca3af'} />
+    <path d="M3.5 25c0-5.799 4.701-10.5 10.5-10.5S24.5 19.201 24.5 25" fill={active ? '#374151' : '#9ca3af'} />
+  </svg>
+);
+
+// ─── Tela de Perfil ───────────────────────────────────────────────────────────
 const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => (
   <div className="flex flex-col items-center justify-center h-full bg-gray-50 p-6">
     <div className="w-24 h-24 bg-lyvo-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
-      <User className="w-10 h-10" />
+      <svg width="44" height="44" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="10" r="5.5" fill="white" />
+        <path d="M3.5 25c0-5.799 4.701-10.5 10.5-10.5S24.5 19.201 24.5 25" fill="white" />
+      </svg>
     </div>
     <h2 className="text-2xl font-bold text-gray-800">Meu Perfil</h2>
     <p className="text-gray-500 text-center mt-2 max-w-xs">
@@ -158,15 +206,17 @@ function App() {
     }
   };
 
-  const NavButton = ({ tab, icon: Icon, label }: { tab: AppTab; icon: any; label: string }) => {
+  const NavButton = ({ tab, icon, label }: { tab: AppTab; icon: (active: boolean) => React.ReactNode; label: string }) => {
     const isActive = currentTab === tab;
     return (
-      <button 
+      <button
         onClick={() => setCurrentTab(tab)}
-        className={`flex flex-col items-center justify-center transition-all duration-200 space-y-1 w-full h-full active:scale-95 ${isActive ? 'text-lyvo-primary' : 'text-gray-400 hover:text-gray-600'}`}
+        className="flex flex-col items-center justify-center gap-0.5 w-full h-full active:scale-95 transition-transform duration-150"
       >
-        <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''} transition-all duration-300`} strokeWidth={isActive ? 2.5 : 2} />
-        <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : ''}`}>{label}</span>
+        <div className={`transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-75'}`}>
+          {icon(isActive)}
+        </div>
+        <span className={`text-[10px] transition-all duration-200 ${isActive ? 'font-bold text-gray-900' : 'font-medium text-gray-400'}`}>{label}</span>
       </button>
     );
   };
@@ -177,10 +227,10 @@ function App() {
         {renderContent()}
       </main>
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <NavButton tab={AppTab.CHAT} icon={MessageCircle} label="Chat" />
-        <NavButton tab={AppTab.FINANCE} icon={PieChart} label="Finanças" />
-        <NavButton tab={AppTab.AGENDA} icon={Calendar} label="Agenda" />
-        <NavButton tab={AppTab.PROFILE} icon={User} label="Perfil" />
+        <NavButton tab={AppTab.CHAT} icon={(a) => <ChatNavIcon active={a} />} label="Chat" />
+        <NavButton tab={AppTab.FINANCE} icon={(a) => <FinancasNavIcon active={a} />} label="Finanças" />
+        <NavButton tab={AppTab.AGENDA} icon={(a) => <AgendaNavIcon active={a} />} label="Agenda" />
+        <NavButton tab={AppTab.PROFILE} icon={(a) => <PerfilNavIcon active={a} />} label="Perfil" />
       </nav>
     </div>
   );

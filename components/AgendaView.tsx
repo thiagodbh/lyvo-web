@@ -2,7 +2,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, RefreshCw, MapPin, Clock } from 'lucide-react';
 import { store } from "../services/firestoreStore";
-import { CalendarEvent, CalendarConnection } from '../types';
+import { CalendarEvent, CalendarConnection, CalendarCategory } from '../types';
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getApp } from "firebase/app";
 
@@ -21,9 +21,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 const formatHour = (h: number) => {
       if (h === 0) return '';
-      if (h < 12) return `${h} AM`;
-      if (h === 12) return '12 PM';
-      return `${h - 12} PM`;
+      return `${String(h).padStart(2, '0')}:00`;
 };
 
 const COLOR_OPTIONS = [
@@ -39,7 +37,14 @@ const COLOR_OPTIONS = [
 
 const DEFAULT_COLOR = { bg: 'bg-blue-500', text: 'text-white' };
 
-const getEventColor = (event: CalendarEvent) => {
+const getEventColor = (event: CalendarEvent, categories: CalendarCategory[] = []) => {
+  if (event.categoryId) {
+    const cat = categories.find(c => c.id === event.categoryId);
+    if (cat) {
+      const found = COLOR_OPTIONS.find(c => c.hex === cat.color);
+      if (found) return { bg: found.bg, text: 'text-white' };
+    }
+  }
   if (event.color) {
     const found = COLOR_OPTIONS.find(c => c.hex === event.color);
     if (found) return { bg: found.bg, text: 'text-white' };
@@ -115,6 +120,10 @@ const AgendaView: React.FC = () => {
       const [isSyncing, setIsSyncing] = useState(false);
       const [showDeleteRecurringModal, setShowDeleteRecurringModal] = useState(false);
       const [currentOccurrenceDate, setCurrentOccurrenceDate] = useState<Date | null>(null);
+      const [categories, setCategories] = useState<CalendarCategory[]>([]);
+      const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
+      const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+      const [categoryDraft, setCategoryDraft] = useState({ name: '', color: '#3b82f6' });
       const gridRef = useRef<HTMLDivElement>(null);
       const hasAutoSynced = useRef(false);
     
@@ -135,6 +144,7 @@ const AgendaView: React.FC = () => {
               setEvents(store.getConsolidatedEvents());
               const conns = [...store.calendarConnections];
               setConnections(conns);
+              setCategories([...store.categories]);
 
               if (!hasAutoSynced.current) {
                 const googleConn = conns.find(c => c.source === 'GOOGLE' && c.connectionStatus === 'CONNECTED');
@@ -261,6 +271,12 @@ const AgendaView: React.FC = () => {
                         const ed = new Date(e.dateTime);
                         if (isSameDate(ed, date)) return true;
                         if (e.recurringDays?.includes(date.getDay())) {
+                          // Only show from the creation date forward
+                          const startDate = new Date(e.dateTime);
+                          startDate.setHours(0, 0, 0, 0);
+                          if (date < startDate) return false;
+                          // Respect recurringEndDate
+                          if (e.recurringEndDate && dateStr > e.recurringEndDate) return false;
                           if (e.recurringExceptions?.includes(dateStr)) return false;
                           return true;
                         }
@@ -315,17 +331,23 @@ const AgendaView: React.FC = () => {
               setForceUpdate(p => p + 1);
       };
 
-      const handleDeleteRecurring = async (mode: 'THIS' | 'ALL') => {
+      const handleDeleteRecurring = async (mode: 'THIS' | 'FORWARD' | 'ALL') => {
               setShowDeleteRecurringModal(false);
               if (!editingEvent?.id) return;
               const ev = editingEvent as any;
+              const pad = (n: number) => String(n).padStart(2, '0');
               if (mode === 'ALL') {
                 await store.deleteEvent(editingEvent.id, ev.googleEventId);
               } else if (mode === 'THIS' && currentOccurrenceDate) {
-                const pad = (n: number) => String(n).padStart(2, '0');
                 const dateStr = `${currentOccurrenceDate.getFullYear()}-${pad(currentOccurrenceDate.getMonth() + 1)}-${pad(currentOccurrenceDate.getDate())}`;
                 const exceptions = [...(ev.recurringExceptions || []), dateStr];
                 await store.updateEvent({ ...editingEvent as CalendarEvent, recurringExceptions: exceptions });
+              } else if (mode === 'FORWARD' && currentOccurrenceDate) {
+                // Set recurringEndDate to the day before this occurrence
+                const endDate = new Date(currentOccurrenceDate);
+                endDate.setDate(endDate.getDate() - 1);
+                const endDateStr = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}`;
+                await store.updateEvent({ ...editingEvent as CalendarEvent, recurringEndDate: endDateStr });
               }
               setShowEditModal(false);
               setForceUpdate(p => p + 1);
@@ -460,13 +482,13 @@ const AgendaView: React.FC = () => {
                                                     {dayEvents.map(event => {
                                                                       const dt = new Date(event.dateTime);
                                                                       const top = dt.getHours() * 60 + dt.getMinutes();
-                                                                      const clr = getEventColor(event);
+                                                                      const clr = getEventColor(event, categories);
                                                                       return (
                                                                                               <div key={event.id}
                                                                                                                         onClick={(e) => { e.stopPropagation(); handleEditEvent(event, day); }}
-                                                                                                                        className={`absolute left-1 right-1 rounded-md px-1.5 py-1 cursor-pointer overflow-hidden ${clr.bg} ${clr.text} shadow-sm hover:brightness-90 transition-all z-10`}
+                                                                                                                        className={`absolute left-1 right-1 rounded-md px-1.5 py-1 cursor-pointer overflow-hidden ${clr.bg} ${clr.text} shadow-sm hover:brightness-90 transition-all z-10 ${event.completed ? 'opacity-50' : ''}`}
                                                                                                                         style={{ top: `${top}px`, minHeight: '22px', maxHeight: '54px' }}>
-                                                                                                                    <p className="text-[11px] font-semibold truncate leading-tight">{event.title}</p>
+                                                                                                                    <p className={`text-[11px] font-semibold truncate leading-tight ${event.completed ? 'line-through' : ''}`}>{event.title}</p>
                                                                                                                     <p className="text-[10px] opacity-80">{dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                                                                                   </div>
                                                                                             );
@@ -520,11 +542,11 @@ const AgendaView: React.FC = () => {
                                                                           </div>
                                                                           <div className="space-y-0.5">
                                                                               {dayEvts.slice(0, 3).map(evt => {
-                                                                                                      const clr = getEventColor(evt);
+                                                                                                      const clr = getEventColor(evt, categories);
                                                                                                       return (
                                                                                                                                 <div key={evt.id}
                                                                                                                                                             onClick={(e) => { e.stopPropagation(); handleEditEvent(evt, d); }}
-                                                                                                                                                            className={`truncate text-[11px] font-medium px-1.5 rounded ${clr.bg} ${clr.text} leading-5`}>
+                                                                                                                                                            className={`truncate text-[11px] font-medium px-1.5 rounded ${clr.bg} ${clr.text} leading-5 ${evt.completed ? 'opacity-50 line-through' : ''}`}>
                                                                                                                                     {evt.title}
                                                                                                                                     </div>
                                                                                                                               );
@@ -556,7 +578,7 @@ const AgendaView: React.FC = () => {
                                       Novo evento
                             </button>
                             <MiniCalendar selectedDate={selectedDate} onSelect={(d) => { setSelectedDate(d); setViewMode('DAY'); }} />
-                            <div className="px-1 mt-1">
+                            <div className="px-1 mt-1 flex-1 overflow-y-auto">
                                       <p className="text-[11px] font-semibold text-gray-500 uppercase mb-2">Calendarios</p>
                                 {[
                   { label: 'Meus eventos', color: 'bg-green-500' },
@@ -567,6 +589,78 @@ const AgendaView: React.FC = () => {
                                                           <span className="text-xs text-gray-700">{cal.label}</span>
                                             </div>
                                           ))}
+                                {/* Seção de categorias */}
+                                <div className="mt-3">
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <p className="text-[11px] font-semibold text-gray-500 uppercase">Categorias</p>
+                                    <button onClick={() => { setShowAddCategoryForm(v => !v); setCategoryDraft({ name: '', color: '#3b82f6' }); setEditingCategoryId(null); }}
+                                      className="text-gray-400 hover:text-blue-600 transition-colors">
+                                      <Plus className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                  {categories.map(cat => (
+                                    editingCategoryId === cat.id ? (
+                                      <div key={cat.id} className="mb-1.5 p-2 bg-gray-50 rounded-xl border border-gray-200 space-y-1.5">
+                                        <input placeholder="Nome" className="w-full text-xs border rounded px-2 py-1 outline-none"
+                                          value={categoryDraft.name}
+                                          onChange={e => setCategoryDraft(d => ({ ...d, name: e.target.value }))} />
+                                        <div className="flex gap-1 flex-wrap">
+                                          {COLOR_OPTIONS.map(c => (
+                                            <button key={c.id} type="button"
+                                              onClick={() => setCategoryDraft(d => ({ ...d, color: c.hex }))}
+                                              className={`w-5 h-5 rounded-full ${c.bg} ${categoryDraft.color === c.hex ? 'ring-2 ring-offset-1 ring-gray-400' : 'opacity-60 hover:opacity-100'}`} />
+                                          ))}
+                                        </div>
+                                        <div className="flex gap-1">
+                                          <button onClick={async () => {
+                                            if (categoryDraft.name.trim()) {
+                                              await store.updateCategory(cat.id, categoryDraft.name.trim(), categoryDraft.color);
+                                              setEditingCategoryId(null);
+                                            }
+                                          }} className="flex-1 text-[11px] bg-blue-600 text-white py-1 rounded font-medium">Salvar</button>
+                                          <button onClick={() => setEditingCategoryId(null)} className="text-[11px] text-gray-400 px-2">✕</button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div key={cat.id} className="flex items-center gap-2 py-0.5 group">
+                                        <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                                        <span className="text-xs text-gray-700 flex-1 truncate">{cat.name}</span>
+                                        <button onClick={() => { setEditingCategoryId(cat.id); setCategoryDraft({ name: cat.name, color: cat.color }); setShowAddCategoryForm(false); }}
+                                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600 transition-opacity">
+                                          <span className="text-[10px]">✎</span>
+                                        </button>
+                                        <button onClick={() => store.deleteCategory(cat.id)}
+                                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity">
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    )
+                                  ))}
+                                  {showAddCategoryForm && (
+                                    <div className="mt-1 p-2 bg-gray-50 rounded-xl border border-gray-200 space-y-1.5">
+                                      <input placeholder="Nome da categoria" className="w-full text-xs border rounded px-2 py-1 outline-none"
+                                        value={categoryDraft.name}
+                                        onChange={e => setCategoryDraft(d => ({ ...d, name: e.target.value }))} />
+                                      <div className="flex gap-1 flex-wrap">
+                                        {COLOR_OPTIONS.map(c => (
+                                          <button key={c.id} type="button"
+                                            onClick={() => setCategoryDraft(d => ({ ...d, color: c.hex }))}
+                                            className={`w-5 h-5 rounded-full ${c.bg} ${categoryDraft.color === c.hex ? 'ring-2 ring-offset-1 ring-gray-400' : 'opacity-60 hover:opacity-100'}`} />
+                                        ))}
+                                      </div>
+                                      <div className="flex gap-1">
+                                        <button onClick={async () => {
+                                          if (categoryDraft.name.trim()) {
+                                            await store.addCategory(categoryDraft.name.trim(), categoryDraft.color);
+                                            setShowAddCategoryForm(false);
+                                            setCategoryDraft({ name: '', color: '#3b82f6' });
+                                          }
+                                        }} className="flex-1 text-[11px] bg-blue-600 text-white py-1 rounded font-medium">Criar</button>
+                                        <button onClick={() => setShowAddCategoryForm(false)} className="text-[11px] text-gray-400 px-2">Cancelar</button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                             </div>
                             <button onClick={handleManualSync} disabled={isSyncing}
                                           className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-800 px-1 mt-auto disabled:opacity-50">
@@ -697,6 +791,34 @@ const AgendaView: React.FC = () => {
                                               ))}
                                                               </div>
                                                 
+                                                              {/* Concluído */}
+                                                              <button type="button"
+                                                                onClick={() => setEditingEvent({ ...editingEvent, completed: !(editingEvent as any).completed } as any)}
+                                                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-colors text-left ${(editingEvent as any).completed ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-200'}`}>
+                                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${(editingEvent as any).completed ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}>
+                                                                  {(editingEvent as any).completed && <span className="text-white text-[10px] font-bold leading-none">✓</span>}
+                                                                </div>
+                                                                <span className={`text-sm font-medium ${(editingEvent as any).completed ? 'text-green-700' : 'text-gray-500'}`}>
+                                                                  {(editingEvent as any).completed ? 'Concluído' : 'Marcar como concluído'}
+                                                                </span>
+                                                              </button>
+
+                                                              {/* Categoria */}
+                                                              {categories.length > 0 && (
+                                                                <div>
+                                                                  <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">Categoria</label>
+                                                                  <select
+                                                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:border-blue-400 text-gray-800 text-sm"
+                                                                    value={(editingEvent as any).categoryId || ''}
+                                                                    onChange={e => setEditingEvent({ ...editingEvent, categoryId: e.target.value || undefined } as any)}>
+                                                                    <option value="">Nenhuma</option>
+                                                                    {categories.map(cat => (
+                                                                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                                    ))}
+                                                                  </select>
+                                                                </div>
+                                                              )}
+
                                                               {/* Cor do evento */}
                                                               <div>
                                                                 <label className="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">Cor</label>
@@ -780,6 +902,10 @@ const AgendaView: React.FC = () => {
                                                               <button onClick={() => handleDeleteRecurring('THIS')}
                                                                                   className="w-full py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">
                                                                               Só este dia
+                                                              </button>
+                                                              <button onClick={() => handleDeleteRecurring('FORWARD')}
+                                                                                  className="w-full py-3 rounded-xl border border-orange-200 text-orange-700 font-medium hover:bg-orange-50 transition-colors">
+                                                                              Este e os seguintes
                                                               </button>
                                                               <button onClick={() => handleDeleteRecurring('ALL')}
                                                                                   className="w-full py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors">

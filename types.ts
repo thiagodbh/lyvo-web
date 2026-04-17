@@ -64,6 +64,12 @@ export interface BudgetLimit {
 
 export type EventSource = 'INTERNAL' | 'GOOGLE' | 'OUTLOOK';
 
+export interface CalendarCategory {
+  id: string;
+  name: string;
+  color: string; // hex
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -74,8 +80,11 @@ export interface CalendarEvent {
   color?: string; // Hex color (e.g. '#3b82f6')
   type?: 'EVENT' | 'TASK' | 'REMINDER';
   status?: string;
+  completed?: boolean;
+  categoryId?: string;
   recurringDays?: number[];
   recurringExceptions?: string[]; // 'YYYY-MM-DD' dates to skip
+  recurringEndDate?: string; // 'YYYY-MM-DD' last inclusive occurrence
   googleEventId?: string;
   reminderMinutes?: number;
 }
