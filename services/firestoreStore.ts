@@ -180,21 +180,22 @@ class FirestoreStore {
   }
 
   calculateBalances(month: number, year: number) {
+    const safeVal = (v: any) => (isNaN(Number(v)) ? 0 : Number(v) || 0);
     const monthTransactions = this.getTransactionsByMonth(month, year);
     const income = monthTransactions
       .filter((t) => t.type === "INCOME")
-      .reduce((sum, t) => sum + t.value, 0);
+      .reduce((sum, t) => sum + safeVal(t.value), 0);
     const expense = monthTransactions
       .filter((t) => t.type === "EXPENSE")
-      .reduce((sum, t) => sum + t.value, 0);
+      .reduce((sum, t) => sum + safeVal(t.value), 0);
 
     const allTransactions = this.transactions.filter((t: any) => !t.relatedCardId);
     const totalIncome = allTransactions
       .filter((t) => t.type === "INCOME")
-      .reduce((sum, t) => sum + t.value, 0);
+      .reduce((sum, t) => sum + safeVal(t.value), 0);
     const totalExpense = allTransactions
       .filter((t) => t.type === "EXPENSE")
-      .reduce((sum, t) => sum + t.value, 0);
+      .reduce((sum, t) => sum + safeVal(t.value), 0);
 
     return { income, expense, balance: totalIncome - totalExpense };
   }
@@ -478,7 +479,7 @@ class FirestoreStore {
 
         return isSameCategory && isExpense && isInMonth;
       })
-      .reduce((acc, t) => acc + t.value, 0);
+      .reduce((acc, t) => acc + (Number(t.value) || 0), 0);
   }
   async addBudgetLimit(category: string, monthlyLimit: number) {
     if (!this.uid) return null;
@@ -546,7 +547,7 @@ class FirestoreStore {
     const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
     return this.transactions
       .filter((t: any) => t.relatedCardId === cardId && t.billingMonth === monthStr)
-      .reduce((acc, t) => acc + t.value, 0);
+      .reduce((acc, t) => acc + (Number(t.value) || 0), 0);
   }
 
   calculateTotalPaidOnInvoice(cardId: string, month: number, year: number) {

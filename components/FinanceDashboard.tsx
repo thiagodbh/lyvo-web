@@ -108,7 +108,8 @@ const FinanceDashboard: React.FC = () => {
     }, []);
 
     const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+        const safe = isNaN(val) || !isFinite(val) ? 0 : val;
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(safe);
     };
 
     const handleToggleBill = (id: string) => {
@@ -231,7 +232,7 @@ const FinanceDashboard: React.FC = () => {
     const evolutionData = getEvolutionData();
 
     return (
-        <div className="flex flex-col h-full bg-lyvo-bg overflow-y-auto pb-24">
+        <div className="flex flex-col h-full bg-lyvo-bg overflow-y-auto overscroll-none" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
             
             <div className="bg-white p-6 pb-2 sticky top-0 z-20 shadow-sm">
                 <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -407,18 +408,17 @@ const FinanceDashboard: React.FC = () => {
                                                 <p className="text-[10px] text-gray-400">{new Date(t.date).toLocaleDateString('pt-BR')} • {t.category}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center space-x-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                           <button
                                             onClick={() => setEditingGeneralTransaction(t)}
-                                            className="p-1 text-gray-300 hover:text-blue-500"
+                                            className="p-1.5 text-gray-400 hover:text-blue-500 active:text-blue-600"
                                             aria-label="Editar transação"
                                           >
                                             <Edit2 className="w-3.5 h-3.5" />
                                           </button>
-
                                           <button
                                             onClick={() => setItemToDelete({ type: 'TRANSACTION', id: t.id })}
-                                            className="p-1 text-gray-300 hover:text-red-500"
+                                            className="p-1.5 text-gray-400 hover:text-red-500 active:text-red-600"
                                             aria-label="Excluir transação"
                                           >
                                             <Trash2 className="w-3.5 h-3.5" />
@@ -543,14 +543,14 @@ const FinanceDashboard: React.FC = () => {
                                                     </span>
                                                 </div>
                                                 
-                                                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button 
+                                                <div className="flex items-center space-x-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                                    <button
                                                         onClick={() => { setEditingCategory(l); setShowCategoryModal(true); }}
                                                         className="p-1 text-blue-500 hover:bg-blue-100 rounded-md transition-colors"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={async () => {
                                                             if(window.confirm(`Deseja excluir a categoria ${l.category}?`)) {
                                                                 await store.deleteBudgetLimit(l.id);
@@ -843,8 +843,8 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
     };
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-            <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl flex flex-col h-[85vh] animate-slide-up">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl flex flex-col" style={{ height: 'min(85vh, 600px)' }}>
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <div className="text-gray-900">
                         <h2 className="text-xl font-bold">{card.name}</h2>
@@ -918,7 +918,7 @@ const EditTransactionModal: React.FC<{ transaction: Transaction, onSave: (id: st
     const [value, setValue] = useState(transaction.value.toString());
 
     return (
-        <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
           <div className="bg-white w-full max-w-xs rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
             <h3 className="text-lg font-black uppercase mb-6">Editar Valor</h3>
             <div className="space-y-4">
@@ -939,7 +939,7 @@ const PayInvoiceValueModal: React.FC<{ fullValue: number, alreadyPaid: number, o
     const [amount, setAmount] = useState(remaining.toString());
 
     return (
-        <div className="absolute inset-0 z-[110] flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
           <div className="bg-white w-full max-w-xs rounded-[2rem] p-8 shadow-2xl text-center text-gray-900">
             <h3 className="text-lg font-black uppercase mb-4">Valor do Pagamento</h3>
             <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl text-center text-2xl font-black outline-none text-gray-900 mb-6" />
@@ -966,8 +966,8 @@ const AddFixedBillModal: React.FC<{ selectedMonth: number, selectedYear: number,
     const [category, setCategory] = useState(availableCategories[0] || 'Geral');
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-            <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4">
+            <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-gray-900 text-left max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-black uppercase mb-6 tracking-tight">Nova Conta Fixa</h3>
                 <div className="space-y-4">
                     <input type="text" placeholder="Descrição" value={name} onChange={e => setName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
@@ -1053,8 +1053,8 @@ const EditFixedBillModal: React.FC<{
     };
 
     return (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-            <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4">
+            <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-gray-900 text-left max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-black uppercase mb-6 tracking-tight">Editar Conta Fixa</h3>
                 <div className="space-y-4">
                     <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold" />
@@ -1120,8 +1120,8 @@ const AddForecastModal: React.FC<{ selectedMonth: number, selectedYear: number, 
     };
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-            <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4">
+            <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-gray-900 text-left max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-black uppercase tracking-tight mb-6">{initialData ? 'Editar Receita' : 'Nova Receita Previsível'}</h3>
                 <div className="space-y-4">
                     <input type="text" placeholder="Nome da Receita" value={description} onChange={e => setDescription(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 placeholder:text-gray-300" />
@@ -1185,8 +1185,8 @@ const AddCreditCardModal: React.FC<{ initialData?: CreditCard | null, onClose: (
     };
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4">
+          <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-gray-900 text-left max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-black uppercase mb-6 tracking-tight">{initialData ? 'Editar Cartão' : 'Novo Cartão'}</h3>
             <div className="space-y-4">
                 <input type="text" placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none text-gray-900 placeholder:text-gray-300" />
@@ -1215,8 +1215,8 @@ const CategoryModal: React.FC<{ initialData?: BudgetLimit | null, onClose: () =>
     const [name, setName] = useState(initialData?.category || '');
     const [limit, setLimit] = useState(initialData?.monthlyLimit?.toString() || '');
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-            <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-gray-900 text-left">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4">
+            <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl text-gray-900 text-left max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-black uppercase mb-6 tracking-tight">{initialData ? 'Editar Categoria' : 'Nova Categoria'}</h3>
                 <div className="space-y-4">
                     <input type="text" placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-gray-900 placeholder:text-gray-300" />
@@ -1232,7 +1232,7 @@ const CategoryModal: React.FC<{ initialData?: BudgetLimit | null, onClose: () =>
 };
 
 const ConfirmationModal: React.FC<{ message: string, onConfirm: () => void, onCancel: () => void }> = ({ message, onConfirm, onCancel }) => (
-    <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
       <div className="bg-white w-full max-w-xs rounded-[2rem] p-8 shadow-2xl text-center text-gray-900">
         <div className="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4"><AlertCircle className="w-6 h-6" /></div>
         <h3 className="text-lg font-black uppercase mb-2">Confirmar</h3>
