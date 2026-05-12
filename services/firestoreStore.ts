@@ -764,6 +764,26 @@ class FirestoreStore {
     }
   }
 
+  // ---------------- INDICAÇÕES ─────────────────────────────────────────────────
+
+  async saveReferral(referredBy: string, referredUserId: string) {
+    if (!referredBy || !referredUserId || referredBy === referredUserId) return;
+    const existing = await getDocs(
+      query(this.col("referrals"), where("referredUserId", "==", referredUserId))
+    );
+    if (!existing.empty) return;
+    await addDoc(this.col("referrals"), {
+      referredBy,
+      referredUserId,
+      createdAt: Timestamp.now(),
+    });
+  }
+
+  async getReferralCount(uid: string): Promise<number> {
+    const snap = await getDocs(query(this.col("referrals"), where("referredBy", "==", uid)));
+    return snap.size;
+  }
+
   // ---------------- CATEGORIAS DE AGENDA ----------------
 
   async addCategory(name: string, color: string): Promise<CalendarCategory | null> {
