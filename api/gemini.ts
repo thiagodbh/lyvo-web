@@ -9,7 +9,6 @@ const actionSchema = {
     },
     transactionDetails: {
       type: Type.OBJECT,
-      nullable: true,
       properties: {
         type: { type: Type.STRING, enum: ["INCOME", "EXPENSE"] },
         value: { type: Type.NUMBER },
@@ -22,7 +21,6 @@ const actionSchema = {
     },
     eventDetails: {
       type: Type.OBJECT,
-      nullable: true,
       properties: {
         title: { type: Type.STRING },
         date: { type: Type.STRING, description: "YYYY-MM-DD" },
@@ -34,6 +32,16 @@ const actionSchema = {
   },
   required: ["action", "responseMessage"],
 };
+
+const systemInstruction = `Você é o assistente financeiro do Lyvo. Analise o comando do usuário e retorne JSON estruturado.
+- Para registrar despesas/receitas: use ADD_TRANSACTION com transactionDetails
+- Para compras no cartão de crédito: use ADD_CREDIT_TRANSACTION com transactionDetails e cardName
+- Para eventos na agenda: use ADD_EVENT com eventDetails
+- Para perguntas/consultas: use QUERY
+- Para comandos não reconhecidos: use UNKNOWN
+- Datas sempre no formato YYYY-MM-DD
+- Valores numéricos sem símbolos de moeda
+- responseMessage deve ser uma resposta amigável em português confirmando a ação`;
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
@@ -53,11 +61,7 @@ export default async function handler(req: any, res: any) {
 
     const parts: any[] = [];
     if (text) {
-      parts.push({
-        text:
-          text +
-          "\nResponda APENAS com JSON válido, sem markdown e sem texto extra.",
-      });
+      parts.push({ text });
     }
 
     if (imageBase64) {
@@ -71,13 +75,9 @@ export default async function handler(req: any, res: any) {
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts,
-        },
-      ],
+      contents: [{ role: "user", parts }],
       config: {
+        systemInstruction,
         responseMimeType: "application/json",
         responseSchema: actionSchema,
       },
@@ -100,9 +100,10 @@ export default async function handler(req: any, res: any) {
     }
   } catch (error: any) {
     console.error("Gemini API Error:", error);
+    const errorMessage = String(error?.message || error);
     return res.status(500).json({
       error: "Gemini processing failed",
-      details: String(error?.message || error),
+      details: errorMessage,
     });
   }
 }

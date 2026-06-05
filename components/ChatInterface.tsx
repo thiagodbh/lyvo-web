@@ -328,9 +328,10 @@ const ChatInterface: React.FC = () => {
       } else {
           setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: res.message || "Pode me dar mais detalhes?" }]);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Chat Error:", e);
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: "Ops! Tive um problema técnico. Tente novamente." }]);
+      const errDetail = e?.message ? ` (${e.message})` : '';
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `Ops! Tive um problema técnico. Tente novamente.${errDetail}` }]);
     } finally {
       // THE MANDATORY RESET: This kills the infinite thinking hang.
       setIsLoading(false); 
