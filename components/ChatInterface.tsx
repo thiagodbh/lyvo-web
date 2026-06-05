@@ -326,7 +326,7 @@ const ChatInterface: React.FC = () => {
           }
           setActiveModal(type);
       } else {
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: res.message || "Pode me dar mais detalhes?" }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: res.message || "Não entendi bem. Tente algo como: \"gastei 50 no mercado\", \"recebi 3000 de salário\" ou \"consulta médica amanhã às 14h\"." }]);
       }
     } catch (e: any) {
       console.error("Chat Error:", e);
