@@ -451,7 +451,7 @@ const ChatInterface: React.FC = () => {
                     value: parseFloat(data.value),
                     category: data.category,
                     description: data.description,
-                    date: new Date(data.date).toISOString(),
+                    date: data.date,
                     ...(isCredit && data.cardId ? { relatedCardId: data.cardId } : {}),
                   },
                   isCredit ? parseInt(data.installments || '1', 10) : 1

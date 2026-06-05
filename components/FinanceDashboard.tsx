@@ -38,6 +38,13 @@ import { Transaction, FixedBill, BudgetLimit, Forecast, CreditCard } from '../ty
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#F43F5E', '#0EA5E9', '#64748B'];
 
+// Formats a date string (YYYY-MM-DD or ISO) in pt-BR without timezone shift
+const formatDate = (dateStr: string): string => {
+  const d = dateStr.split('T')[0];
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+};
+
 const FinanceDashboard: React.FC = () => {
     const today = new Date();
     const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -165,7 +172,7 @@ const FinanceDashboard: React.FC = () => {
         const allTrans = store.transactions;
         const header = "Data,Descricao,Categoria,Valor,Tipo\n";
         const rows = allTrans.map(t => {
-            const date = new Date(t.date).toLocaleDateString('pt-BR');
+            const date = formatDate(t.date);
             return `${date},${t.description.replace(/,/g, '')},${t.category},${t.value},${t.type}`;
         }).join("\n");
         const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
@@ -200,11 +207,11 @@ const FinanceDashboard: React.FC = () => {
     const billsToShow = expandBills ? sortedBills : sortedBills.slice(0, 4);
 
     const incomeForecasts = forecasts.filter(f => f.type === 'EXPECTED_INCOME' && f.status === 'PENDING');
-    const sortedIncomeForecasts = [...incomeForecasts].sort((a, b) => new Date(a.expectedDate).getTime() - new Date(b.expectedDate).getTime());
+    const sortedIncomeForecasts = [...incomeForecasts].sort((a, b) => a.expectedDate.localeCompare(b.expectedDate));
     const forecastsToShow = expandForecasts ? sortedIncomeForecasts : sortedIncomeForecasts.slice(0, 4);
     
     const sortedTransactions = [...transactions].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a, b) => b.date.localeCompare(a.date)
     );
     const transactionsToShow = expandTransactions ? sortedTransactions : sortedTransactions.slice(0, 4);
 
@@ -405,7 +412,7 @@ const FinanceDashboard: React.FC = () => {
                                             </div>
                                             <div>
                                                 <p className="font-semibold text-gray-900 text-sm">{t.description}</p>
-                                                <p className="text-[10px] text-gray-400">{new Date(t.date).toLocaleDateString('pt-BR')} • {t.category}</p>
+                                                <p className="text-[10px] text-gray-400">{formatDate(t.date)} • {t.category}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -482,7 +489,7 @@ const FinanceDashboard: React.FC = () => {
                                                     <p className="text-[10px] font-black text-green-600">{formatCurrency(f.value)}</p>
                                                 </div>
                                                 <div className="flex items-center justify-between">
-                                                    <p className="text-[9px] text-gray-400 font-bold uppercase">{new Date(f.expectedDate).toLocaleDateString('pt-BR')} • {f.category || 'Salário'}{f.isRecurring && ' • Mensal'}</p>
+                                                    <p className="text-[9px] text-gray-400 font-bold uppercase">{formatDate(f.expectedDate)} • {f.category || 'Salário'}{f.isRecurring && ' • Mensal'}</p>
                                                     <div className="flex items-center space-x-2">
                                                         <button onClick={() => { setEditingForecast(f); setShowAddForecastModal(true); }} className="p-1 text-gray-400 hover:text-blue-500 transition-colors">
                                                             <Edit2 className="w-3.5 h-3.5" />
@@ -878,7 +885,7 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
                             <div key={t.id} className="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm group">
                                 <div className="text-gray-900">
                                     <p className="text-sm font-bold">{t.description}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold">{formatDate(t.date)}</p>
                                 </div>
                                 <div className="flex items-center space-x-3">
                                     <span className="text-sm font-black text-gray-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}</span>

@@ -27,6 +27,13 @@ import { db, auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 
+// Parses a date string (YYYY-MM-DD or ISO) as local time to avoid UTC midnight timezone shift
+function parseDate(dateStr: string): Date {
+  const d = dateStr.split('T')[0]; // strip time if present → YYYY-MM-DD
+  const [y, m, day] = d.split('-').map(Number);
+  return new Date(y, m - 1, day, 12, 0, 0); // local noon, avoids DST edge cases
+}
+
 const DEFAULT_CREDIT_CARDS: Omit<CreditCard, "id">[] = [
   {
     name: "Nubank",
@@ -134,7 +141,7 @@ class FirestoreStore {
 
     bind<Transaction>("transactions", (items) => {
       this.transactions = items.sort(
-        (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a: any, b: any) => parseDate(b.date).getTime() - parseDate(a.date).getTime()
       );
     });
 
@@ -173,10 +180,10 @@ class FirestoreStore {
   getTransactionsByMonth(month: number, year: number) {
     return this.transactions
       .filter((t) => {
-        const d = new Date(t.date);
+        const d = parseDate(t.date);
         return d.getMonth() === month && d.getFullYear() === year && !(t as any).relatedCardId;
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime());
   }
 
   calculateBalances(month: number, year: number) {
@@ -203,7 +210,7 @@ class FirestoreStore {
   private calculateBillingMonth(dateStr: string, cardId: string): string {
     const card = this.creditCards.find((c) => c.id === cardId);
     if (!card) return "";
-    const d = new Date(dateStr);
+    const d = parseDate(dateStr);
     const day = d.getDate();
     const billingDate = new Date(d.getFullYear(), d.getMonth(), 1);
 
@@ -217,20 +224,20 @@ class FirestoreStore {
 
     // cartão (parcelado)
     if ((t as any).relatedCardId) {
-      const baseDate = new Date(t.date);
+      const baseDate = parseDate(t.date);
       const valPerInstallment = t.value / installments;
 
       for (let i = 0; i < installments; i++) {
-        const d = new Date(baseDate);
-        d.setMonth(baseDate.getMonth() + i);
-        const billingMonth = this.calculateBillingMonth(d.toISOString(), (t as any).relatedCardId);
+        const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate(), 12, 0, 0);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const billingMonth = this.calculateBillingMonth(dateStr, (t as any).relatedCardId);
 
         await addDoc(this.col("transactions"), {
           ...t,
           uid: this.uid,
           value: valPerInstallment,
           description: installments > 1 ? `${t.description} (${i + 1}/${installments})` : t.description,
-          date: d.toISOString(),
+          date: dateStr,
           billingMonth,
           createdAt: Timestamp.now(),
         });
@@ -334,7 +341,7 @@ class FirestoreStore {
 
       const desc = `Pagamento: ${bill.name}`;
       const trans = this.transactions.find(
-        (t) => t.description === desc && new Date(t.date).getMonth() === month && new Date(t.date).getFullYear() === year
+        (t) => t.description === desc && parseDate(t.date).getMonth() === month && parseDate(t.date).getFullYear() === year
       );
       if (trans) await this.deleteTransaction(trans.id);
     }
@@ -462,8 +469,8 @@ class FirestoreStore {
 
     return this.transactions
       .filter((t) => {
-        const d = new Date(t.date);
-        
+        const d = parseDate(t.date);
+
         // Critério 1: Mesma categoria
         const isSameCategory = t.category === category;
 
