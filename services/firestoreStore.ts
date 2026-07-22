@@ -287,7 +287,7 @@ class FirestoreStore {
     const currentMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
     return this.fixedBills.filter((bill) => {
       if (currentMonthStr < bill.startMonth) return false;
-      if ((bill as any).endedAt && currentMonthStr >= (bill as any).endedAt) return false;
+      if ((bill as any).endedAt && currentMonthStr > (bill as any).endedAt) return false;
       if (bill.skippedMonths.includes(currentMonthStr)) return false;
       return true;
     });
