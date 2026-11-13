@@ -49,6 +49,8 @@ export async function getBillingConfig(): Promise<BillingConfig> {
     ...DEFAULT_BILLING_CONFIG,
     ...c,
     providers: { ...DEFAULT_BILLING_CONFIG.providers, ...(c.providers || {}) },
+    // gateways novos que ainda não estão na ordem salva entram no fim (não mudam o principal sem querer)
+    providerOrder: [...(c.providerOrder || []), ...DEFAULT_BILLING_CONFIG.providerOrder.filter((p) => !(c.providerOrder || []).includes(p))],
   } as BillingConfig;
 }
 
@@ -104,10 +106,11 @@ export function nextAccess(
     case "PAYMENT_RENEWED": {
       const interval = plan?.interval || ev.intervalHint || "month";
       const from = Math.max(ev.occurredAt.getTime(), now - 2 * DAY);
-      return {
-        ...base, status: "active", everPaid: true,
-        currentPeriodEnd: TS.fromMillis(from + INTERVAL_DAYS[interval] * DAY),
-      };
+      // Olimpo Pay informa a próxima cobrança: acesso vai até ela (+1 dia de folga para o pagamento cair)
+      const end = ev.periodEndHint && ev.periodEndHint.getTime() > now
+        ? ev.periodEndHint.getTime() + DAY
+        : from + INTERVAL_DAYS[interval] * DAY;
+      return { ...base, status: "active", everPaid: true, currentPeriodEnd: TS.fromMillis(end) };
     }
     case "RENEWAL_LATE": {
       const end = current?.currentPeriodEnd?.toMillis?.() ?? now;
@@ -139,7 +142,7 @@ export type ProcessResult =
 export async function processEvent(
   ev: NormalizedEvent,
   rawJson: string,
-  meta: { endpoint: "v2" | "legacy" },
+  meta: { endpoint: "v2" | "legacy"; forceUid?: string },
 ): Promise<{ id: string; result: ProcessResult }> {
   const cfg = await getBillingConfig();
   const id = `${ev.provider}_${crypto.createHash("sha1").update(ev.externalEventId).digest("hex").slice(0, 24)}`;
@@ -148,7 +151,7 @@ export async function processEvent(
   if (existing.exists && existing.data()?.result !== "error") return { id, result: "duplicate" };
 
   const plan = resolvePlan(cfg, ev);
-  const uid = await findUidByEmail(ev.email);
+  const uid = meta.forceUid || await findUidByEmail(ev.email);
   const sign = REVENUE_SIGN[ev.type] ?? 0;
   const revenue = ev.isTest ? 0 : sign * (ev.amount ?? (sign ? plan?.price ?? 0 : 0));
 
@@ -209,7 +212,7 @@ export async function processEvent(
     }
     if (ev.type === "SUBSCRIPTION_CANCELED") patch.canceledAt = TS.fromDate(ev.occurredAt);
     const subSnap = await subRef.get();
-    if (!subSnap.exists) patch.startedAt = TS.fromDate(ev.occurredAt);
+    if (!subSnap.exists || (sign > 0 && !subSnap.data()?.startedAt)) patch.startedAt = TS.fromDate(ev.occurredAt);
     await subRef.set(patch, { merge: true });
   }
 

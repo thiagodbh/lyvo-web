@@ -1,6 +1,6 @@
 // Tipos do painel admin (espelham o que functions/src/admin.ts devolve).
 
-export type ProviderId = 'lastlink' | 'kiwify' | 'hotmart' | 'cakto';
+export type ProviderId = 'olimpopay' | 'lastlink' | 'kiwify' | 'hotmart' | 'cakto';
 export type PlanInterval = 'month' | 'quarter' | 'semester' | 'year' | 'lifetime';
 export type UserStatus =
   | 'trial' | 'trial_expired' | 'active' | 'past_due' | 'canceled'
@@ -25,7 +25,7 @@ export interface Plan {
 export interface BillingConfig {
   plans: Plan[];
   providerOrder: ProviderId[];
-  providers: Record<ProviderId, { enabled: boolean; validated: boolean; label: string }>;
+  providers: Record<ProviderId, { enabled: boolean; validated: boolean; label: string; mode?: 'api' | 'link' }>;
   trialDays: number;
   graceDays: number;
   allowLegacyLastlink: boolean;
@@ -95,7 +95,10 @@ export interface Subscription {
   email: string | null;
   uid: string | null;
   planId: string | null;
-  status: 'active' | 'past_due' | 'canceled' | 'expired' | 'refunded';
+  status: 'waiting' | 'active' | 'past_due' | 'canceled' | 'expired' | 'refunded' | 'abandoned';
+  paymentLink?: string | null;
+  nextChargeAt?: number | null;
+  remoteStatus?: string | null;
   startedAt: number | null;
   lastPaymentAt: number | null;
   lastAmount?: number | null;
@@ -156,6 +159,7 @@ export interface UserDetail {
 
 export interface GatewayInfo {
   id: ProviderId;
+  mode?: 'api' | 'link';
   enabled: boolean;
   validated: boolean;
   label: string;
@@ -171,7 +175,7 @@ export interface GatewayInfo {
 export type UserActionName =
   | 'grant_access' | 'extend_trial' | 'set_period_end' | 'revoke_access' | 'block' | 'unblock'
   | 'note' | 'update_profile' | 'password_reset_link' | 'revoke_sessions' | 'set_admin'
-  | 'apply_pending' | 'delete_account';
+  | 'apply_pending' | 'delete_account' | 'cancel_gateway_subscription';
 
 export interface AdminApi {
   mode: 'live' | 'demo';
@@ -191,4 +195,6 @@ export interface AdminApi {
   dryRun(provider: ProviderId, payload: string): Promise<any>;
   listAudit(): Promise<AuditEntry[]>;
   recomputeUsage(): Promise<any>;
+  olimpoPing(): Promise<{ ok: boolean; error?: string; status?: number | null }>;
+  olimpoSyncAll(): Promise<{ synced: number; changed: number; errors: number }>;
 }

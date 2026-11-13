@@ -1,9 +1,9 @@
 // Modelo canônico de cobrança. Todo gateway é traduzido para isto,
 // então o resto do sistema (acesso, métricas, admin) não sabe qual gateway veio.
 
-export type ProviderId = "lastlink" | "kiwify" | "hotmart" | "cakto";
+export type ProviderId = "olimpopay" | "lastlink" | "kiwify" | "hotmart" | "cakto";
 
-export const PROVIDERS: ProviderId[] = ["lastlink", "kiwify", "hotmart", "cakto"];
+export const PROVIDERS: ProviderId[] = ["olimpopay", "lastlink", "kiwify", "hotmart", "cakto"];
 
 /** Tipos de evento normalizados. */
 export type CanonicalType =
@@ -47,6 +47,8 @@ export interface Plan {
 
 export interface ProviderConfig {
   enabled: boolean;
+  /** "api": o servidor cria a cobrança (Olimpo Pay). "link": checkout hospedado por link fixo. */
+  mode?: "api" | "link";
   /** true quando o mapeamento foi validado com um payload real de teste */
   validated: boolean;
   label: string;
@@ -84,6 +86,8 @@ export interface NormalizedEvent {
   isTest: boolean;
   paymentMethod?: string | null;
   utm?: Record<string, string> | null;
+  /** quando o gateway informa a próxima cobrança, o acesso vai até ela (Olimpo Pay) */
+  periodEndHint?: Date | null;
 }
 
 export const DEFAULT_BILLING_CONFIG: BillingConfig = {
@@ -111,12 +115,13 @@ export const DEFAULT_BILLING_CONFIG: BillingConfig = {
       externalIds: {},
     },
   ],
-  providerOrder: ["lastlink", "kiwify", "hotmart", "cakto"],
+  providerOrder: ["olimpopay", "lastlink", "kiwify", "hotmart", "cakto"],
   providers: {
-    lastlink: { enabled: true, validated: true, label: "LastLink" },
-    kiwify: { enabled: false, validated: false, label: "Kiwify" },
-    hotmart: { enabled: false, validated: false, label: "Hotmart" },
-    cakto: { enabled: false, validated: false, label: "Cakto" },
+    olimpopay: { enabled: true, validated: false, label: "Olimpo Pay", mode: "api" },
+    lastlink: { enabled: true, validated: true, label: "LastLink", mode: "link" },
+    kiwify: { enabled: false, validated: false, mode: "link", label: "Kiwify" },
+    hotmart: { enabled: false, validated: false, mode: "link", label: "Hotmart" },
+    cakto: { enabled: false, validated: false, mode: "link", label: "Cakto" },
   },
   trialDays: 3,
   graceDays: 3,

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, FlaskConical, KeyRound, RefreshCw, Save, ShieldAlert, CheckCircle2, CircleDashed } from 'lucide-react';
+import { ArrowDown, ArrowUp, FlaskConical, KeyRound, RefreshCw, Save, ShieldAlert, CheckCircle2, CircleDashed, PlugZap, Repeat } from 'lucide-react';
 import { useApi } from '../ctx';
 import type { BillingConfig, GatewayInfo, ProviderId } from '../types';
 import { brl, Button, Card, CopyButton, cx, dateBR, ErrorBox, Field, inputCls, Loading, Modal, PageHeader, Pill, rel, Toggle, useAsync, useToast } from '../ui';
 
 const HELP: Record<ProviderId, string> = {
-  lastlink: 'No painel da LastLink, na configuração de Webhook, cole a URL abaixo e marque os eventos de compra, recorrência, cancelamento, expiração, reembolso e chargeback. A LastLink não documenta assinatura de webhook, então o token na URL é a proteção.',
+  olimpopay: 'Olimpo Pay funciona por API: o Lyvo cria a assinatura e manda o cliente para o link de pagamento da Olimpo (Pix ou cartão). O acesso é liberado conferindo a assinatura na API a cada 15 min e quando o cliente clica “Verificar meu pagamento”. O webhook abaixo é opcional e só acelera a conferência (a Olimpo não assina o webhook, então ele nunca libera acesso sozinho). A chave da API fica no secret OLIMPO_API_KEY do Firebase.',
+  lastlink: 'Fallback. No painel da LastLink, na configuração de Webhook, cole a URL abaixo e marque os eventos de compra, recorrência, cancelamento, expiração, reembolso e chargeback. A LastLink não documenta assinatura de webhook, então o token na URL é a proteção.',
   kiwify: 'Na área de Webhooks da Kiwify, cole a URL e selecione compra aprovada, reembolso, chargeback e eventos de assinatura. Opcional: cadastre o token da Kiwify como segredo nativo.',
   hotmart: 'Na configuração de Webhook da Hotmart (versão 2.0.0), cole a URL. Opcional: cadastre o Hottok como segredo nativo.',
   cakto: 'Na área de Webhooks da Cakto, cole a URL e selecione os eventos. Opcional: cadastre o “secret” do app como segredo nativo.',
@@ -52,9 +53,9 @@ export default function GatewaysPage() {
             <div className="text-xs font-medium text-slate-500">Checkout principal agora</div>
             <div className="mt-0.5 text-lg font-semibold">{primary ? cfg.providers[primary].label : 'Nenhum — paywall sem botão de compra!'}</div>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              <strong>Fallback:</strong> o paywall usa o <em>primeiro gateway habilitado</em> da lista que tiver link para o plano.
-              Se a LastLink cair, desabilite ela (ou suba outra na ordem) e salve: o botão de compra troca na hora, sem deploy.
-              Webhooks de todos os gateways habilitados continuam sendo processados ao mesmo tempo.
+              <strong>Fallback automático:</strong> o paywall tenta o <em>primeiro gateway habilitado</em>. Se for a Olimpo Pay e a API
+              falhar na hora (fora do ar, sem adquirente), o cliente já vê o botão do próximo da lista. Para trocar o principal de vez,
+              mude a ordem ou desabilite e salve: vale na hora, sem deploy. Webhooks de todos os habilitados continuam sendo processados.
             </p>
           </div>
         </div>
@@ -81,7 +82,8 @@ export default function GatewaysPage() {
                     </div>
                     <div className="mt-2 flex flex-col items-start gap-2 whitespace-nowrap">
                       <Toggle checked={pc.enabled} onChange={(v) => setProv(p, { enabled: v })} label="Habilitado" />
-                      <Toggle checked={pc.validated} onChange={(v) => setProv(p, { validated: v })} label="Mapeamento validado" />
+                      <Toggle checked={pc.validated} onChange={(v) => setProv(p, { validated: v })} label={p === 'olimpopay' ? 'Validado em produção' : 'Mapeamento validado'} />
+                      {pc.mode === 'api' || p === 'olimpopay' ? <span className="text-[11px] text-slate-500">checkout via API</span> : <span className="text-[11px] text-slate-500">checkout por link</span>}
                     </div>
                   </div>
                 </div>
@@ -94,10 +96,12 @@ export default function GatewaysPage() {
                     <Stat k="Erros 30d" v={g?.errors30d ?? 0} warn={!!g?.errors30d} />
                   </div>
 
+                  {p === 'olimpopay' && <OlimpoTools />}
+
                   <div>
                     <div className="mb-1 flex items-center gap-2 text-xs font-medium text-slate-500">
-                      URL do webhook
-                      {pc.validated ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" />validado</span>
+                      URL do webhook{p === 'olimpopay' ? ' (opcional — só acelera a conferência)' : ''}
+                      {p === 'olimpopay' ? null : pc.validated ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" />validado</span>
                         : <span className="inline-flex items-center gap-1 text-amber-700"><CircleDashed className="h-3.5 w-3.5" />validar com evento de teste</span>}
                     </div>
                     {url ? (
@@ -166,6 +170,7 @@ function Stat({ k, v, warn }: { k: string; v: React.ReactNode; warn?: boolean })
 }
 
 const SAMPLE: Record<ProviderId, string> = {
+  olimpopay: JSON.stringify({ type: 'transaction', transaction_id: '98765432', external_reference: 'pedido-123', method: 'pix', total_price: '24.90', status: 'paid', customer: { name: 'Cliente Teste', document: '12345678901', email: 'cliente@exemplo.com', phone: '11999998888' }, created_at: '2026-11-13 12:50:31', updated_at: '2026-11-13 12:51:10', refund_at: null }, null, 2),
   lastlink: JSON.stringify({ Id: 'teste-123', IsTest: true, Event: 'Purchase_Order_Confirmed', CreatedAt: '2026-11-13T15:00:00', Data: { Buyer: { Email: 'cliente@exemplo.com', Name: 'Cliente Teste' }, Purchase: { PaymentId: 'pay-1', Recurrency: 1, RecurrenceNumber: 1, Price: { Value: 24.9 }, Payment: { PaymentMethod: 'pix' } }, Products: [{ Id: 'prod-1', Name: 'Lyvo' }], Plan: { Id: 'plan-1', Name: 'Mensal', Recurrency: 1, Amount: 24.9 } } }, null, 2),
   kiwify: JSON.stringify({ order_id: 'kw-1', webhook_event_type: 'order_approved', order_status: 'paid', Customer: { email: 'cliente@exemplo.com', full_name: 'Cliente Teste' }, Product: { product_id: 'kw-prod-1', product_name: 'Lyvo' }, Commissions: { charge_amount: 2490 } }, null, 2),
   hotmart: JSON.stringify({ id: 'hm-1', event: 'PURCHASE_APPROVED', version: '2.0.0', data: { buyer: { email: 'cliente@exemplo.com', name: 'Cliente Teste' }, product: { id: 123 }, purchase: { transaction: 'HP123', price: { value: 24.9 } } } }, null, 2),
@@ -222,5 +227,27 @@ function SecretModal({ provider, onClose }: { provider: ProviderId; onClose: () 
       <p className="mb-3 text-sm text-slate-600">Validação extra, além do token na URL: {provider === 'hotmart' ? 'Hottok (header X-HOTMART-HOTTOK)' : provider === 'kiwify' ? 'token da Kiwify (assinatura HMAC na query “signature”)' : 'campo “secret” enviado no corpo'}. Fica guardado só no servidor; nem este painel consegue ler depois.</p>
       <input type="password" className={inputCls} value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="Cole o segredo (vazio = remover)" autoComplete="off" />
     </Modal>
+  );
+}
+
+function OlimpoTools() {
+  const api = useApi();
+  const toast = useToast();
+  const [ping, setPing] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [busy, setBusy] = useState<'ping' | 'sync' | null>(null);
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50/60 p-3 ring-1 ring-amber-200">
+      <Button size="sm" loading={busy === 'ping'} icon={<PlugZap className="h-3.5 w-3.5" />} onClick={async () => {
+        setBusy('ping'); try { setPing(await api.olimpoPing()); } catch (e: any) { setPing({ ok: false, error: e.message }); } finally { setBusy(null); }
+      }}>Testar conexão com a API</Button>
+      <Button size="sm" loading={busy === 'sync'} icon={<Repeat className="h-3.5 w-3.5" />} onClick={async () => {
+        setBusy('sync');
+        try { const r = await api.olimpoSyncAll(); toast(`${r.synced} assinatura(s) conferida(s), ${r.changed} com mudança${r.errors ? `, ${r.errors} erro(s)` : ''}`); }
+        catch (e: any) { toast(e.message, 'err'); } finally { setBusy(null); }
+      }}>Conferir assinaturas agora</Button>
+      {ping && (ping.ok
+        ? <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" />API respondendo com a chave configurada</span>
+        : <span className="text-xs font-medium text-rose-700">Falhou: {ping.error}</span>)}
+    </div>
   );
 }

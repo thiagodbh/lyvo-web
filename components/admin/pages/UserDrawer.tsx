@@ -23,7 +23,9 @@ const ACTIONS: { id: UserActionName; label: string; icon: any; danger?: boolean;
   { id: 'revoke_sessions', label: 'Derrubar sessões', icon: LogOut, desc: 'Força o usuário a fazer login de novo em todos os aparelhos.' },
   { id: 'set_admin', label: 'Permissão de admin', icon: UserCog, desc: 'Dá ou remove acesso a este painel.' },
   { id: 'delete_account', label: 'Excluir conta (LGPD)', icon: Trash2, danger: true, desc: 'Apaga login e dados do app. Registros financeiros ficam, pseudonimizados.' },
+  { id: 'cancel_gateway_subscription', label: 'Cancelar assinatura na Olimpo Pay', icon: Ban, danger: true, desc: 'Para as próximas cobranças na Olimpo Pay. O cliente mantém acesso até o fim do período já pago.' },
 ];
+const GRID_HIDDEN: UserActionName[] = ['cancel_gateway_subscription'];
 
 export default function UserDrawer({ uid, onClose, onChanged }: { uid: string; onClose: () => void; onChanged: () => void }) {
   const api = useApi();
@@ -31,6 +33,7 @@ export default function UserDrawer({ uid, onClose, onChanged }: { uid: string; o
   const { data, error, loading, reload } = useAsync(() => api.getUser(uid), [uid, api]);
   const [tab, setTab] = useState<Tab>('summary');
   const [action, setAction] = useState<UserActionName | null>(null);
+  const [subId, setSubId] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
 
@@ -45,7 +48,7 @@ export default function UserDrawer({ uid, onClose, onChanged }: { uid: string; o
           <AccessBox d={data} />
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {ACTIONS.filter((a) => (a.id === 'unblock' ? data.row.blocked : a.id === 'block' ? !data.row.blocked : true)).map((a) => {
+            {ACTIONS.filter((a) => !GRID_HIDDEN.includes(a.id) && (a.id === 'unblock' ? data.row.blocked : a.id === 'block' ? !data.row.blocked : true)).map((a) => {
               const Icon = a.icon;
               return (
                 <button key={a.id} onClick={() => setAction(a.id)} title={a.desc}
@@ -65,7 +68,7 @@ export default function UserDrawer({ uid, onClose, onChanged }: { uid: string; o
           ]} />
 
           {tab === 'summary' && <ProfileTab d={data} />}
-          {tab === 'billing' && <BillingTab d={data} />}
+          {tab === 'billing' && <BillingTab d={data} onCancelSub={(id) => { setSubId(id); setAction('cancel_gateway_subscription'); }} />}
           {tab === 'usage' && <UsageTab d={data} />}
           {tab === 'history' && (
             <div className="space-y-4">
@@ -106,7 +109,7 @@ export default function UserDrawer({ uid, onClose, onChanged }: { uid: string; o
       )}
 
       {action && data && (
-        <ActionModal action={action} d={data} onClose={() => setAction(null)}
+        <ActionModal action={action} d={data} subscriptionId={subId} onClose={() => { setAction(null); setSubId(null); }}
           onDone={(msg) => { setAction(null); toast(msg); if (action === 'delete_account') { onChanged(); onClose(); } else after(); }} />
       )}
     </Drawer>
@@ -174,7 +177,7 @@ function ProfileTab({ d }: { d: UserDetail }) {
   );
 }
 
-function BillingTab({ d }: { d: UserDetail }) {
+function BillingTab({ d, onCancelSub }: { d: UserDetail; onCancelSub: (id: string) => void }) {
   return (
     <div className="space-y-4">
       {d.subscriptions.length > 0 && (
@@ -183,8 +186,14 @@ function BillingTab({ d }: { d: UserDetail }) {
             {d.subscriptions.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                 <div className="flex items-center gap-2"><ProviderBadge provider={s.provider} /><StatusBadge status={s.status} /></div>
-                <div className="text-xs text-slate-500 tabular-nums">
-                  desde {dateBR(s.startedAt)} · {s.paymentsCount || 0} cobrança(s) · até {dateBR(s.currentPeriodEnd)}
+                <div className="flex items-center gap-3">
+                  <div className="text-xs text-slate-500 tabular-nums">
+                    desde {dateBR(s.startedAt)} · {s.paymentsCount || 0} cobrança(s) · até {dateBR(s.currentPeriodEnd)}
+                    {s.nextChargeAt ? ` · próxima ${dateBR(s.nextChargeAt)}` : ''}
+                  </div>
+                  {s.provider === 'olimpopay' && ['waiting', 'active', 'past_due'].includes(s.status) && (
+                    <Button size="sm" variant="ghost" className="text-rose-700" onClick={() => onCancelSub(s.id)}>Cancelar</Button>
+                  )}
                 </div>
               </li>
             ))}
@@ -237,7 +246,7 @@ function UsageTab({ d }: { d: UserDetail }) {
   );
 }
 
-function ActionModal({ action, d, onClose, onDone }: { action: UserActionName; d: UserDetail; onClose: () => void; onDone: (msg: string) => void }) {
+function ActionModal({ action, d, subscriptionId, onClose, onDone }: { action: UserActionName; d: UserDetail; subscriptionId?: string | null; onClose: () => void; onDone: (msg: string) => void }) {
   const api = useApi();
   const meta = ACTIONS.find((a) => a.id === action)!;
   const [reason, setReason] = useState('');
@@ -260,6 +269,7 @@ function ActionModal({ action, d, onClose, onDone }: { action: UserActionName; d
       if (action === 'set_period_end') p.until = new Date(until + 'T23:59:00-03:00').getTime();
       if (action === 'set_admin') p.value = !d.row.isAdmin;
       if (action === 'delete_account') p.confirmEmail = confirmEmail;
+      if (action === 'cancel_gateway_subscription') p.subscriptionId = subscriptionId;
       const r = await api.userAction(d.row.uid, action, p);
       if (action === 'password_reset_link' && r?.link) { setLink(r.link); setBusy(false); return; }
       onDone(`${meta.label}: feito`);

@@ -11,6 +11,7 @@ import {
   Access, applyPendingAccess, findUidByEmail, getBillingConfig, hasAccess, legacyMirror, nextAccess, resolvePlan,
 } from "./billing/engine";
 import { BillingConfig, INTERVAL_DAYS, PROVIDERS, ProviderId } from "./billing/types";
+import { OLIMPO_API_KEY, cancelSubscription as olimpoCancel, ping as olimpoPing, syncWhere as olimpoSync } from "./billing/olimpo";
 
 export const ADMIN_EMAILS = defineString("ADMIN_EMAILS", { default: "" });
 
@@ -379,6 +380,20 @@ async function userAction(req: CallableRequest, d: any) {
       await admin.auth().setCustomUserClaims(uid, claims);
       break;
     }
+    case "cancel_gateway_subscription": {
+      const subId = String(d.subscriptionId || "");
+      const subRef = db().collection("subscriptions").doc(subId);
+      const sub = (await subRef.get()).data();
+      if (!sub || sub.uid !== uid) throw new HttpsError("not-found", "Assinatura não encontrada para este usuário");
+      if (sub.provider !== "olimpopay") throw new HttpsError("failed-precondition", "Cancelamento automático só existe para Olimpo Pay. Nos outros gateways cancele no painel deles.");
+      await olimpoCancel(OLIMPO_API_KEY.value(), sub.externalSubscriptionId);
+      await subRef.set({ status: "canceled", canceledAt: TS.now(), updatedAt: FV.serverTimestamp() }, { merge: true });
+      // acesso continua até o fim do período pago
+      if (u.access && ["active", "past_due"].includes(u.access.status)) {
+        patch = { access: { ...u.access, status: "canceled", updatedAt: FV.serverTimestamp() } };
+      }
+      break;
+    }
     case "apply_pending": {
       result = { ok: true, applied: await applyPendingAccess(uid, email) };
       break;
@@ -413,7 +428,7 @@ async function userAction(req: CallableRequest, d: any) {
   const after = (await ref.get()).data() || {};
   await audit(req, d.action, { uid, email }, {
     reason: reason || null,
-    params: { planId: d.planId ?? null, days: d.days ?? null, until: d.until ?? null, kind: d.kind ?? null, value: d.value ?? null },
+    params: { planId: d.planId ?? null, days: d.days ?? null, until: d.until ?? null, kind: d.kind ?? null, value: d.value ?? null, subscriptionId: d.subscriptionId ?? null },
     before: JSON.parse(JSON.stringify(before)),
     after: JSON.parse(JSON.stringify({ access: after.access || null, trialEndsAt: after.trialEndsAt || null, blocked: !!after.blocked })),
   });
@@ -481,7 +496,7 @@ async function gateways() {
     const last = evs.map((e) => ms(e.receivedAt) || 0).sort((a, b) => b - a)[0] || null;
     const token = secrets.tokens?.[p] || null;
     return {
-      id: p, ...cfg.providers[p],
+      id: p, mode: p === "olimpopay" ? "api" : "link", ...cfg.providers[p],
       webhookUrl: token ? `${webhookBase()}/${p}?token=${token}` : null,
       hasNativeSecret: !!secrets.native?.[p],
       events30d: evs.length,
@@ -578,7 +593,7 @@ async function recomputeUsage(req: CallableRequest) {
   return { ok: true, users: n };
 }
 
-export const adminApi = onCall({ timeoutSeconds: 120, memory: "512MiB" }, async (req) => {
+export const adminApi = onCall({ timeoutSeconds: 120, memory: "512MiB", secrets: [OLIMPO_API_KEY] }, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Faça login");
   if (!isAdmin(req)) throw new HttpsError("permission-denied", "Acesso restrito a administradores");
   const d = req.data || {};
@@ -599,6 +614,15 @@ export const adminApi = onCall({ timeoutSeconds: 120, memory: "512MiB" }, async 
     case "dryRun": return dryRun(d);
     case "listAudit": return listAudit(d);
     case "recomputeUsage": return recomputeUsage(req);
+    case "olimpoPing": {
+      try { await olimpoPing(OLIMPO_API_KEY.value()); return { ok: true }; }
+      catch (e: any) { return { ok: false, error: String(e?.message || e), status: e?.status ?? null }; }
+    }
+    case "olimpoSyncAll": {
+      const r = await olimpoSync(OLIMPO_API_KEY.value(), null);
+      await audit(req, "olimpo_sync_all", null, { params: r });
+      return r;
+    }
     default: throw new HttpsError("invalid-argument", `Ação desconhecida: ${d.action}`);
   }
 });

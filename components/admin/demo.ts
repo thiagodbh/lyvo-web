@@ -26,17 +26,18 @@ const CONFIG: BillingConfig = {
   plans: [
     { id: 'annual', name: 'Plano Anual', price: 149.9, interval: 'year', installmentsText: 'ou até 5x no cartão', highlight: true, active: true,
       features: ['Acesso completo por 12 meses', 'Economia frente ao mensal'],
-      checkout: { lastlink: 'https://lastlink.com/p/CA05DE2CE/checkout-payment/', kiwify: 'https://pay.kiwify.com.br/EXEMPLO-ANUAL' },
-      externalIds: { lastlink: ['d5d81bb8-anual-exemplo'], kiwify: ['kw-anual-exemplo'] } },
+      checkout: { lastlink: 'https://lastlink.com/p/CA05DE2CE/checkout-payment/' },
+      externalIds: { lastlink: ['d5d81bb8-anual-exemplo'] } },
     { id: 'monthly', name: 'Plano Mensal', price: 24.9, interval: 'month', active: true,
       features: ['Cancele quando quiser', 'Sem fidelidade'],
-      checkout: { lastlink: 'https://lastlink.com/p/CE5BD085C/checkout-payment/', kiwify: 'https://pay.kiwify.com.br/EXEMPLO-MENSAL' },
-      externalIds: { lastlink: ['d5d81bb8-mensal-exemplo'], kiwify: [] } },
+      checkout: { lastlink: 'https://lastlink.com/p/CE5BD085C/checkout-payment/' },
+      externalIds: { lastlink: ['d5d81bb8-mensal-exemplo'] } },
   ],
-  providerOrder: ['lastlink', 'kiwify', 'hotmart', 'cakto'],
+  providerOrder: ['olimpopay', 'lastlink', 'kiwify', 'hotmart', 'cakto'],
   providers: {
-    lastlink: { enabled: true, validated: true, label: 'LastLink' },
-    kiwify: { enabled: true, validated: false, label: 'Kiwify' },
+    olimpopay: { enabled: true, validated: false, label: 'Olimpo Pay', mode: 'api' },
+    lastlink: { enabled: true, validated: true, label: 'LastLink', mode: 'link' },
+    kiwify: { enabled: false, validated: false, label: 'Kiwify' },
     hotmart: { enabled: false, validated: false, label: 'Hotmart' },
     cakto: { enabled: false, validated: false, label: 'Cakto' },
   },
@@ -45,6 +46,10 @@ const CONFIG: BillingConfig = {
   allowLegacyLastlink: true,
 };
 
+const RT: Record<string, Record<string, string>> = {
+  olimpopay: { approved: 'subscription:ACTIVE:paid', renewed: 'subscription:ACTIVE:paid', refund: 'transaction:refunded', cancel: 'subscription:CANCELLED', late: 'subscription:ACTIVE:overdue' },
+  lastlink: { approved: 'Purchase_Order_Confirmed', renewed: 'Recurrent_Payment', refund: 'Payment_Refund', cancel: 'Subscription_Canceled', late: 'Subscription_Renewal_Pending' },
+};
 const users: UserRow[] = [];
 const events: BillingEvent[] = [];
 const subs: Subscription[] = [];
@@ -90,18 +95,18 @@ function build() {
       everPaid = true;
       planId = chance(0.4) ? 'annual' : 'monthly';
       const plan = CONFIG.plans.find((p) => p.id === planId)!;
-      provider = createdAt > NOW - 20 * DAY && chance(0.4) ? 'kiwify' : 'lastlink';
+      provider = createdAt > NOW - 50 * DAY && chance(0.85) ? 'olimpopay' : 'lastlink';
       const start = Math.min(trialEndsAt + Math.floor(rnd() * 2 * DAY), NOW - 3600e3);
       const subId = `sub_${uid}`;
       const fate = rnd();
       let paidCount = 1;
       addEvent({ provider, email, uid, planId, amount: plan.price, revenue: plan.price, occurredAt: start, receivedAt: start + 4000,
-        rawType: provider === 'kiwify' ? 'order_approved' : 'Purchase_Order_Confirmed', externalSubscriptionId: subId, paymentMethod: pick(['credit_card', 'pix', 'pix', 'credit_card']) });
+        rawType: RT[provider].approved, externalSubscriptionId: subId, paymentMethod: pick(['credit_card', 'pix', 'pix', 'credit_card']) });
       if (planId === 'monthly') {
         let t = start + 31 * DAY;
         while (t < NOW && fate > 0.18) {
           addEvent({ provider, email, uid, planId, amount: plan.price, revenue: plan.price, occurredAt: t, receivedAt: t + 3000, type: 'PAYMENT_RENEWED',
-            rawType: provider === 'kiwify' ? 'subscription_renewed' : 'Recurrent_Payment', externalSubscriptionId: subId });
+            rawType: RT[provider].renewed, externalSubscriptionId: subId });
           paidCount++; t += 31 * DAY;
         }
         periodEnd = start + paidCount * 31 * DAY;
@@ -113,14 +118,14 @@ function build() {
       if (fate < 0.07) {
         const refundAt = Math.min(start + 5 * DAY, NOW - 3600e3);
         status = 'refunded'; periodEnd = refundAt; totalPaid = 0;
-        addEvent({ provider, email, uid, planId, amount: plan.price, revenue: -plan.price, occurredAt: refundAt, receivedAt: refundAt, type: 'REFUNDED', rawType: provider === 'kiwify' ? 'order_refunded' : 'Payment_Refund' });
+        addEvent({ provider, email, uid, planId, amount: plan.price, revenue: -plan.price, occurredAt: refundAt, receivedAt: refundAt, type: 'REFUNDED', rawType: RT[provider].refund });
       } else if (fate < 0.18 && planId === 'monthly') {
         status = periodEnd > NOW ? 'canceled' : 'expired';
         const cAt = Math.min(periodEnd - 10 * DAY, NOW - DAY);
-        addEvent({ provider, email, uid, planId, occurredAt: cAt, receivedAt: cAt, type: 'SUBSCRIPTION_CANCELED', rawType: provider === 'kiwify' ? 'subscription_canceled' : 'Subscription_Canceled', amount: null });
+        addEvent({ provider, email, uid, planId, occurredAt: cAt, receivedAt: cAt, type: 'SUBSCRIPTION_CANCELED', rawType: RT[provider].cancel, amount: null });
       } else if (periodEnd < NOW && planId === 'monthly' && chance(0.6)) {
         status = 'past_due'; graceUntil = Math.max(periodEnd, NOW) + 3 * DAY;
-        addEvent({ provider, email, uid, planId, occurredAt: NOW - Math.floor(rnd() * 2 * DAY), type: 'RENEWAL_LATE', rawType: provider === 'kiwify' ? 'subscription_late' : 'Subscription_Renewal_Pending', amount: null });
+        addEvent({ provider, email, uid, planId, occurredAt: NOW - Math.floor(rnd() * 2 * DAY), type: 'RENEWAL_LATE', rawType: RT[provider].late, amount: null });
       } else if (periodEnd < NOW) {
         status = 'expired';
       }
@@ -160,10 +165,10 @@ function build() {
 
   // pagamento sem conta (e-mail diferente do cadastro)
   addEvent({ email: 'maria.compra@exemplo.com', uid: null, matched: false, planId: 'annual', amount: 149.9, revenue: 149.9, occurredAt: NOW - 2 * DAY, receivedAt: NOW - 2 * DAY, result: 'pending_user', name: 'Maria Compra' });
-  addEvent({ provider: 'kiwify', rawType: 'order_approved', email: 'joao.outroemail@exemplo.com', uid: null, matched: false, planId: 'monthly', amount: 24.9, revenue: 24.9, occurredAt: NOW - 9 * 3600e3, receivedAt: NOW - 9 * 3600e3, result: 'pending_user' });
+  addEvent({ rawType: 'Purchase_Order_Confirmed', email: 'joao.outroemail@exemplo.com', uid: null, matched: false, planId: 'monthly', amount: 24.9, revenue: 24.9, occurredAt: NOW - 9 * 3600e3, receivedAt: NOW - 9 * 3600e3, result: 'pending_user' });
   // produto sem mapeamento
-  const u = users.find((x) => x.status === 'active' && x.provider === 'kiwify') || users[5];
-  addEvent({ provider: 'kiwify', rawType: 'order_approved', email: u.email, uid: u.uid, planId: null, amount: 19.9, revenue: 19.9, occurredAt: NOW - 30 * 3600e3, receivedAt: NOW - 30 * 3600e3, result: 'unmatched_plan' });
+  const u = users.find((x) => x.status === 'active' && x.provider === 'lastlink') || users[5];
+  addEvent({ rawType: 'Purchase_Order_Confirmed', email: u.email, uid: u.uid, planId: null, amount: 19.9, revenue: 19.9, occurredAt: NOW - 30 * 3600e3, receivedAt: NOW - 30 * 3600e3, result: 'unmatched_plan' });
   // webhook legado ainda chegando
   addEvent({ endpoint: 'legacy', rawType: 'legacy:approved', email: users[3].email, uid: users[3].uid, occurredAt: NOW - 4 * DAY, receivedAt: NOW - 4 * DAY, result: 'no_change', amount: null });
   // ruído: pendentes / ignorados / teste
@@ -173,6 +178,12 @@ function build() {
     addEvent({ email: x.email, uid: x.uid, type: pick(['PAYMENT_PENDING', 'PAYMENT_FAILED', 'IGNORED']), rawType: pick(['Purchase_Request_Confirmed', 'Purchase_Request_Expired', 'Abandoned_Cart']), occurredAt: t, receivedAt: t, result: 'no_change', amount: 24.9 });
   }
   addEvent({ isTest: true, email: 'teste@lastlink.com', uid: null, matched: false, result: 'test', occurredAt: NOW - 12 * DAY, receivedAt: NOW - 12 * DAY, amount: 97 });
+  users.filter((x) => x.status === 'trial_expired' && x.createdAt && x.createdAt > NOW - 10 * DAY).slice(0, 4).forEach((x, i) => {
+    subs.push({ id: `olimpopay_9${i}`, provider: 'olimpopay', email: x.email, uid: x.uid, planId: i % 2 ? 'annual' : 'monthly', status: 'waiting',
+      startedAt: null, lastPaymentAt: null, paymentsCount: 0, currentPeriodEnd: null, canceledAt: null, externalSubscriptionId: `9${i}`,
+      paymentLink: 'https://go.olimpopay.com.br/link/exemplo', remoteStatus: 'WAITING' });
+  });
+  subs.forEach((sb) => { if (sb.provider === 'olimpopay' && sb.status === 'active') sb.nextChargeAt = sb.currentPeriodEnd; });
   events.sort((a, b) => (b.receivedAt || 0) - (a.receivedAt || 0));
 
   const actor = 'admin@exemplo.com';
@@ -310,7 +321,9 @@ export function createDemoApi(): AdminApi {
     listBilling: () => wait({ events, subscriptions: subs }),
     getEventRaw: (id) => {
       const e = events.find((x) => x.id === id)!;
-      const raw = e.provider === 'lastlink'
+      const raw = e.provider === 'olimpopay'
+        ? { id: Number(String(e.externalSubscriptionId || '21').replace(/\D/g, '').slice(-4)) || 21, nome: `Lyvo — ${e.planId === 'annual' ? 'Plano Anual' : 'Plano Mensal'}`, valor: String(e.amount ?? 24.9), status: e.type === 'SUBSCRIPTION_CANCELED' ? 'CANCELLED' : 'ACTIVE', intervalo_valor: 1, intervalo_unidade: e.planId === 'annual' ? 'YEAR' : 'MONTH', data_inicio: '2026-10-01', ultimo_pagamento: new Date((e.occurredAt || NOW) - 3 * 3600e3).toISOString().slice(0, 19).replace('T', ' '), proxima_cobranca: new Date((e.occurredAt || NOW) + 31 * DAY).toISOString().slice(0, 10), payment_methods: ['PIX', 'CREDIT_CARD'], cliente_email: e.email }
+        : e.provider === 'lastlink'
         ? { Id: e.id, IsTest: e.isTest, Event: e.rawType, CreatedAt: new Date(e.occurredAt || NOW).toISOString().slice(0, 19), Data: { Buyer: { Email: e.email, Name: e.name || 'Cliente Exemplo' }, Purchase: { PaymentId: `pay_${e.id}`, Recurrency: e.planId === 'annual' ? 12 : 1, Price: { Value: e.amount }, Payment: { PaymentMethod: e.paymentMethod } }, Plan: { Id: 'd5d81bb8-mensal-exemplo', Name: e.planId === 'annual' ? 'Anual' : 'Mensal' } } }
         : { order_id: `kw_${e.id}`, webhook_event_type: e.rawType, order_status: 'paid', Customer: { email: e.email, full_name: 'Cliente Exemplo' }, Product: { product_id: e.planId ? 'kw-anual-exemplo' : 'kw-produto-novo', product_name: 'Lyvo' }, Commissions: { charge_amount: Math.round((e.amount || 0) * 100) } };
       return wait({ rawJson: JSON.stringify(raw), accessBefore: null, accessAfter: null }, 100);
@@ -330,8 +343,8 @@ export function createDemoApi(): AdminApi {
       const ev = events.filter((e) => e.provider === p && within(e.receivedAt, 30));
       return { id: p, ...CONFIG.providers[p],
         webhookUrl: CONFIG.providers[p].enabled ? `https://us-central1-lyvo-web.cloudfunctions.net/billingWebhook/${p}?token=demo${p}9f2c1e8a7b` : null,
-        hasNativeSecret: p === 'kiwify', events30d: ev.length, revenue30d: ev.reduce((s, e) => s + (e.isTest ? 0 : e.revenue), 0),
-        lastEventAt: ev[0]?.receivedAt || null, errors30d: p === 'kiwify' ? 1 : 0, supportsNative: p !== 'lastlink' };
+        hasNativeSecret: false, mode: p === 'olimpopay' ? 'api' : 'link', events30d: ev.length, revenue30d: ev.reduce((s, e) => s + (e.isTest ? 0 : e.revenue), 0),
+        lastEventAt: ev[0]?.receivedAt || null, errors30d: 0, supportsNative: !['lastlink', 'olimpopay'].includes(p) };
     })),
     async rotateToken(p) { log('rotate_webhook_token', null, undefined, { provider: p }); return wait({ webhookUrl: `https://us-central1-lyvo-web.cloudfunctions.net/billingWebhook/${p}?token=demo${Math.random().toString(16).slice(2, 14)}` }); },
     async setNativeSecret(p) { log('set_native_secret', null, undefined, { provider: p }); return wait({ ok: true }); },
@@ -347,5 +360,7 @@ export function createDemoApi(): AdminApi {
     },
     listAudit: () => wait(audit),
     recomputeUsage: () => wait({ ok: true, users: users.length }, 900),
+    olimpoPing: () => wait({ ok: true }, 600),
+    olimpoSyncAll: () => wait({ synced: subs.filter((x) => x.provider === 'olimpopay' && ['waiting', 'active', 'past_due'].includes(x.status)).length, changed: 0, errors: 0 }, 900),
   };
 }

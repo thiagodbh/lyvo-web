@@ -7,7 +7,7 @@ import { brl, Button, Card, cx, ErrorBox, Field, inputCls, Loading, Modal, PageH
 const INTERVALS: { v: PlanInterval; l: string; m: number }[] = [
   { v: 'month', l: 'Mensal', m: 1 }, { v: 'quarter', l: 'Trimestral', m: 3 }, { v: 'semester', l: 'Semestral', m: 6 }, { v: 'year', l: 'Anual', m: 12 }, { v: 'lifetime', l: 'Vitalício', m: 0 },
 ];
-const PROVIDERS: ProviderId[] = ['lastlink', 'kiwify', 'hotmart', 'cakto'];
+const PROVIDERS: ProviderId[] = ['olimpopay', 'lastlink', 'kiwify', 'hotmart', 'cakto'];
 
 export default function PlansPage() {
   const api = useApi();
@@ -49,7 +49,7 @@ export default function PlansPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         {cfg.plans.map((p, i) => {
           const months = INTERVALS.find((x) => x.v === p.interval)?.m || 0;
-          const linkUsed = cfg.providerOrder.find((pr) => cfg.providers[pr]?.enabled && p.checkout[pr]);
+          const linkUsed = cfg.providerOrder.find((pr) => cfg.providers[pr]?.enabled && (pr === 'olimpopay' ? !!INTERVALS.find((x) => x.v === p.interval)?.m : p.checkout[pr]));
           return (
             <Card key={i} title={<span className="flex items-center gap-2">{p.name}{p.highlight && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />}{!p.active && <Pill>inativo</Pill>}</span>}
               action={<button onClick={() => setCfg({ ...cfg, plans: cfg.plans.filter((_, j) => j !== i) })} className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Remover plano"><Trash2 className="h-4 w-4" /></button>}>
@@ -74,7 +74,14 @@ export default function PlansPage() {
                   <div className="text-xs text-slate-500">Paywall usa: <span className="font-medium text-slate-800">{linkUsed ? PROVIDER_LABEL[linkUsed] : '— sem link ativo'}</span></div>
                 </div>
                 <div className="space-y-3">
-                  {PROVIDERS.map((pr) => (
+                  {PROVIDERS.map((pr) => pr === 'olimpopay' ? (
+                    <div key={pr} className={cx('grid gap-2 rounded-lg p-2.5 sm:grid-cols-[90px_1fr] sm:items-center', cfg.providers[pr]?.enabled ? 'bg-amber-50/70 ring-1 ring-amber-200' : 'bg-slate-50/50 opacity-60')}>
+                      <div className="text-xs font-semibold text-slate-700">{PROVIDER_LABEL[pr]}</div>
+                      <div className="text-xs text-slate-600">{months
+                        ? <>Sem link fixo: o Lyvo cria a assinatura na hora ({p.interval === 'year' ? 'anual' : `a cada ${months} mês(es)`}, {brl(p.price)}) e envia o cliente ao link da Olimpo.</>
+                        : <span className="text-amber-700">Plano vitalício não é suportado pela assinatura da Olimpo; usa o próximo gateway.</span>}</div>
+                    </div>
+                  ) : (
                     <div key={pr} className={cx('grid gap-2 rounded-lg p-2.5 sm:grid-cols-[90px_1fr_1fr] sm:items-center', cfg.providers[pr]?.enabled ? 'bg-slate-50' : 'bg-slate-50/50 opacity-60')}>
                       <div className="text-xs font-semibold text-slate-700">{PROVIDER_LABEL[pr]}</div>
                       <input className={cx(inputCls, 'text-xs')} placeholder="Link do checkout (https://…)" value={p.checkout[pr] || ''}

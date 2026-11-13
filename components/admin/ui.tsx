@@ -36,9 +36,13 @@ export const STATUS: Record<UserStatus, { label: string; cls: string; dot: strin
   refunded: { label: 'Reembolsado', cls: 'bg-rose-50 text-rose-700 ring-rose-600/20', dot: 'bg-rose-500' },
   blocked: { label: 'Bloqueado', cls: 'bg-rose-100 text-rose-800 ring-rose-700/30', dot: 'bg-rose-700' },
 };
+const SUB_STATUS: Record<string, { label: string; cls: string; dot: string }> = {
+  waiting: { label: 'Aguardando 1º pagamento', cls: 'bg-sky-50 text-sky-700 ring-sky-600/20', dot: 'bg-sky-500' },
+  abandoned: { label: 'Abandonada', cls: 'bg-slate-100 text-slate-500 ring-slate-500/20', dot: 'bg-slate-300' },
+};
 
 export function StatusBadge({ status }: { status: UserStatus | string }) {
-  const s = STATUS[status as UserStatus] || { label: status, cls: 'bg-slate-100 text-slate-600 ring-slate-500/20', dot: 'bg-slate-400' };
+  const s = STATUS[status as UserStatus] || SUB_STATUS[status] || { label: status, cls: 'bg-slate-100 text-slate-600 ring-slate-500/20', dot: 'bg-slate-400' };
   return (
     <span className={cx('inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap', s.cls)}>
       <span className={cx('h-1.5 w-1.5 rounded-full', s.dot)} />{s.label}
@@ -46,8 +50,9 @@ export function StatusBadge({ status }: { status: UserStatus | string }) {
   );
 }
 
-export const PROVIDER_LABEL: Record<string, string> = { lastlink: 'LastLink', kiwify: 'Kiwify', hotmart: 'Hotmart', cakto: 'Cakto', manual: 'Manual' };
+export const PROVIDER_LABEL: Record<string, string> = { olimpopay: 'Olimpo Pay', lastlink: 'LastLink', kiwify: 'Kiwify', hotmart: 'Hotmart', cakto: 'Cakto', manual: 'Manual' };
 const PROVIDER_CLS: Record<string, string> = {
+  olimpopay: 'bg-amber-50 text-amber-800 ring-amber-600/30',
   lastlink: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20', kiwify: 'bg-lime-50 text-lime-800 ring-lime-600/25',
   hotmart: 'bg-orange-50 text-orange-700 ring-orange-600/20', cakto: 'bg-cyan-50 text-cyan-800 ring-cyan-600/20',
   manual: 'bg-slate-100 text-slate-600 ring-slate-500/20',

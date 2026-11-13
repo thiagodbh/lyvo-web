@@ -115,7 +115,7 @@ export default function UsersPage() {
             <option value="all">Todos os planos</option><option value="annual">Anual</option><option value="monthly">Mensal</option><option value="none">Sem plano</option>
           </select>
           <select className={cx(inputCls, 'sm:w-40')} value={provider} onChange={(e) => setProvider(e.target.value)}>
-            <option value="all">Todos gateways</option><option value="lastlink">LastLink</option><option value="kiwify">Kiwify</option><option value="hotmart">Hotmart</option><option value="cakto">Cakto</option><option value="manual">Manual</option>
+            <option value="all">Todos gateways</option><option value="olimpopay">Olimpo Pay</option><option value="lastlink">LastLink</option><option value="kiwify">Kiwify</option><option value="hotmart">Hotmart</option><option value="cakto">Cakto</option><option value="manual">Manual</option>
           </select>
         </div>
       </div>

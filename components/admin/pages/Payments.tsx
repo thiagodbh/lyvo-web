@@ -79,7 +79,7 @@ export default function PaymentsPage() {
             <input className={cx(inputCls, 'pl-9')} placeholder="Buscar por e-mail, nome, ID do pagamento…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <select className={cx(inputCls, 'sm:w-44')} value={prov} onChange={(e) => setProv(e.target.value)}>
-            <option value="all">Todos gateways</option><option value="lastlink">LastLink</option><option value="kiwify">Kiwify</option><option value="hotmart">Hotmart</option><option value="cakto">Cakto</option>
+            <option value="all">Todos gateways</option><option value="olimpopay">Olimpo Pay</option><option value="lastlink">LastLink</option><option value="kiwify">Kiwify</option><option value="hotmart">Hotmart</option><option value="cakto">Cakto</option>
           </select>
         </div>
       </div>

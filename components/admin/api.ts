@@ -27,6 +27,8 @@ export function createLiveApi(): AdminApi {
     dryRun: (provider, payload) => call('dryRun', { provider, payload }),
     listAudit: () => call('listAudit'),
     recomputeUsage: () => call('recomputeUsage'),
+    olimpoPing: () => call('olimpoPing'),
+    olimpoSyncAll: () => call('olimpoSyncAll'),
   };
 }
 

@@ -284,4 +284,35 @@ const cakto: Adapter = {
   },
 };
 
-export const ADAPTERS: Record<ProviderId, Adapter> = { lastlink, kiwify, hotmart, cakto };
+// ─── Olimpo Pay ──────────────────────────────────────────────────────────────
+// O webhook da Olimpo NÃO é usado para liberar acesso (não é assinado). Este adaptador existe só
+// para o "Testar payload" do admin mostrar como o evento seria lido. O fluxo real está em olimpo.ts.
+const OLIMPO_MAP: Record<string, CanonicalType> = {
+  paid: "PAYMENT_APPROVED", waiting_payment: "PAYMENT_PENDING", refused: "PAYMENT_FAILED", failed: "PAYMENT_FAILED",
+  refunded: "REFUNDED", chargeback: "CHARGEBACK",
+};
+const olimpopay: Adapter = {
+  id: "olimpopay",
+  normalize({ body }) {
+    const rawType = `${body.type || "?"}:${body.status || "?"}`;
+    return {
+      provider: "olimpopay",
+      externalEventId: `olimpo_tx_${body.transaction_id || "noid"}_${body.status || ""}`,
+      rawType,
+      type: body.type === "transaction" ? OLIMPO_MAP[String(body.status || "").toLowerCase()] || "IGNORED" : "IGNORED",
+      email: normEmail(get(body, "customer.email")),
+      name: get(body, "customer.name") ?? null,
+      phone: get(body, "customer.phone") ?? null,
+      amount: num(body.total_price),
+      currency: "BRL",
+      externalPaymentId: body.transaction_id ? String(body.transaction_id) : null,
+      externalProductIds: [],
+      occurredAt: toDate(first(body.updated_at, body.created_at)),
+      isTest: false,
+      paymentMethod: body.method ?? null,
+      utm: body.utms || null,
+    };
+  },
+};
+
+export const ADAPTERS: Record<ProviderId, Adapter> = { olimpopay, lastlink, kiwify, hotmart, cakto };

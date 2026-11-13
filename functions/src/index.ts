@@ -10,6 +10,10 @@ admin.initializeApp();
 import { ADAPTERS } from "./billing/adapters";
 import { applyPendingAccess, getBillingConfig, hasAccess, processEvent } from "./billing/engine";
 import { PROVIDERS, ProviderId } from "./billing/types";
+import {
+  OLIMPO_API_KEY, OlimpoError, createCheckout, handleWebhook as handleOlimpoWebhook,
+  isValidCnpj, isValidCpf, onlyDigits, syncWhere,
+} from "./billing/olimpo";
 export { adminApi } from "./admin";
 
 const GOOGLE_CLIENT_ID = defineSecret("GOOGLE_CLIENT_ID");
@@ -22,7 +26,7 @@ const safeEqual = (a: string, b: string) => {
 
 // ─── Webhook de cobrança (todos os gateways) ────────────────────────────────
 // URL: /billingWebhook/<gateway>?token=<token gerado no admin>
-export const billingWebhook = onRequest(async (req, res) => {
+export const billingWebhook = onRequest({ secrets: [OLIMPO_API_KEY] }, async (req, res) => {
   const provider = req.path.replace(/^\/+/, "").split("/")[0] as ProviderId;
   if (req.method !== "POST") { res.status(405).send("Method not allowed"); return; }
   if (!PROVIDERS.includes(provider)) { res.status(404).send("Gateway desconhecido"); return; }
@@ -34,6 +38,18 @@ export const billingWebhook = onRequest(async (req, res) => {
   const tokenOk = !!token && typeof req.query.token === "string" && safeEqual(req.query.token, token);
   const nativeOk = !!native && !!ADAPTERS[provider].verifyNative?.(input, native);
   if (!tokenOk && !nativeOk) { res.status(401).send("Unauthorized"); return; }
+
+  // Olimpo Pay: webhook só dispara conferência na API (não é assinado, não liberamos acesso pelo payload)
+  if (provider === "olimpopay") {
+    try {
+      const r = await handleOlimpoWebhook(OLIMPO_API_KEY.value(), req.body || {});
+      res.status(200).json(r);
+    } catch (e: any) {
+      await admin.firestore().collection("webhookErrors").add({ provider, at: admin.firestore.FieldValue.serverTimestamp(), error: String(e?.message || e), rawJson: JSON.stringify(req.body).slice(0, 20000) });
+      res.status(200).send("Recebido"); // Olimpo não reenvia; o sync de 15 min cobre
+    }
+    return;
+  }
 
   const cfg = await getBillingConfig();
   if (!cfg.providers[provider]?.enabled) {
@@ -437,4 +453,58 @@ export const sendEventReminders = onSchedule("every 5 minutes", async () => {
       });
     } catch { /* token inválido ou expirado, ignora */ }
   }
+});
+
+
+// ─── Olimpo Pay: checkout e conferência ─────────────────────────────────────
+// Usuário logado pede o link de pagamento. Se a Olimpo falhar, o app cai para o próximo gateway (LastLink).
+export const olimpoCheckout = onCall({ secrets: [OLIMPO_API_KEY], timeoutSeconds: 30 }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Faça login");
+  const uid = req.auth.uid;
+  const cfg = await getBillingConfig();
+  if (!cfg.providers.olimpopay?.enabled) throw new HttpsError("failed-precondition", "olimpo_disabled");
+  const plan = cfg.plans.find((p) => p.id === req.data?.planId && p.active);
+  if (!plan) throw new HttpsError("invalid-argument", "Plano inválido");
+
+  const document = onlyDigits(req.data?.document);
+  if (!(isValidCpf(document) || isValidCnpj(document))) throw new HttpsError("invalid-argument", "CPF/CNPJ inválido");
+  const phone = onlyDigits(req.data?.phone);
+  if (phone.length < 10 || phone.length > 11) throw new HttpsError("invalid-argument", "Celular inválido (DDD + número)");
+
+  const userRef = admin.firestore().collection("users").doc(uid);
+  const u = (await userRef.get()).data() || {};
+  if (u.blocked) throw new HttpsError("permission-denied", "Conta bloqueada");
+  const email = String(req.auth.token.email || u.email || "").toLowerCase();
+  const name = String(req.data?.name || u.name || "").trim();
+  if (!email) throw new HttpsError("failed-precondition", "Conta sem e-mail");
+  if (name.length < 3) throw new HttpsError("invalid-argument", "Informe seu nome completo");
+
+  // limite simples contra abuso: 6 links por hora
+  const recent = await admin.firestore().collection("subscriptions").where("uid", "==", uid).where("provider", "==", "olimpopay").get();
+  const lastHour = recent.docs.filter((d) => (d.data().createdAt?.toMillis?.() || 0) > Date.now() - 3600e3).length;
+  if (lastHour >= 6) throw new HttpsError("resource-exhausted", "Muitas tentativas. Tente em alguns minutos.");
+
+  try {
+    const r = await createCheckout(OLIMPO_API_KEY.value(), { uid, plan, customer: { name, email, document, phone } });
+    // telefone/nome ajudam o suporte; o CPF NÃO é guardado no Lyvo (fica só na Olimpo Pay)
+    await userRef.set({ ...(u.phone ? {} : { phone }), ...(u.name ? {} : { name }) }, { merge: true });
+    return { url: r.paymentLink, reused: r.reused };
+  } catch (e: any) {
+    const status = e instanceof OlimpoError ? e.status : 0;
+    await admin.firestore().collection("webhookErrors").add({ provider: "olimpopay", at: admin.firestore.FieldValue.serverTimestamp(), error: `checkout: ${e?.message || e}`, status, uid });
+    if (status === 422 || status === 400) throw new HttpsError("invalid-argument", e.message || "Dados recusados pela Olimpo Pay");
+    throw new HttpsError("unavailable", "olimpo_unavailable"); // app usa o fallback
+  }
+});
+
+/** "Já paguei": confere na Olimpo e devolve se o acesso já foi liberado. */
+export const olimpoSyncMine = onCall({ secrets: [OLIMPO_API_KEY], timeoutSeconds: 60 }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Faça login");
+  const r = await syncWhere(OLIMPO_API_KEY.value(), "uid", req.auth.uid);
+  const u = (await admin.firestore().collection("users").doc(req.auth.uid).get()).data();
+  return { ...r, hasAccess: hasAccess(u) };
+});
+
+export const olimpoSyncScheduled = onSchedule({ schedule: "every 15 minutes", secrets: [OLIMPO_API_KEY], timeoutSeconds: 300 }, async () => {
+  await syncWhere(OLIMPO_API_KEY.value(), null);
 });

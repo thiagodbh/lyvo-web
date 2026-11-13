@@ -27,7 +27,23 @@ O modo demo só existe em `npm run dev` (ou build com `VITE_ADMIN_DEMO=1`); em p
   gravada, atividade registrada de verdade, “Esqueci minha senha” funcionando.
 - **Regras do Firestore** (`firestore.rules`): antes não existia arquivo no repositório.
 
+## Olimpo Pay (gateway principal) e LastLink (fallback)
+
+- **Checkout:** o servidor cria uma assinatura na Olimpo Pay (`POST /v2/subscriptions/create`) e manda o cliente
+  para o `paymentLink` hospedado (Pix ou cartão). Nenhum dado de cartão passa pelo Lyvo. O cliente informa
+  CPF e celular no paywall; o CPF não é salvo no Lyvo.
+- **Liberação de acesso:** a API de assinatura não aceita URL de webhook, e o webhook da Olimpo não é assinado
+  nem reenviado. Então o acesso é decidido consultando `GET /v2/subscriptions/me?id=` (status, último pagamento,
+  próxima cobrança): a cada 15 min, quando o cliente clica “Verificar meu pagamento” e quando volta da página de
+  pagamento. O acesso vai até a próxima cobrança + 1 dia (+ carência se atrasar).
+- **Fallback automático:** se a Olimpo falhar na hora de gerar a cobrança, o paywall oferece o link da LastLink.
+- **Cancelamento:** pela ficha do usuário no admin (`POST /v2/subscriptions/cancel`); o acesso segue até o fim do período.
+
 ## Ordem de implantação
+
+0. **Chave da Olimpo Pay (você mesmo, no terminal):** `firebase functions:secrets:set OLIMPO_API_KEY`
+   e cole a chave quando pedir. Sem ela o deploy das functions falha (elas declaram esse secret).
+
 
 1. **Testar as regras antes de publicar.** No console do Firebase → Firestore → Regras → *Rules Playground*,
    simule com um usuário comum: ler o próprio `users/{uid}` (deve permitir), ler o de outro (negar),
@@ -46,11 +62,18 @@ O modo demo só existe em `npm run dev` (ou build com `VITE_ADMIN_DEMO=1`); em p
 9. **Planos:** cadastre os IDs de produto/oferta da LastLink em cada plano (copie do payload em
    Pagamentos → Detalhes). Sem eles o sistema identifica pelo intervalo/valor, o que funciona,
    mas ID é mais seguro.
-10. **Gateway reserva (ex.: Kiwify):** crie os produtos lá, cole os links de checkout em Planos,
+10. **Olimpo Pay em produção:** Admin → Gateways → “Testar conexão com a API”. Faça uma assinatura real de
+    R$ 24,90 com seu próprio CPF, pague no Pix, clique “Verificar meu pagamento” e confira em Pagamentos.
+    Depois cancele pela sua ficha no admin e marque “Validado em produção”.
+11. **Gateway reserva (ex.: Kiwify):** crie os produtos lá, cole os links de checkout em Planos,
     gere a URL do webhook, mande um evento de teste, use “Testar payload” para conferir e só então
     marque “Mapeamento validado”.
 
 ## Pontos a validar com dados reais
+
+- **Olimpo Pay (confirmar com o time técnico):** (1) se existe webhook para a fatura recorrente e onde se configura;
+  (2) se o link da assinatura anual permite parcelar no cartão (o paywall não promete parcelas quando a Olimpo é a principal);
+  (3) o fuso das datas `ultimo_pagamento`/`proxima_cobranca` (assumi horário de Brasília); (4) se existe chave de sandbox.
 
 - Formato dos webhooks de **Kiwify, Hotmart e Cakto** foi montado com documentação pública parcial.
   O da LastLink segue a documentação oficial. Por isso os três começam “não validados”.
