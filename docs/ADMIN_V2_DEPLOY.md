@@ -39,6 +39,13 @@ O modo demo só existe em `npm run dev` (ou build com `VITE_ADMIN_DEMO=1`); em p
 - **Fallback automático:** se a Olimpo falhar na hora de gerar a cobrança, o paywall oferece o link da LastLink.
 - **Cancelamento:** pela ficha do usuário no admin (`POST /v2/subscriptions/cancel`); o acesso segue até o fim do período.
 
+## Atalho (2 comandos, no Terminal do Mac, dentro da pasta do projeto)
+
+1. `bash scripts/deploy-backend.sh`: login, e-mail de admin, chave da Olimpo, publica as functions.
+2. `bash scripts/publish-front.sh`: confere as functions, junta no `main` e dá push (a Vercel publica).
+
+Os passos abaixo detalham o que os scripts fazem e o que vem depois (regras, webhook da LastLink).
+
 ## Ordem de implantação
 
 0. **Chave da Olimpo Pay (você mesmo, no terminal):** `firebase functions:secrets:set OLIMPO_API_KEY`
