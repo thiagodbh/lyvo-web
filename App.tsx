@@ -1,7 +1,6 @@
 import { checkUserAccess } from "./services/accessControl";
-import { Timestamp, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import Paywall from './components/Paywall';
-import AdminPanel from './components/AdminPanel';
 import { db } from './services/firebase';
 import { store } from './services/firestoreStore';
 import React, { useState, useEffect } from 'react';
@@ -13,6 +12,25 @@ import AgendaView from './components/AgendaView';
 import LandingPage from './components/LandingPage';
 import { AppTab } from './types';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { captureAcquisition, getAcquisition } from './services/acquisition';
+
+// Admin carregado sob demanda: não pesa o app dos clientes
+const AdminApp = React.lazy(() => import('./components/admin/AdminApp'));
+
+captureAcquisition();
+
+// Registra atividade real (não só no login): ao abrir e ao voltar para a aba, no máx. 1x a cada 10 min
+const ACTIVITY_THROTTLE_MS = 10 * 60 * 1000;
+let lastActivityPing = 0;
+async function pingActivity(uid: string) {
+  if (Date.now() - lastActivityPing < ACTIVITY_THROTTLE_MS) return;
+  lastActivityPing = Date.now();
+  try {
+    await updateDoc(doc(db, "users", uid), { lastActiveAt: serverTimestamp() });
+  } catch (e) {
+    console.error("Erro ao registrar atividade:", e);
+  }
+}
 
 // ─── Ícones do menu ──────────────────────────────────────────────────────────
 const ChatNavIcon = ({ active }: { active: boolean }) => (
@@ -301,14 +319,7 @@ function App() {
           return;
         }
 
-        try {
-          const userRef = doc(db, "users", u.uid);
-          await updateDoc(userRef, {
-            lastActiveAt: serverTimestamp()
-          });
-        } catch (e) {
-          console.error("Erro ao registrar atividade:", e);
-        }
+        pingActivity(u.uid);
 
         store.setUser(u.uid);
         setIsAuthenticated(true);
@@ -323,7 +334,12 @@ function App() {
         }
       })();
     });
-    return () => unsubscribe();
+    const onVisible = () => {
+      const cur = authService.getCurrentUser();
+      if (document.visibilityState === 'visible' && cur?.uid) pingActivity(cur.uid);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { unsubscribe(); document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   const handleLogin = async (email: string, password: string) => {
@@ -331,36 +347,14 @@ function App() {
   };
 
   const handleSignUp = async (userData: any) => {
-    const { email, password } = userData;
-    await authService.signUp(email, password);
-    const u = authService.getCurrentUser();
+    const { email, password, ...profile } = userData;
+    // o perfil agora é gravado junto com a criação do doc (antes nunca era salvo)
+    const u = await authService.signUp(email, password, profile);
     if (!u?.uid) return;
 
-    const userRef = doc(db, "users", u.uid);
-    const snap = await getDoc(userRef);
-
-    if (!snap.exists()) {
-      await setDoc(userRef, {
-        name: userData.name || '',
-        email: email,
-        phone: userData.phone || '',
-        birthDate: userData.birthDate || '',
-        city: userData.city || '',
-        state: userData.state || '',
-        gender: userData.gender || '',
-        profession: userData.profession || '',
-        income: userData.income || '',
-        active: false,
-        plan: "trial",
-        createdAt: serverTimestamp(),
-        trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)),
-      }, { merge: true });
-
-      const signUpParams = new URLSearchParams(window.location.search);
-      const referredBy = signUpParams.get('ref');
-      if (referredBy) {
-        store.saveReferral(referredBy, u.uid).catch(() => {});
-      }
+    const referredBy = getAcquisition().ref;
+    if (referredBy) {
+      store.saveReferral(referredBy, u.uid).catch(() => {});
     }
   };
 
@@ -382,11 +376,15 @@ function App() {
   const isAdminView = urlParams.get('view') === 'admin';
 
   if (isAdminView) {
-    return <AdminPanel />;
+    return (
+      <React.Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-slate-50 text-slate-500 text-sm">Carregando painel…</div>}>
+        <AdminApp />
+      </React.Suspense>
+    );
   }
 
   if (!isAuthenticated) {
-    return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
+    return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} onResetPassword={(email) => authService.resetPassword(email)} />;
   }
 
   if (isAuthorized === null) {

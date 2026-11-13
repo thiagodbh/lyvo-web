@@ -916,9 +916,10 @@ table.cmp tr:last-child td{border-bottom:none}
 interface LandingPageProps {
   onLogin: (email: string, password: string) => Promise<void> | void;
   onSignUp: (data: any) => Promise<void> | void;
+  onResetPassword?: (email: string) => Promise<void>;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPassword }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [timerText, setTimerText] = useState('00:00:00');
@@ -927,6 +928,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
   const [showModal, setShowModal] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [formInfo, setFormInfo] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -1774,10 +1776,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp }) => {
 
               {!isSignUp && (
                 <div style={{ textAlign: 'right', marginBottom: 20 }}>
-                  <a href="#" style={{ fontSize: 13, fontWeight: 600, color: 'var(--teal-text)', textDecoration: 'none' }}>Esqueci minha senha</a>
+                  <a href="#" onClick={async (e) => {
+                      e.preventDefault();
+                      setFormError(null); setFormInfo(null);
+                      if (!email.includes('@')) { setFormError('Digite seu e-mail acima para receber o link de redefinição.'); return; }
+                      try { await onResetPassword?.(email); setFormInfo('Se existir uma conta com esse e-mail, enviamos um link para redefinir a senha.'); }
+                      catch { setFormInfo('Se existir uma conta com esse e-mail, enviamos um link para redefinir a senha.'); }
+                    }}
+                    style={{ fontSize: 13, fontWeight: 600, color: 'var(--teal-text)', textDecoration: 'none' }}>Esqueci minha senha</a>
                 </div>
               )}
 
+              {formInfo && (
+                <div style={{ background: '#ECFDF5', border: '1px solid #6EE7B7', borderRadius: 10, padding: '10px 14px', fontSize: 14, color: '#047857', marginBottom: 16 }}>{formInfo}</div>
+              )}
               {/* Error */}
               {formError && (
                 <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '10px 14px', fontSize: 14, color: '#B91C1C', marginBottom: 16 }}>{formError}</div>

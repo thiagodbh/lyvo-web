@@ -1,27 +1,134 @@
 import * as admin from "firebase-admin";
+import * as crypto from "crypto";
 import { defineSecret } from "firebase-functions/params";
 import { onCall, HttpsError, onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
 
 admin.initializeApp();
+
+import { ADAPTERS } from "./billing/adapters";
+import { applyPendingAccess, getBillingConfig, hasAccess, processEvent } from "./billing/engine";
+import { PROVIDERS, ProviderId } from "./billing/types";
+export { adminApi } from "./admin";
 
 const GOOGLE_CLIENT_ID = defineSecret("GOOGLE_CLIENT_ID");
 const GOOGLE_CLIENT_SECRET = defineSecret("GOOGLE_CLIENT_SECRET");
 
-// ─── Webhook LastLink ───────────────────────────────────────────────────────
+const safeEqual = (a: string, b: string) => {
+  const A = Buffer.from(a); const B = Buffer.from(b);
+  return A.length === B.length && crypto.timingSafeEqual(A, B);
+};
+
+// ─── Webhook de cobrança (todos os gateways) ────────────────────────────────
+// URL: /billingWebhook/<gateway>?token=<token gerado no admin>
+export const billingWebhook = onRequest(async (req, res) => {
+  const provider = req.path.replace(/^\/+/, "").split("/")[0] as ProviderId;
+  if (req.method !== "POST") { res.status(405).send("Method not allowed"); return; }
+  if (!PROVIDERS.includes(provider)) { res.status(404).send("Gateway desconhecido"); return; }
+
+  const secrets = (await admin.firestore().doc("config/billingSecrets").get()).data() || {};
+  const token = secrets.tokens?.[provider];
+  const native = secrets.native?.[provider];
+  const input = { body: req.body || {}, headers: req.headers as any, query: req.query as any, rawBody: req.rawBody };
+  const tokenOk = !!token && typeof req.query.token === "string" && safeEqual(req.query.token, token);
+  const nativeOk = !!native && !!ADAPTERS[provider].verifyNative?.(input, native);
+  if (!tokenOk && !nativeOk) { res.status(401).send("Unauthorized"); return; }
+
+  const cfg = await getBillingConfig();
+  if (!cfg.providers[provider]?.enabled) {
+    // gateway desligado: registra para auditoria mas não aplica acesso
+    await admin.firestore().collection("webhookErrors").add({ provider, at: admin.firestore.FieldValue.serverTimestamp(), error: "gateway desabilitado", rawJson: JSON.stringify(req.body).slice(0, 20000) });
+    res.status(200).send("Gateway disabled"); return;
+  }
+  try {
+    const ev = ADAPTERS[provider].normalize(input);
+    if (!ev) { res.status(200).send("Ignored"); return; }
+    const r = await processEvent(ev, JSON.stringify(req.body), { endpoint: "v2" });
+    res.status(200).json(r);
+  } catch (e: any) {
+    await admin.firestore().collection("webhookErrors").add({ provider, at: admin.firestore.FieldValue.serverTimestamp(), error: String(e?.message || e), rawJson: JSON.stringify(req.body).slice(0, 20000) });
+    res.status(500).send("Erro interno"); // gateway tenta de novo
+  }
+});
+
+// ─── Webhook LastLink antigo (sem token) — só enquanto a URL não for trocada ─
 export const lastlinkWebhook = onRequest(async (req, res) => {
-      const { status, customer } = req.body;
-      const email = customer?.email;
-      if (!email) { res.status(400).send("E-mail nao encontrado."); return; }
-      try {
-              const snap = await admin.firestore().collection("users").where("email", "==", email).get();
-              if (snap.empty) { res.status(200).send("Aguardando cadastro."); return; }
-              const isActive = status === "approved" || status === "active";
-              const batch = admin.firestore().batch();
-              snap.forEach(d => batch.update(d.ref, { active: isActive }));
-              await batch.commit();
-              res.status(200).send("OK");
-      } catch { res.status(500).send("Erro interno."); }
+  const cfg = await getBillingConfig();
+  if (!cfg.allowLegacyLastlink) { res.status(410).send("Endpoint desativado. Use billingWebhook/lastlink."); return; }
+  try {
+    const ev = ADAPTERS.lastlink.normalize({ body: req.body || {}, headers: req.headers as any, query: req.query as any });
+    if (!ev || !ev.email) { res.status(400).send("E-mail nao encontrado."); return; }
+    const r = await processEvent(ev, JSON.stringify(req.body), { endpoint: "legacy" });
+    res.status(200).json(r);
+  } catch (e: any) {
+    await admin.firestore().collection("webhookErrors").add({ provider: "lastlink", at: admin.firestore.FieldValue.serverTimestamp(), error: String(e?.message || e), legacy: true });
+    res.status(500).send("Erro interno.");
+  }
+});
+
+// ─── Gatilhos de dados ──────────────────────────────────────────────────────
+// Novo cadastro: aplica pagamento feito antes da conta existir.
+export const onUserCreated = onDocumentCreated("users/{uid}", async (event) => {
+  const data = event.data?.data();
+  let email: string | null = data?.email || null;
+  if (!email) email = (await admin.auth().getUser(event.params.uid).catch(() => null))?.email || null;
+  await applyPendingAccess(event.params.uid, email);
+});
+
+const bumpUsage = async (uid: string | undefined, field: "transactions" | "events") => {
+  if (!uid) return;
+  const ref = admin.firestore().collection("users").doc(uid);
+  const now = admin.firestore.Timestamp.now();
+  await admin.firestore().runTransaction(async (tx) => {
+    const u = (await tx.get(ref)).data() || {};
+    const usage: any = { [field]: admin.firestore.FieldValue.increment(1), lastTxAt: now };
+    if (!u.usage?.firstTxAt) usage.firstTxAt = now;
+    tx.set(ref, { usage, lastActiveAt: now }, { merge: true });
+  });
+};
+
+export const onTransactionCreated = onDocumentCreated("transactions/{id}", (e) =>
+  bumpUsage(e.data?.data()?.uid, "transactions"));
+
+// eventos importados do Google não contam como uso
+export const onEventCreated = onDocumentCreated("events/{id}", (e) => {
+  const d = e.data?.data();
+  return d?.source === "GOOGLE" ? Promise.resolve() : bumpUsage(d?.uid, "events");
+});
+
+export const onCalendarConnected = onDocumentCreated("calendarConnections/{id}", async (e) => {
+  const uid = e.data?.data()?.uid;
+  if (uid) await admin.firestore().collection("users").doc(uid).set({ usage: { googleConnected: true } }, { merge: true });
+});
+
+// ─── Rotina diária: vencimentos + foto das métricas ─────────────────────────
+export const dailyBillingMaintenance = onSchedule({ schedule: "every day 03:10", timeZone: "America/Sao_Paulo" }, async () => {
+  const db = admin.firestore();
+  const now = Date.now();
+  const cfg = await getBillingConfig();
+  const users = await db.collection("users").get();
+  let paying = 0; let trials = 0; let mrr = 0; let expiredToday = 0;
+  const months: Record<string, number> = { month: 1, quarter: 3, semester: 6, year: 12 };
+  for (const d of users.docs) {
+    const u = d.data();
+    const ok = hasAccess(u, now);
+    const st = u.access?.status;
+    if (ok && ["active", "past_due", "canceled"].includes(st)) {
+      paying++;
+      const p = cfg.plans.find((x) => x.id === u.access?.planId);
+      if (p && months[p.interval]) mrr += p.price / months[p.interval];
+    } else if (ok && (!u.access || st === "trial") && !u.active) trials++;
+    // venceu sem renovar → expira e desliga o campo legado
+    if (!ok && st && ["active", "past_due", "canceled", "courtesy"].includes(st)) {
+      await d.ref.set({ access: { ...u.access, status: "expired", updatedAt: admin.firestore.FieldValue.serverTimestamp() }, active: false }, { merge: true });
+      expiredToday++;
+    } else if (!ok && !u.access && u.active === true) {
+      // nada: usuário antigo sem prazo; mantém
+    }
+  }
+  const day = new Date(now - 3 * 3600e3).toISOString().slice(0, 10);
+  await db.collection("metricsDaily").doc(day).set({ users: users.size, paying, trials, mrr, expiredToday, at: admin.firestore.FieldValue.serverTimestamp() });
 });
 
 // ─── googleConnect ──────────────────────────────────────────────────────────
