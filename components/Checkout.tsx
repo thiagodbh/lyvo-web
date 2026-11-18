@@ -97,6 +97,38 @@ export async function verifyPayment(): Promise<boolean> {
   return !!r?.hasAccess;
 }
 
+/** Confere na Olimpo e diz se a conta virou ASSINANTE (no trial, hasAccess já é true e não serve). */
+export async function verifyPaid(): Promise<boolean> {
+  await httpsCallable(getFunctions(), "olimpoSyncMine")({});
+  const uid = auth.currentUser?.uid;
+  if (!uid) return false;
+  const a: any = (await getDoc(doc(db, "users", uid))).data()?.access;
+  const end = a?.currentPeriodEnd?.toMillis ? a.currentPeriodEnd.toMillis() : Number(a?.currentPeriodEnd || 0);
+  return !!a && ["active", "past_due", "courtesy"].includes(a.status) && (!end || end > Date.now());
+}
+
+const startedAt = (): number => { try { return Number(sessionStorage.getItem(CHECKOUT_FLAG) || 0); } catch { return 0; } };
+const clearStarted = () => { try { sessionStorage.removeItem(CHECKOUT_FLAG); } catch { /* */ } };
+
+/** Quem voltou do pagamento (na mesma aba ou trocando de aba) tem a assinatura conferida sozinha. */
+export function usePendingCheckoutWatcher(enabled: boolean, onPaid: () => void) {
+  useEffect(() => {
+    if (!enabled) return;
+    let busy = false;
+    const check = async () => {
+      const t = startedAt();
+      if (!t || busy || document.visibilityState !== "visible") return;
+      if (Date.now() - t > 3 * 3600e3) { clearStarted(); return; }
+      busy = true;
+      try { if (await verifyPaid()) { clearStarted(); onPaid(); } } catch { /* tenta de novo na próxima volta */ } finally { busy = false; }
+    };
+    check();
+    document.addEventListener("visibilitychange", check);
+    return () => document.removeEventListener("visibilitychange", check);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
+}
+
 const maskCpf = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 14);
   if (d.length <= 11) return d.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
@@ -141,17 +173,40 @@ export function OlimpoCheckoutModal({ plan, profile, fallback, onClose }: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
+  // depois de abrir a Olimpo em outra aba, este modal vira a tela de espera que confere o pagamento sozinha
+  const [payUrl, setPayUrl] = useState<string | null>(null);
+  const [paid, setPaid] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [waitMsg, setWaitMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!payUrl || paid) return;
+    let alive = true;
+    const t0 = Date.now();
+    const tick = async () => {
+      if (!alive || document.visibilityState !== "visible") return;
+      try { if (await verifyPaid()) { if (!alive) return; setPaid(true); clearStarted(); setTimeout(() => window.location.reload(), 1800); } } catch { /* */ }
+    };
+    const id = setInterval(() => { if (Date.now() - t0 > 20 * 60e3) clearInterval(id); else tick(); }, 6000);
+    document.addEventListener("visibilitychange", tick);
+    return () => { alive = false; clearInterval(id); document.removeEventListener("visibilitychange", tick); };
+  }, [payUrl, paid]);
 
   const submit = async (e: any) => {
     e.preventDefault();
     setBusy(true); setErr(null);
+    // abre a aba já no clique (depois de um await o navegador bloqueia como pop-up)
+    let win: Window | null = null;
+    try { win = window.open("", "_blank"); } catch { /* */ }
     try {
       const r: any = (await httpsCallable(getFunctions(), "olimpoCheckout", { timeout: 30000 })({
         planId: plan.id, name, document: cpf.replace(/\D/g, ""), phone: phone.replace(/\D/g, ""),
       })).data;
       try { sessionStorage.setItem(CHECKOUT_FLAG, String(Date.now())); } catch { /* */ }
-      window.location.href = r.url;
+      if (win && !win.closed) { win.location.href = r.url; setPayUrl(r.url); setBusy(false); }
+      else window.location.href = r.url; // pop-up bloqueado: segue na mesma aba e confere na volta
     } catch (ex: any) {
+      try { win?.close(); } catch { /* */ }
       const code = String(ex?.code || "");
       if (code.endsWith("invalid-argument") || code.endsWith("resource-exhausted") || code.endsWith("permission-denied")) {
         setErr(ex?.message || "Confira os dados e tente novamente.");
@@ -177,7 +232,37 @@ export function OlimpoCheckoutModal({ plan, profile, fallback, onClose }: {
           </div>
         </div>
 
-        {fallbackUrl ? (
+        {payUrl ? (
+          paid ? (
+            <div className="space-y-2 rounded-xl bg-emerald-50 p-5 text-center">
+              <div className="text-3xl">🎉</div>
+              <p className="font-bold text-emerald-800">Pagamento confirmado!</p>
+              <p className="text-sm text-emerald-700">Sua assinatura está ativa. Atualizando o Lyvo…</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 rounded-xl bg-teal-50 p-4 text-sm text-teal-900">
+                <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
+                <span>Conclua o pagamento na aba da Olimpo Pay. Assim que ele cair, liberamos aqui sozinho. Pode voltar para esta aba.</span>
+              </div>
+              <a href={payUrl} target="_blank" rel="noreferrer" className="block w-full rounded-xl border border-gray-300 py-3 text-center text-sm font-semibold text-gray-800 hover:bg-gray-50">
+                Abrir a página de pagamento de novo
+              </a>
+              <button type="button" disabled={checking} onClick={async () => {
+                  setChecking(true); setWaitMsg(null);
+                  try {
+                    if (await verifyPaid()) { setPaid(true); clearStarted(); setTimeout(() => window.location.reload(), 1800); }
+                    else setWaitMsg("Ainda não caiu. Pix costuma levar segundos; cartão, alguns minutos.");
+                  } catch { setWaitMsg("Não conseguimos conferir agora. Se você já pagou, o acesso é liberado em até 15 minutos."); }
+                  finally { setChecking(false); }
+                }}
+                className="w-full rounded-xl bg-lyvo-primary py-3 font-bold text-white hover:bg-lyvo-dark disabled:opacity-60">
+                {checking ? "Conferindo…" : "Já paguei"}
+              </button>
+              {waitMsg && <p className="text-center text-xs text-gray-500">{waitMsg}</p>}
+            </div>
+          )
+        ) : fallbackUrl ? (
           <div className="space-y-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
             <p>Nosso pagamento principal está instável agora. Você pode concluir pelo checkout alternativo:</p>
             <a href={fallbackUrl} target="_blank" rel="noreferrer"
@@ -267,7 +352,7 @@ export function SubscribeModal({ onClose, preselect }: { onClose: () => void; pr
         <div className="mt-5 rounded-2xl bg-gray-50 p-4">
           <button disabled={checking} onClick={async () => {
               setChecking(true); setMsg(null);
-              try { if (await verifyPayment()) { window.location.reload(); return; } setMsg("Ainda não identificamos o pagamento. Pix costuma cair em segundos; cartão em alguns minutos."); }
+              try { if (await verifyPaid()) { clearStarted(); window.location.reload(); return; } setMsg("Ainda não identificamos o pagamento. Pix costuma cair em segundos; cartão em alguns minutos."); }
               catch { setMsg("Não conseguimos verificar agora. Se você já pagou, o acesso é liberado automaticamente em até 15 minutos."); }
               finally { setChecking(false); }
             }}

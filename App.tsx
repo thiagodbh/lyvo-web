@@ -1,7 +1,7 @@
 import { checkUserAccess } from "./services/accessControl";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import Paywall from './components/Paywall';
-import { SubscribeModal, takePlanIntent } from './components/Checkout';
+import { SubscribeModal, takePlanIntent, usePendingCheckoutWatcher } from './components/Checkout';
 import { hasAccess } from './services/accessControl';
 import { db } from './services/firebase';
 import { store } from './services/firestoreStore';
@@ -362,6 +362,8 @@ function App() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
   const [subscribe, setSubscribe] = useState<{ open: boolean; preselect: string | null }>({ open: false, preselect: null });
+  // voltou da Olimpo durante o teste: confere o pagamento e recarrega já como assinante
+  usePendingCheckoutWatcher(isAuthenticated === true && isAuthorized === true, () => window.location.reload());
 
   React.useEffect(() => {
     const unsubscribe = authService.onChange((u) => {
