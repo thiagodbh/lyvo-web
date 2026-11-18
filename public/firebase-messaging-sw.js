@@ -18,8 +18,8 @@ messaging.onBackgroundMessage((payload) => {
   const body = payload.notification?.body || '';
   self.registration.showNotification(title, {
     body,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/badge-96.png',
     tag: payload.data?.eventId || 'lyvo-reminder',
     requireInteraction: false,
     data: payload.data,

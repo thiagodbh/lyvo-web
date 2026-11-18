@@ -3,8 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lyvo Finance</title>
+    <title>Lyvo · seu assistente de finanças e agenda</title>
+    <meta name="description" content="Registre gastos, receitas e compromissos conversando. O Lyvo organiza seu mês e mostra para onde vai o seu dinheiro." />
+    <meta name="theme-color" content="#050a14" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Lyvo" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Lyvo" />
+    <meta property="og:title" content="Lyvo · seu assistente de finanças e agenda" />
+    <meta property="og:description" content="Registre gastos, receitas e compromissos conversando. 3 dias grátis." />
+    <meta property="og:url" content="https://meulyvo.com/" />
+    <meta property="og:image" content="https://meulyvo.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://meulyvo.com/og-image.png" />
 <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Cores da marca (tiradas da logo). Antes estas classes eram usadas no app mas nunca definidas.
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              lyvo: {
+                primary: '#0D9488', light: '#5EE3C1', mid: '#12C2B4', dark: '#00877E',
+                secondary: '#10B981', accent: '#5EE3C1', ink: '#050A14',
+                text: '#0B1426', subtext: '#64748B', bg: '#F5F7FA',
+              },
+            },
+            fontFamily: { poppins: ['Poppins', 'Inter', 'system-ui', 'sans-serif'] },
+          },
+        },
+      };
+    </script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800;900&display=swap"
       rel="stylesheet"

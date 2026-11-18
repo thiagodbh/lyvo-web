@@ -203,7 +203,7 @@ const AgendaView: React.FC = () => {
                   if (minutesUntil > rem - 1 && minutesUntil <= rem) {
                     const n = new Notification(`⏰ ${event.title}`, {
                       body: `Começa em ${rem < 60 ? rem + ' min' : rem / 60 + 'h'}${event.location ? ' · ' + event.location : ''}`,
-                      icon: '/favicon.ico',
+                      icon: '/icons/icon-192.png',
                       tag: `${event.id}-${rem}`,
                     });
                     n.onclick = () => window.focus();

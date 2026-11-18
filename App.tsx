@@ -1,7 +1,8 @@
 import { checkUserAccess } from "./services/accessControl";
-import { Timestamp, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import Paywall from './components/Paywall';
-import AdminPanel from './components/AdminPanel';
+import { SubscribeModal, takePlanIntent } from './components/Checkout';
+import { hasAccess } from './services/accessControl';
 import { db } from './services/firebase';
 import { store } from './services/firestoreStore';
 import React, { useState, useEffect } from 'react';
@@ -13,6 +14,27 @@ import AgendaView from './components/AgendaView';
 import LandingPage from './components/LandingPage';
 import { AppTab } from './types';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { captureAcquisition, getAcquisition } from './services/acquisition';
+
+// Admin carregado sob demanda: não pesa o app dos clientes
+const AdminApp = React.lazy(() => import('./components/admin/AdminApp'));
+
+captureAcquisition();
+
+// Registra atividade real (não só no login): ao abrir e ao voltar para a aba, no máx. 1x a cada 10 min
+const ACTIVITY_THROTTLE_MS = 10 * 60 * 1000;
+let lastActivityPing = 0;
+async function pingActivity(uid: string) {
+  if (Date.now() - lastActivityPing < ACTIVITY_THROTTLE_MS) return;
+  lastActivityPing = Date.now();
+  try {
+    let via = "browser";
+    try { if (window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone) via = "pwa"; } catch { /* */ }
+    await updateDoc(doc(db, "users", uid), { lastOpenAt: serverTimestamp(), lastActiveAt: serverTimestamp(), lastOpenVia: via });
+  } catch (e) {
+    console.error("Erro ao registrar atividade:", e);
+  }
+}
 
 // ─── Ícones do menu ──────────────────────────────────────────────────────────
 const ChatNavIcon = ({ active }: { active: boolean }) => (
@@ -59,7 +81,54 @@ const PerfilNavIcon = ({ active }: { active: boolean }) => (
 );
 
 // ─── Tela de Perfil ───────────────────────────────────────────────────────────
-const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => {
+const PAID = ['active', 'past_due', 'canceled', 'courtesy'];
+const PLAN_NAME: Record<string, string> = { annual: 'Plano Anual', monthly: 'Plano Mensal' };
+const fmtDate = (ms?: number | null) => (ms ? new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '');
+const toMs = (v: any): number | null => (typeof v?.toMillis === 'function' ? v.toMillis() : typeof v === 'number' ? v : null);
+
+/** Status do plano no perfil: teste (com botão de assinar) ou assinatura ativa. */
+const PlanCard = ({ onSubscribe }: { onSubscribe: () => void }) => {
+  const [u, setU] = useState<any>(null);
+  const uid = authService.getCurrentUser()?.uid;
+  useEffect(() => { if (uid) getDoc(doc(db, 'users', uid)).then((s) => setU(s.data() || {})).catch(() => {}); }, [uid]);
+  if (!u) return null;
+  const a = u.access;
+  const paid = (a && PAID.includes(a.status) && hasAccess(u)) || (!a && u.active === true);
+  if (paid) {
+    const end = toMs(a?.currentPeriodEnd);
+    return (
+      <div className="mx-4 mb-4 rounded-2xl bg-white p-5 shadow-sm border border-gray-100 flex items-center gap-4">
+        <img src="/brand/lyvo-icon-128.png" alt="" className="w-11 h-11 object-contain" />
+        <div className="flex-1">
+          <div className="font-bold text-gray-900">{PLAN_NAME[a?.planId] || 'Assinatura Lyvo'}{a?.status === 'courtesy' ? ' · cortesia' : ''}</div>
+          <div className="text-sm text-gray-500">
+            {a?.status === 'canceled' ? `Cancelado · acesso até ${fmtDate(end)}` : a?.status === 'past_due' ? 'Pagamento pendente · regularize para não perder o acesso' : end ? `Ativo · próxima renovação em ${fmtDate(end)}` : 'Ativo'}
+          </div>
+        </div>
+        {(a?.status === 'past_due' || a?.status === 'canceled') && (
+          <button onClick={onSubscribe} className="rounded-xl bg-lyvo-primary px-3 py-2 text-sm font-bold text-white">{a?.status === 'past_due' ? 'Pagar' : 'Reativar'}</button>
+        )}
+      </div>
+    );
+  }
+  const trialEnd = toMs(u.trialEndsAt);
+  const left = trialEnd ? Math.max(0, Math.ceil((trialEnd - Date.now()) / 864e5)) : 0;
+  return (
+    <div className="mx-4 mb-4 rounded-2xl p-5 text-white shadow-lg bg-gradient-to-br from-lyvo-primary to-lyvo-dark">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1.5"><img src="/brand/lyvo-icon-128.png" alt="" className="w-full h-full object-contain" /></div>
+        <div>
+          <div className="font-bold text-lg leading-tight">Teste grátis</div>
+          <div className="text-sm text-white/80">{left > 0 ? `Termina em ${left} dia${left > 1 ? 's' : ''} · ${fmtDate(trialEnd)}` : 'Termina hoje'}</div>
+        </div>
+      </div>
+      <p className="text-sm text-white/85 mb-4">Assine agora e continue sem interrupção. Seu histórico fica exatamente onde está.</p>
+      <button onClick={onSubscribe} className="w-full bg-white text-lyvo-dark font-bold py-3 rounded-xl shadow active:scale-95 transition">Assinar agora →</button>
+    </div>
+  );
+};
+
+const ProfileScreen = ({ onLogout, onSubscribe }: { onLogout: () => void; onSubscribe: () => void }) => {
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [referralCount, setReferralCount] = useState<number>(0);
@@ -139,7 +208,7 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => {
 
       {/* Header */}
       <div className="flex flex-col items-center pt-10 pb-6 px-6">
-        <div className="w-24 h-24 bg-lyvo-primary rounded-full flex items-center justify-center shadow-lg mb-4">
+        <div className="w-24 h-24 bg-gradient-to-br from-lyvo-light to-lyvo-dark rounded-full flex items-center justify-center shadow-lg mb-4">
           <svg width="44" height="44" viewBox="0 0 28 28" fill="none">
             <circle cx="14" cy="10" r="5.5" fill="white" />
             <path d="M3.5 25c0-5.799 4.701-10.5 10.5-10.5S24.5 19.201 24.5 25" fill="white" />
@@ -150,6 +219,8 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => {
           Gerencie sua conta e preferências do Lyvo.
         </p>
       </div>
+
+      <PlanCard onSubscribe={onSubscribe} />
 
       {/* Cartão de indicação */}
       <div className="mx-4 mb-4">
@@ -290,6 +361,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
+  const [subscribe, setSubscribe] = useState<{ open: boolean; preselect: string | null }>({ open: false, preselect: null });
 
   React.useEffect(() => {
     const unsubscribe = authService.onChange((u) => {
@@ -301,14 +373,7 @@ function App() {
           return;
         }
 
-        try {
-          const userRef = doc(db, "users", u.uid);
-          await updateDoc(userRef, {
-            lastActiveAt: serverTimestamp()
-          });
-        } catch (e) {
-          console.error("Erro ao registrar atividade:", e);
-        }
+        pingActivity(u.uid);
 
         store.setUser(u.uid);
         setIsAuthenticated(true);
@@ -317,13 +382,25 @@ function App() {
         try {
           const allowed = await checkUserAccess(u.uid);
           setIsAuthorized(allowed);
+          // veio da landing (botão de plano) ou de link ?assinar=1: abre o pagamento se ainda não for assinante
+          const intent = takePlanIntent();
+          if (allowed && intent) {
+            const d: any = (await getDoc(doc(db, "users", u.uid))).data() || {};
+            const paid = (d.access && ['active', 'past_due', 'courtesy'].includes(d.access.status) && hasAccess(d)) || (!d.access && d.active === true);
+            if (!paid) setSubscribe({ open: true, preselect: intent });
+          }
         } catch (error) {
           console.error("Erro no access control:", error);
           setIsAuthorized(false);
         }
       })();
     });
-    return () => unsubscribe();
+    const onVisible = () => {
+      const cur = authService.getCurrentUser();
+      if (document.visibilityState === 'visible' && cur?.uid) pingActivity(cur.uid);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { unsubscribe(); document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   const handleLogin = async (email: string, password: string) => {
@@ -331,36 +408,14 @@ function App() {
   };
 
   const handleSignUp = async (userData: any) => {
-    const { email, password } = userData;
-    await authService.signUp(email, password);
-    const u = authService.getCurrentUser();
+    const { email, password, ...profile } = userData;
+    // o perfil agora é gravado junto com a criação do doc (antes nunca era salvo)
+    const u = await authService.signUp(email, password, profile);
     if (!u?.uid) return;
 
-    const userRef = doc(db, "users", u.uid);
-    const snap = await getDoc(userRef);
-
-    if (!snap.exists()) {
-      await setDoc(userRef, {
-        name: userData.name || '',
-        email: email,
-        phone: userData.phone || '',
-        birthDate: userData.birthDate || '',
-        city: userData.city || '',
-        state: userData.state || '',
-        gender: userData.gender || '',
-        profession: userData.profession || '',
-        income: userData.income || '',
-        active: false,
-        plan: "trial",
-        createdAt: serverTimestamp(),
-        trialEndsAt: Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)),
-      }, { merge: true });
-
-      const signUpParams = new URLSearchParams(window.location.search);
-      const referredBy = signUpParams.get('ref');
-      if (referredBy) {
-        store.saveReferral(referredBy, u.uid).catch(() => {});
-      }
+    const referredBy = getAcquisition().ref;
+    if (referredBy) {
+      store.saveReferral(referredBy, u.uid).catch(() => {});
     }
   };
 
@@ -372,8 +427,9 @@ function App() {
 
   if (isAuthenticated === null) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-        <div className="text-gray-500 font-medium">Carregando...</div>
+      <div className="h-screen w-full flex flex-col items-center justify-center gap-4 bg-gray-50">
+        <img src="/brand/lyvo-icon-128.png" alt="Lyvo" className="w-16 h-16 object-contain animate-pulse" />
+        <div className="text-gray-400 text-sm font-medium">Carregando…</div>
       </div>
     );
   }
@@ -382,11 +438,15 @@ function App() {
   const isAdminView = urlParams.get('view') === 'admin';
 
   if (isAdminView) {
-    return <AdminPanel />;
+    return (
+      <React.Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-slate-50 text-slate-500 text-sm">Carregando painel…</div>}>
+        <AdminApp />
+      </React.Suspense>
+    );
   }
 
   if (!isAuthenticated) {
-    return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} />;
+    return <LandingPage onLogin={handleLogin} onSignUp={handleSignUp} onResetPassword={(email) => authService.resetPassword(email)} />;
   }
 
   if (isAuthorized === null) {
@@ -406,7 +466,7 @@ function App() {
       case AppTab.CHAT: return <ChatInterface />;
       case AppTab.FINANCE: return <FinanceDashboard />;
       case AppTab.AGENDA: return <AgendaView />;
-      case AppTab.PROFILE: return <ProfileScreen onLogout={handleLogout} />;
+      case AppTab.PROFILE: return <ProfileScreen onLogout={handleLogout} onSubscribe={() => setSubscribe({ open: true, preselect: null })} />;
       default: return <ChatInterface />;
     }
   };
@@ -431,6 +491,7 @@ function App() {
       <main className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
         {renderContent()}
       </main>
+      {subscribe.open && <SubscribeModal preselect={subscribe.preselect} onClose={() => setSubscribe({ open: false, preselect: null })} />}
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <NavButton tab={AppTab.CHAT} icon={(a) => <ChatNavIcon active={a} />} label="Chat" />
         <NavButton tab={AppTab.FINANCE} icon={(a) => <FinancasNavIcon active={a} />} label="Finanças" />

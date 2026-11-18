@@ -1,0 +1,74 @@
+rules_version = '2';
+
+// Regras do Lyvo.
+// ⚠️ ANTES DE PUBLICAR: teste no Rules Playground / emulador com um usuário comum.
+// Princípio: cada usuário só lê/escreve o que é dele; campos de acesso/plano só o servidor muda.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function ownsResource() { return signedIn() && resource.data.uid == request.auth.uid; }
+    function ownsRequest() { return signedIn() && request.resource.data.uid == request.auth.uid; }
+
+    // Campos que só o servidor (functions/admin) pode alterar
+    function privilegedFields() {
+      return ['access', 'active', 'plan', 'blocked', 'accessBeforeBlock', 'adminNotes', 'usage', 'referredBy',
+              'whatsappOptOut', 'whatsappOptOutAt', 'lastContactAt'];
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+
+      // cadastro: só pode nascer como trial, sem acesso pago e com trial curto
+      allow create: if isOwner(uid)
+        && !request.resource.data.keys().hasAny(['access', 'blocked', 'accessBeforeBlock', 'adminNotes', 'usage', 'whatsappOptOut', 'lastContactAt'])
+        && request.resource.data.get('active', false) == false
+        && request.resource.data.get('plan', 'trial') == 'trial'
+        && (!('trialEndsAt' in request.resource.data)
+            || request.resource.data.trialEndsAt <= request.time + duration.value(8, 'd'));
+
+      // atualização: não toca em campos privilegiados; trialEndsAt só pode ser criado, nunca estendido
+      allow update: if isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(privilegedFields())
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['trialEndsAt'])
+            || (!('trialEndsAt' in resource.data)
+                && request.resource.data.trialEndsAt <= request.time + duration.value(8, 'd')));
+
+      allow delete: if false;
+    }
+
+    // Dados do usuário (todas têm o campo uid)
+    match /{col}/{id} {
+      allow read, update, delete: if col in ['transactions', 'fixedBills', 'creditCards', 'forecasts',
+                                             'budgetLimits', 'events', 'calendarConnections', 'calendarCategories']
+                                  && ownsResource()
+                                  && (request.method != 'update' || request.resource.data.uid == resource.data.uid);
+      allow create: if col in ['transactions', 'fixedBills', 'creditCards', 'forecasts',
+                               'budgetLimits', 'events', 'calendarConnections', 'calendarCategories']
+                    && ownsRequest();
+    }
+
+    // Indicações: o indicado registra; cada lado lê o que envolve ele
+    match /referrals/{id} {
+      allow create: if signedIn()
+        && request.resource.data.referredUserId == request.auth.uid
+        && request.resource.data.referredBy != request.auth.uid;
+      allow read: if signedIn()
+        && (resource.data.referredBy == request.auth.uid || resource.data.referredUserId == request.auth.uid);
+    }
+
+    // Config pública de cobrança (o paywall lê planos e links de checkout)
+    match /config/billing {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Tudo o mais (billingEvents, subscriptions, pendingAccess, adminAudit, config/billingSecrets,
+    // googleConnections, metricsDaily, webhookErrors) só via servidor.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
