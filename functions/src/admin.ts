@@ -532,7 +532,7 @@ async function saveConfig(req: CallableRequest, d: any) {
     plans: c.plans,
     providerOrder: c.providerOrder.filter((p) => PROVIDERS.includes(p)),
     providers: c.providers,
-    trialDays: Math.max(0, Math.min(30, Number(c.trialDays) || 0)),
+    trialDays: Math.max(1, Math.min(7, Number(c.trialDays) || 3)),
     graceDays: Math.max(0, Math.min(15, Number(c.graceDays) || 0)),
     allowLegacyLastlink: !!c.allowLegacyLastlink,
   };
@@ -577,6 +577,74 @@ async function dryRun(d: any) {
     matchedUid: uid,
     accessAfter: next ? { ...next, currentPeriodEnd: ms(next.currentPeriodEnd), graceUntil: ms(next.graceUntil) } : null,
   };
+}
+
+// ─── diagnóstico: testa cada integração ao vivo ─────────────────────────────
+type Check = { id: string; label: string; status: "ok" | "warn" | "fail"; detail: string; link?: string };
+const brDate = (t: number | null) => (t ? new Date(t).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
+
+async function health(): Promise<{ at: number; checks: Check[] }> {
+  const now = Date.now();
+  const checks: Check[] = [];
+  const add = (c: Check) => checks.push(c);
+  const list = ADMIN_EMAILS.value().split(",").map((s) => s.trim()).filter(Boolean);
+  add({ id: "backend", label: "Servidor (Cloud Functions) publicado", status: "ok", detail: `Respondendo. Admins: ${list.join(", ") || "por permissão no login"}` });
+
+  const cfgSnap = await db().doc("config/billing").get();
+  add({ id: "config", label: "Planos e gateways salvos", status: cfgSnap.exists ? "ok" : "warn", link: "plans",
+    detail: cfgSnap.exists ? "Configuração salva no banco." : "Usando os valores padrão do código. Abra Planos, confira e salve uma vez." });
+  const cfg = await getBillingConfig();
+  const primary = cfg.providerOrder.find((p) => cfg.providers[p]?.enabled);
+  add({ id: "primary", label: "Checkout principal", status: primary === "olimpopay" ? "ok" : "warn", link: "gateways",
+    detail: `Principal: ${primary ? cfg.providers[primary].label : "nenhum"}. Fallback: ${cfg.providerOrder.filter((p) => p !== primary && cfg.providers[p]?.enabled).map((p) => cfg.providers[p].label).join(", ") || "nenhum"}.` });
+
+  let key = "";
+  try { key = OLIMPO_API_KEY.value(); } catch { /* sem secret */ }
+  if (!key) add({ id: "olimpo_key", label: "Chave da API Olimpo Pay", status: "fail", detail: "Secret OLIMPO_API_KEY não configurado. Rode scripts/deploy-backend.sh." });
+  else {
+    try { await olimpoPing(key); add({ id: "olimpo_key", label: "Chave da API Olimpo Pay", status: "ok", detail: "A API da Olimpo respondeu com a chave configurada." }); }
+    catch (e: any) { add({ id: "olimpo_key", label: "Chave da API Olimpo Pay", status: "fail", detail: `A API recusou: ${e?.message || e}${e?.status ? ` (HTTP ${e.status})` : ""}` }); }
+  }
+  const olimpoSubs = await db().collection("subscriptions").where("provider", "==", "olimpopay").get();
+  const paidOlimpo = olimpoSubs.docs.filter((d) => (d.data().paymentsCount || 0) > 0).length;
+  add({ id: "olimpo_flow", label: "Venda pela Olimpo Pay de ponta a ponta", status: paidOlimpo > 0 ? "ok" : "warn", link: "payments",
+    detail: paidOlimpo > 0 ? `${paidOlimpo} assinatura(s) paga(s) confirmada(s) pela API.` : `${olimpoSubs.size} checkout(s) gerado(s), nenhum pago ainda. Faça uma compra de teste.` });
+
+  const st = (await db().doc("systemStatus/olimpoSync").get()).data();
+  const stAt = ms(st?.at);
+  add({ id: "olimpo_sync", label: "Conferência automática Olimpo (15 min)", status: stAt && now - stAt < 40 * 60e3 ? "ok" : "warn",
+    detail: stAt ? `Última execução ${brDate(stAt)} · ${st?.synced ?? 0} conferida(s), ${st?.errors ?? 0} erro(s).` : "Ainda não rodou. Roda a cada 15 minutos depois do deploy." });
+  const md = await db().collection("metricsDaily").orderBy("at", "desc").limit(1).get();
+  add({ id: "daily", label: "Rotina diária de vencimentos (03:10)", status: md.empty ? "warn" : "ok",
+    detail: md.empty ? "Ainda não rodou. Roda toda madrugada às 03:10." : `Última execução: ${md.docs[0].id}.` });
+
+  const secrets = (await db().doc("config/billingSecrets").get()).data() || {};
+  const recent = await db().collection("billingEvents").where("receivedAt", ">=", TS.fromMillis(now - 30 * DAY)).get();
+  const ev = recent.docs.map((d) => d.data());
+  const llV2 = ev.filter((e) => e.provider === "lastlink" && e.endpoint === "v2").length;
+  const llLegacy = ev.filter((e) => e.endpoint === "legacy").length;
+  add({ id: "lastlink_url", label: "Webhook novo da LastLink (com token)", status: llV2 > 0 ? "ok" : secrets.tokens?.lastlink ? "warn" : "fail", link: "gateways",
+    detail: llV2 > 0 ? `${llV2} evento(s) recebido(s) pela URL nova em 30 dias.` : secrets.tokens?.lastlink ? "URL gerada, mas nenhum evento chegou por ela ainda. Confirme que foi colada na LastLink." : "Gere a URL em Gateways e cole no painel da LastLink." });
+  add({ id: "legacy", label: "Webhook antigo da LastLink desligado", status: cfg.allowLegacyLastlink ? (llLegacy ? "fail" : "warn") : "ok", link: "gateways",
+    detail: cfg.allowLegacyLastlink ? `Ainda aceita eventos sem token${llLegacy ? ` (${llLegacy} nos últimos 30 dias)` : ""}. Desligue depois de migrar a URL.` : "Desligado." });
+
+  const users = await db().collection("users").get();
+  const withUsage = users.docs.filter((d) => d.data().usage).length;
+  add({ id: "usage", label: "Contadores de uso dos clientes", status: withUsage >= users.size * 0.9 ? "ok" : "warn", link: "audit",
+    detail: `${withUsage} de ${users.size} contas com contador.${withUsage < users.size ? " Rode “Recalcular uso” na Auditoria." : ""}` });
+  const fresh = users.docs.map((d) => d.data()).filter((u) => (ms(u.createdAt) || 0) > now - 14 * DAY);
+  const withName = fresh.filter((u) => u.name && u.phone).length;
+  add({ id: "signup", label: "Cadastro salvando nome e celular", status: !fresh.length ? "warn" : withName / fresh.length >= 0.8 ? "ok" : "fail", link: "users",
+    detail: fresh.length ? `${withName} de ${fresh.length} cadastros dos últimos 14 dias com nome e celular.` : "Nenhum cadastro nos últimos 14 dias. Faça um de teste numa aba anônima." });
+
+  const msgCfg = (await db().doc("config/messaging").get()).data();
+  add({ id: "whatsapp", label: "WhatsApp do Lyvo cadastrado", status: msgCfg?.senderNumber ? "ok" : "warn", link: "messages?tab=settings",
+    detail: msgCfg?.senderNumber ? `Número +${msgCfg.senderNumber} · assinando como ${msgCfg.senderName || "—"}.` : "Cadastre em Mensagens → Configurar WhatsApp." });
+
+  const errs = await db().collection("webhookErrors").where("at", ">=", TS.fromMillis(now - 7 * DAY)).get();
+  add({ id: "errors", label: "Erros de integração (7 dias)", status: errs.empty ? "ok" : "warn", link: "gateways",
+    detail: errs.empty ? "Nenhum." : `${errs.size} erro(s). Último: ${String(errs.docs.map((d) => d.data()).sort((a, b) => (ms(b.at) || 0) - (ms(a.at) || 0))[0]?.error || "").slice(0, 160)}` });
+  return { at: now, checks };
 }
 
 async function listAudit(d: any) {
@@ -663,8 +731,10 @@ export const adminApi = onCall({ timeoutSeconds: 120, memory: "512MiB", secrets:
       try { await olimpoPing(OLIMPO_API_KEY.value()); return { ok: true }; }
       catch (e: any) { return { ok: false, error: String(e?.message || e), status: e?.status ?? null }; }
     }
+    case "health": return health();
     case "olimpoSyncAll": {
       const r = await olimpoSync(OLIMPO_API_KEY.value(), null);
+      await db().doc("systemStatus/olimpoSync").set({ ...r, at: FV.serverTimestamp(), source: "admin" });
       await audit(req, "olimpo_sync_all", null, { params: r });
       return r;
     }

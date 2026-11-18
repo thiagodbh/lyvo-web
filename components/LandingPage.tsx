@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { setPlanIntent, useBillingConfig } from './Checkout';
 
 const LYVO_CSS = `
 @import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap");
@@ -931,6 +932,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
 
   const openLoginModal = () => { setIsSignUp(false); setFormError(null); setShowModal(true); };
   const openSignUpModal = () => { setIsSignUp(true); setFormError(null); setShowModal(true); };
+  // Preços vêm do admin (Planos). Botão de plano: cria a conta e vai direto para o pagamento.
+  const { cfg: billing } = useBillingConfig();
+  const annual = billing.plans.find((p) => p.interval === 'year' && p.active);
+  const monthly = billing.plans.find((p) => p.interval === 'month' && p.active);
+  const annualMonth = annual ? Math.floor((annual.price / 12) * 100) / 100 : 12.49;
+  const money = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const [aInt, aDec] = money(annualMonth).split(',');
+  const [mInt, mDec] = money(monthly?.price ?? 24.9).split(',');
+  const economy = annual && monthly ? Math.round((1 - annual.price / (monthly.price * 12)) * 100) : 50;
+  const buyPlan = (planId: string) => (e: React.MouseEvent) => { e.preventDefault(); setPlanIntent(planId); openSignUpModal(); };
   const closeModal = () => { setShowModal(false); setEmail(''); setPassword(''); setFormError(null); };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1598,27 +1609,27 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
         </div>
         <div className="pricing-value-anchor">
           <div className="pva-icon">🧮</div>
-          <div className="pva-text">A desorganização financeira custa em média <strong>R$1.000 por mês</strong> em gastos evitáveis e juros de cartão. O Lyvo custa <strong>R$12,49/mês</strong>. Ou seja: você gasta R$12 para não perder R$1.000.</div>
+          <div className="pva-text">A desorganização financeira custa em média <strong>R$1.000 por mês</strong> em gastos evitáveis e juros de cartão. O Lyvo custa <strong>R${money(annualMonth)}/mês</strong>. Ou seja: você gasta R${aInt} para não perder R$1.000.</div>
         </div>
         <div className="pricing-grid">
           <div className="plan feat">
             <div className="plan-star">Melhor custo-benefício</div>
             <div className="plan-name">Plano Anual</div>
-            <div className="plan-p-row"><span className="plan-cur">R$</span><span className="plan-price">12</span><span className="plan-dec">,49</span></div>
+            <div className="plan-p-row"><span className="plan-cur">R$</span><span className="plan-price">{aInt}</span><span className="plan-dec">,{aDec}</span></div>
             <div className="plan-period">/mês — cobrado anualmente</div>
-            <div className="plan-economy">Equivalente a R$ 149,90/ano · Economia de 50%</div>
-            <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 24 }}>Parcelamos em até 5x de R$29,98 · 3 dias grátis para testar</div>
+            <div className="plan-economy">R$ {money(annual?.price ?? 149.9)} por ano · Economia de {economy}% frente ao mensal</div>
+            <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 24 }}>Pix ou cartão · {billing.trialDays ?? 3} dias grátis para testar</div>
             <div className="plan-features">
               {['Chat inteligente completo (texto, áudio, foto)','Cartões de crédito ilimitados','Contas fixas ilimitadas','Agenda + Google integrado','Relatórios e gráficos','Suporte prioritário','30 dias de garantia total'].map(f => (
                 <div className="pf" key={f}><span className="pf-check">✓</span>{f}</div>
               ))}
             </div>
-            <a href="https://lastlink.com/p/CA05DE2CE/checkout-payment/" target="_blank" rel="noopener noreferrer" className="plan-cta plan-cta-solid">Aproveitar Desconto Anual →</a>
-            <div className="plan-note">* R$149,90 cobrado uma vez por ano</div>
+            <a href="#planos" onClick={buyPlan(annual?.id || 'annual')} className="plan-cta plan-cta-solid">Aproveitar Desconto Anual →</a>
+            <div className="plan-note">* R$ {money(annual?.price ?? 149.9)} cobrado uma vez por ano</div>
           </div>
           <div className="plan">
             <div className="plan-name">Plano Mensal</div>
-            <div className="plan-p-row"><span className="plan-cur">R$</span><span className="plan-price">24</span><span className="plan-dec">,90</span></div>
+            <div className="plan-p-row"><span className="plan-cur">R$</span><span className="plan-price">{mInt}</span><span className="plan-dec">,{mDec}</span></div>
             <div className="plan-period">/mês — sem fidelidade</div>
             <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 24 }}>Cancele quando quiser, sem burocracia</div>
             <div className="plan-features">
@@ -1626,8 +1637,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
                 <div className="pf" key={f}><span className="pf-check">✓</span>{f}</div>
               ))}
             </div>
-            <a href="https://lastlink.com/p/CE5BD085C/checkout-payment/" target="_blank" rel="noopener noreferrer" className="plan-cta plan-cta-outline">Assinar Mensal →</a>
-            <div className="plan-note">Pagamento mensal recorrente no cartão</div>
+            <a href="#planos" onClick={buyPlan(monthly?.id || 'monthly')} className="plan-cta plan-cta-outline">Assinar Mensal →</a>
+            <div className="plan-note">Pix ou cartão · renovação mensal, cancele quando quiser</div>
           </div>
         </div>
       </section>

@@ -1,6 +1,8 @@
 import { checkUserAccess } from "./services/accessControl";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import Paywall from './components/Paywall';
+import { SubscribeModal, takePlanIntent } from './components/Checkout';
+import { hasAccess } from './services/accessControl';
 import { db } from './services/firebase';
 import { store } from './services/firestoreStore';
 import React, { useState, useEffect } from 'react';
@@ -77,7 +79,54 @@ const PerfilNavIcon = ({ active }: { active: boolean }) => (
 );
 
 // ─── Tela de Perfil ───────────────────────────────────────────────────────────
-const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => {
+const PAID = ['active', 'past_due', 'canceled', 'courtesy'];
+const PLAN_NAME: Record<string, string> = { annual: 'Plano Anual', monthly: 'Plano Mensal' };
+const fmtDate = (ms?: number | null) => (ms ? new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '');
+const toMs = (v: any): number | null => (typeof v?.toMillis === 'function' ? v.toMillis() : typeof v === 'number' ? v : null);
+
+/** Status do plano no perfil: teste (com botão de assinar) ou assinatura ativa. */
+const PlanCard = ({ onSubscribe }: { onSubscribe: () => void }) => {
+  const [u, setU] = useState<any>(null);
+  const uid = authService.getCurrentUser()?.uid;
+  useEffect(() => { if (uid) getDoc(doc(db, 'users', uid)).then((s) => setU(s.data() || {})).catch(() => {}); }, [uid]);
+  if (!u) return null;
+  const a = u.access;
+  const paid = (a && PAID.includes(a.status) && hasAccess(u)) || (!a && u.active === true);
+  if (paid) {
+    const end = toMs(a?.currentPeriodEnd);
+    return (
+      <div className="mx-4 mb-4 rounded-2xl bg-white p-5 shadow-sm border border-gray-100 flex items-center gap-4">
+        <img src="/brand/lyvo-icon-128.png" alt="" className="w-11 h-11 object-contain" />
+        <div className="flex-1">
+          <div className="font-bold text-gray-900">{PLAN_NAME[a?.planId] || 'Assinatura Lyvo'}{a?.status === 'courtesy' ? ' · cortesia' : ''}</div>
+          <div className="text-sm text-gray-500">
+            {a?.status === 'canceled' ? `Cancelado · acesso até ${fmtDate(end)}` : a?.status === 'past_due' ? 'Pagamento pendente · regularize para não perder o acesso' : end ? `Ativo · próxima renovação em ${fmtDate(end)}` : 'Ativo'}
+          </div>
+        </div>
+        {(a?.status === 'past_due' || a?.status === 'canceled') && (
+          <button onClick={onSubscribe} className="rounded-xl bg-lyvo-primary px-3 py-2 text-sm font-bold text-white">{a?.status === 'past_due' ? 'Pagar' : 'Reativar'}</button>
+        )}
+      </div>
+    );
+  }
+  const trialEnd = toMs(u.trialEndsAt);
+  const left = trialEnd ? Math.max(0, Math.ceil((trialEnd - Date.now()) / 864e5)) : 0;
+  return (
+    <div className="mx-4 mb-4 rounded-2xl p-5 text-white shadow-lg bg-gradient-to-br from-lyvo-primary to-lyvo-dark">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1.5"><img src="/brand/lyvo-icon-128.png" alt="" className="w-full h-full object-contain" /></div>
+        <div>
+          <div className="font-bold text-lg leading-tight">Teste grátis</div>
+          <div className="text-sm text-white/80">{left > 0 ? `Termina em ${left} dia${left > 1 ? 's' : ''} · ${fmtDate(trialEnd)}` : 'Termina hoje'}</div>
+        </div>
+      </div>
+      <p className="text-sm text-white/85 mb-4">Assine agora e continue sem interrupção. Seu histórico fica exatamente onde está.</p>
+      <button onClick={onSubscribe} className="w-full bg-white text-lyvo-dark font-bold py-3 rounded-xl shadow active:scale-95 transition">Assinar agora →</button>
+    </div>
+  );
+};
+
+const ProfileScreen = ({ onLogout, onSubscribe }: { onLogout: () => void; onSubscribe: () => void }) => {
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [referralCount, setReferralCount] = useState<number>(0);
@@ -168,6 +217,8 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => {
           Gerencie sua conta e preferências do Lyvo.
         </p>
       </div>
+
+      <PlanCard onSubscribe={onSubscribe} />
 
       {/* Cartão de indicação */}
       <div className="mx-4 mb-4">
@@ -308,6 +359,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [currentTab, setCurrentTab] = useState<AppTab>(AppTab.CHAT);
+  const [subscribe, setSubscribe] = useState<{ open: boolean; preselect: string | null }>({ open: false, preselect: null });
 
   React.useEffect(() => {
     const unsubscribe = authService.onChange((u) => {
@@ -328,6 +380,13 @@ function App() {
         try {
           const allowed = await checkUserAccess(u.uid);
           setIsAuthorized(allowed);
+          // veio da landing (botão de plano) ou de link ?assinar=1: abre o pagamento se ainda não for assinante
+          const intent = takePlanIntent();
+          if (allowed && intent) {
+            const d: any = (await getDoc(doc(db, "users", u.uid))).data() || {};
+            const paid = (d.access && ['active', 'past_due', 'courtesy'].includes(d.access.status) && hasAccess(d)) || (!d.access && d.active === true);
+            if (!paid) setSubscribe({ open: true, preselect: intent });
+          }
         } catch (error) {
           console.error("Erro no access control:", error);
           setIsAuthorized(false);
@@ -405,7 +464,7 @@ function App() {
       case AppTab.CHAT: return <ChatInterface />;
       case AppTab.FINANCE: return <FinanceDashboard />;
       case AppTab.AGENDA: return <AgendaView />;
-      case AppTab.PROFILE: return <ProfileScreen onLogout={handleLogout} />;
+      case AppTab.PROFILE: return <ProfileScreen onLogout={handleLogout} onSubscribe={() => setSubscribe({ open: true, preselect: null })} />;
       default: return <ChatInterface />;
     }
   };
@@ -430,6 +489,7 @@ function App() {
       <main className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-gray-50 md:bg-white/50 pb-16">
         {renderContent()}
       </main>
+      {subscribe.open && <SubscribeModal preselect={subscribe.preselect} onClose={() => setSubscribe({ open: false, preselect: null })} />}
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <NavButton tab={AppTab.CHAT} icon={(a) => <ChatNavIcon active={a} />} label="Chat" />
         <NavButton tab={AppTab.FINANCE} icon={(a) => <FinancasNavIcon active={a} />} label="Finanças" />

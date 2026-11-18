@@ -26,7 +26,17 @@ export type SignUpProfile = {
   whatsappOptIn?: boolean;
 };
 
-const TRIAL_DAYS = 3;
+const DEFAULT_TRIAL_DAYS = 3;
+
+/** Dias de teste definidos no admin (Planos). Limitado a 1–7, o mesmo teto das regras do Firestore. */
+export async function getTrialDays(): Promise<number> {
+  try {
+    const s = await getDoc(doc(db, "config", "billing"));
+    const n = Number(s.data()?.trialDays);
+    if (Number.isFinite(n) && n >= 1) return Math.min(7, Math.round(n));
+  } catch { /* usa o padrão */ }
+  return DEFAULT_TRIAL_DAYS;
+}
 
 function toUser(u: FirebaseUser | null): User {
   if (!u) return null;
@@ -57,6 +67,7 @@ async function ensureUserDoc(uid: string, email: string, profile?: SignUpProfile
     return;
   }
 
+  const trialDays = await getTrialDays();
   await setDoc(ref, {
     email: email.toLowerCase(),
     name: clean(profile?.name),
@@ -74,7 +85,7 @@ async function ensureUserDoc(uid: string, email: string, profile?: SignUpProfile
     plan: "trial",
     createdAt: serverTimestamp(),
     lastActiveAt: serverTimestamp(),
-    trialEndsAt: Timestamp.fromDate(new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000)),
+    trialEndsAt: Timestamp.fromDate(new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000)),
   });
 }
 

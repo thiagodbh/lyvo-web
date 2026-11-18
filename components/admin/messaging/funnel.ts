@@ -95,7 +95,8 @@ Se travou em alguma etapa, me responde aqui que eu resolvo com você agora.` },
 
 Seu acesso continua liberado até *{fim_carencia}*. Depois disso o app pausa, mas seus dados ficam guardados.
 
-Para regularizar é só entrar em {link_app}. Prefere que eu te mande um Pix aqui mesmo?` },
+Para regularizar, é só abrir aqui: {link_assinar}
+Prefere que eu te mande um Pix aqui mesmo?` },
 
   { id: 'payment_confirmed', stage: 'payment_confirmed', name: 'Boas-vindas ao assinante', active: true, body:
 `{primeiro_nome}, pagamento confirmado ✅ Bem-vindo(a) ao Lyvo *{plano}*!
@@ -126,7 +127,8 @@ Para continuar sem perder nada:
 • *Anual*: {preco_anual} (sai {preco_anual_mes}/mês)
 • *Mensal*: {preco_mensal}/mês, sem fidelidade
 
-É só entrar em {link_app} e escolher. Quer que eu te mande o link direto de um dos dois?` },
+Assina aqui em 1 minuto: {link_assinar}
+Ficou alguma dúvida? Me responde que eu te ajudo.` },
 
   { id: 'activation', stage: 'activation', name: 'Primeiro registro', active: true, body:
 `Oi, {primeiro_nome}! Aqui é {atendente}, do Lyvo.
@@ -156,7 +158,7 @@ Assinando agora, você continua exatamente de onde parou:
 • *Anual*: {preco_anual} (equivale a {preco_anual_mes}/mês)
 • *Mensal*: {preco_mensal}/mês
 
-{link_app}
+{link_assinar}
 
 Ficou alguma dúvida que te impediu de seguir? Me conta aqui.` },
 
@@ -170,7 +172,8 @@ Quer que eu te ajude a reorganizar o mês em 5 minutos?` },
   { id: 'winback', stage: 'winback', name: 'Reconquista', active: true, body:
 `Oi, {primeiro_nome}! Aqui é {atendente}, do Lyvo.
 
-{seus_registros_cap} continua salvo. Se quiser voltar a ter o mês na palma da mão, é só entrar em {link_app} e escolher um plano: a partir de {preco_anual_mes}/mês no anual.
+{seus_registros_cap} continua salvo. Se quiser voltar a ter o mês na palma da mão, é só escolher um plano aqui: {link_assinar}
+No anual sai a partir de {preco_anual_mes}/mês.
 
 E se algo não funcionou para você da última vez, me conta. Eu leio tudo pessoalmente.` },
 
@@ -217,6 +220,7 @@ export const VARIABLES: { key: string; label: string }[] = [
   { key: 'seus_registros_cap', label: '“Seus 23 registros” (início de frase)' },
   { key: 'dias_sem_uso', label: 'Dias sem usar' },
   { key: 'link_app', label: 'Link do app' },
+  { key: 'link_assinar', label: 'Link que abre a escolha de plano' },
   { key: 'link_pagamento', label: 'Link de pagamento pendente' },
   { key: 'link_indicacao', label: 'Link de indicação' },
 ];
@@ -271,6 +275,7 @@ export function buildVars(u: UserRow, ctx: Ctx): Record<string, string> {
     seus_registros_cap: seus[0].toUpperCase() + seus.slice(1),
     dias_sem_uso: u.lastActiveAt ? String(Math.max(1, Math.floor((ctx.now - u.lastActiveAt) / DAY))) : 'alguns',
     link_app: APP_URL,
+    link_assinar: `${APP_URL}/?assinar=1`,
     link_pagamento: ctx.waitingSub?.paymentLink || APP_URL,
     link_indicacao: `${APP_URL}/?ref=${u.uid}`,
   };

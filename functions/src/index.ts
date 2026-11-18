@@ -506,5 +506,7 @@ export const olimpoSyncMine = onCall({ secrets: [OLIMPO_API_KEY], timeoutSeconds
 });
 
 export const olimpoSyncScheduled = onSchedule({ schedule: "every 15 minutes", secrets: [OLIMPO_API_KEY], timeoutSeconds: 300 }, async () => {
-  await syncWhere(OLIMPO_API_KEY.value(), null);
+  const r = await syncWhere(OLIMPO_API_KEY.value(), null);
+  // o Diagnóstico do admin usa isto para saber se a rotina está rodando
+  await admin.firestore().doc("systemStatus/olimpoSync").set({ ...r, at: admin.firestore.FieldValue.serverTimestamp(), source: "schedule" });
 });

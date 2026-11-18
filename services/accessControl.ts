@@ -3,8 +3,9 @@
 // O servidor é quem grava `access`; o cliente só lê. O trial inicial continua sendo criado aqui.
 import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { db } from "./firebase";
+import { getTrialDays } from "./authService";
 
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const PAID = ["active", "past_due", "canceled", "courtesy"];
 
 const toMs = (v: any): number | null =>
@@ -34,7 +35,7 @@ export async function checkUserAccess(uid: string): Promise<boolean> {
     await setDoc(userRef, {
       active: false,
       plan: "trial",
-      trialEndsAt: Timestamp.fromDate(new Date(nowMs + THREE_DAYS_MS)),
+      trialEndsAt: Timestamp.fromDate(new Date(nowMs + (await getTrialDays()) * DAY_MS)),
       createdAt: Timestamp.now(),
     }, { merge: true });
     return true;
@@ -44,7 +45,7 @@ export async function checkUserAccess(uid: string): Promise<boolean> {
 
   // Conta sem trial registrado e sem acesso pago: inicia o trial
   if (!data.trialEndsAt && !data.access && data.active !== true) {
-    await setDoc(userRef, { trialEndsAt: Timestamp.fromDate(new Date(nowMs + THREE_DAYS_MS)), plan: "trial", active: false }, { merge: true });
+    await setDoc(userRef, { trialEndsAt: Timestamp.fromDate(new Date(nowMs + (await getTrialDays()) * DAY_MS)), plan: "trial", active: false }, { merge: true });
     return true;
   }
 

@@ -205,4 +205,9 @@ export interface AdminApi {
   saveMessaging(config: any, reason?: string): Promise<any>;
   logMessage(entry: { uid: string; stage: string; templateId: string; preview: string }): Promise<{ ok: boolean; id: string }>;
   listMessageLog(): Promise<any[]>;
+  health(): Promise<{ at: number; checks: HealthCheck[] }>;
+  /** Tenta ler um dado privado direto do navegador. Seguro = permissão negada. */
+  probeRules(): Promise<HealthCheck>;
 }
+
+export type HealthCheck = { id: string; label: string; status: 'ok' | 'warn' | 'fail'; detail: string; link?: string };

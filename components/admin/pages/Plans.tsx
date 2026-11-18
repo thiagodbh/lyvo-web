@@ -36,7 +36,7 @@ export default function PlansPage() {
 
       <Card className="mb-4">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Dias de trial" hint="Vale para novos cadastros."><input type="number" min={0} max={30} className={inputCls} value={cfg.trialDays} onChange={(e) => setCfg({ ...cfg, trialDays: Number(e.target.value) })} /></Field>
+          <Field label="Dias de teste grátis (1 a 7)" hint="Vale para novos cadastros e aparece na seção de preços da landing. Os outros textos da landing citam 3 dias."><input type="number" min={1} max={7} className={inputCls} value={cfg.trialDays} onChange={(e) => setCfg({ ...cfg, trialDays: Number(e.target.value) })} /></Field>
           <Field label="Dias de carência" hint="Acesso mantido após renovação em atraso."><input type="number" min={0} max={15} className={inputCls} value={cfg.graceDays} onChange={(e) => setCfg({ ...cfg, graceDays: Number(e.target.value) })} /></Field>
           <div className="rounded-lg bg-slate-50 p-3 text-sm ring-1 ring-slate-200">
             <div className="text-xs text-slate-500">Checkout ativo no paywall</div>

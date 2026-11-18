@@ -388,6 +388,13 @@ export function createDemoApi(): AdminApi {
       return wait({ ok: true, id: entry.id }, 80);
     },
     listMessageLog: () => wait(msgLog),
+    health: () => wait({ at: Date.now(), checks: [
+      { id: 'backend', label: 'Servidor (Cloud Functions) publicado', status: 'ok', detail: 'Demonstração — dados fictícios.' },
+      { id: 'olimpo_key', label: 'Chave da API Olimpo Pay', status: 'ok', detail: 'A API da Olimpo respondeu com a chave configurada.' },
+      { id: 'olimpo_flow', label: 'Venda pela Olimpo Pay de ponta a ponta', status: 'warn', detail: 'Nenhum pagamento confirmado ainda. Faça uma compra de teste.', link: 'payments' },
+      { id: 'legacy', label: 'Webhook antigo da LastLink desligado', status: 'fail', detail: 'Ainda aceita eventos sem token. Desligue depois de migrar a URL.', link: 'gateways' },
+    ] }, 700),
+    probeRules: () => wait({ id: 'rules', label: 'Regras de segurança do banco (Firestore)', status: 'ok' as const, detail: 'Demonstração.' }),
     olimpoSyncAll: () => wait({ synced: subs.filter((x) => x.provider === 'olimpopay' && ['waiting', 'active', 'past_due'].includes(x.status)).length, changed: 0, errors: 0 }, 900),
   };
 }

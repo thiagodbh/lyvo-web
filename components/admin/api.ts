@@ -1,5 +1,6 @@
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import '../../services/firebase'; // garante initializeApp
+import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { db } from '../../services/firebase'; // garante initializeApp
 import type { AdminApi } from './types';
 
 /** API real: tudo passa pela callable `adminApi`, que valida admin no servidor. */
@@ -33,6 +34,17 @@ export function createLiveApi(): AdminApi {
     saveMessaging: (config, reason) => call('saveMessaging', { config, reason }),
     logMessage: (entry) => call('logMessage', entry),
     listMessageLog: () => call('listMessageLog', { limit: 2000 }),
+    health: () => call('health'),
+    probeRules: async () => {
+      const base = { id: 'rules', label: 'Regras de segurança do banco (Firestore)', link: '' };
+      try {
+        await getDocs(query(collection(db, 'billingEvents'), limit(1)));
+        return { ...base, status: 'fail' as const, detail: 'O navegador conseguiu ler pagamentos de todos os clientes. Publique o firestore.rules novo.' };
+      } catch (e: any) {
+        if (e?.code === 'permission-denied') return { ...base, status: 'ok' as const, detail: 'Dados de pagamento bloqueados para acesso direto pelo navegador.' };
+        return { ...base, status: 'warn' as const, detail: `Não deu para testar: ${e?.message || e}` };
+      }
+    },
   };
 }
 

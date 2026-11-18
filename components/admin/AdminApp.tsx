@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  LayoutDashboard, Users, Repeat, Receipt, Package, PlugZap, ScrollText, Menu, LogOut, ShieldAlert, FlaskConical, MessageCircle,
+  LayoutDashboard, Users, Repeat, Receipt, Package, PlugZap, ScrollText, Menu, LogOut, ShieldAlert, FlaskConical, MessageCircle, Stethoscope,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
@@ -17,6 +17,7 @@ import PlansPage from './pages/Plans';
 import GatewaysPage from './pages/Gateways';
 import AuditPage from './pages/Audit';
 import MessagesPage from './pages/Messages';
+import HealthPage from './pages/Health';
 
 const NAV = [
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
@@ -27,6 +28,7 @@ const NAV = [
   { id: 'plans', label: 'Planos', icon: Package },
   { id: 'gateways', label: 'Gateways', icon: PlugZap },
   { id: 'audit', label: 'Auditoria', icon: ScrollText },
+  { id: 'health', label: 'Diagnóstico', icon: Stethoscope },
 ];
 
 function Shell({ api, email, onLogout }: { api: AdminApi; email: string; onLogout?: () => void }) {
@@ -43,6 +45,7 @@ function Shell({ api, email, onLogout }: { api: AdminApi; email: string; onLogou
       case 'plans': return <PlansPage />;
       case 'gateways': return <GatewaysPage />;
       case 'audit': return <AuditPage />;
+      case 'health': return <HealthPage />;
       default: return <OverviewPage />;
     }
   }, [path]);
