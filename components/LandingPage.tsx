@@ -934,6 +934,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
   const openSignUpModal = () => { setIsSignUp(true); setFormError(null); setShowModal(true); };
   // Preços vêm do admin (Planos). Botão de plano: cria a conta e vai direto para o pagamento.
   const { cfg: billing } = useBillingConfig();
+  const td = Math.min(7, Math.max(1, billing.trialDays ?? 3));
   const annual = billing.plans.find((p) => p.interval === 'year' && p.active);
   const monthly = billing.plans.find((p) => p.interval === 'month' && p.active);
   const annualMonth = annual ? Math.floor((annual.price / 12) * 100) / 100 : 12.49;
@@ -1048,7 +1049,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
 
   const faqItems = [
     { q: 'Como funciona a integração com o Google Agenda?', a: 'O Lyvo se conecta diretamente com o seu Google Agenda. Quando você cadastra um compromisso por mensagem — "reunião amanhã às 14h" — ele é criado automaticamente no seu calendário. Você recebe a notificação no celular como qualquer evento do Google. Os vencimentos das suas contas fixas também podem virar eventos, para você nunca esquecer de pagar.' },
-    { q: 'Como funciona o período de 3 dias grátis?', a: 'Você acessa todos os recursos do Lyvo por 3 dias sem precisar informar cartão de crédito. Ao final, escolhe o plano que preferir — ou não contrata nada, sem pressão.' },
+    { q: `Como funciona o período de ${td} dias grátis?`, a: `Você acessa todos os recursos do Lyvo por ${td} dias sem precisar informar cartão de crédito. Ao final, escolhe o plano que preferir — ou não contrata nada, sem pressão.` },
     { q: 'Precisa conectar meu WhatsApp?', a: 'Não. O chat do Lyvo é 100% próprio, dentro do site meulyvo.com. A experiência é inspirada no WhatsApp — mas completamente independente. Nenhum acesso ao seu telefone ou aplicativos.' },
     { q: 'Como o Lyvo sabe em qual fatura lançar a compra?', a: 'Ao cadastrar o cartão, você informa o melhor dia de compra, o limite e a data de vencimento. Com esses dados, o Lyvo identifica automaticamente se a compra vai para a fatura atual ou a próxima — sempre com 100% de precisão.' },
     { q: 'Posso cancelar a qualquer momento?', a: 'Sim. No plano mensal você cancela quando quiser, sem multa. No plano anual, a cobrança é feita uma vez e você usa por 12 meses. Em ambos, se cancelar nos primeiros 30 dias, reembolsamos 100%.' },
@@ -1060,7 +1061,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
     <div>
       {/* ── TOPBAR ── */}
       <div className="topbar">
-        <span className="topbar-text-long">⚡ Oferta por tempo limitado — 3 dias grátis +</span>
+        <span className="topbar-text-long">⚡ Oferta por tempo limitado — {td} dias grátis +</span>
         <span>30 dias de garantia total.</span>
         <div className="topbar-timer">{timerText}</div>
         <a href="#planos" onClick={goTo('planos')}>Aproveitar →</a>
@@ -1109,7 +1110,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
           <a href="#faq" onClick={goTo('faq')}>FAQ</a>
         </div>
         <div className="mobile-menu-actions">
-          <button onClick={() => { openSignUpModal(); setMobileMenuOpen(false); }} className="btn-hero-main">Começar — 3 dias grátis</button>
+          <button onClick={() => { openSignUpModal(); setMobileMenuOpen(false); }} className="btn-hero-main">Começar — {td} dias grátis</button>
           <button onClick={() => { openLoginModal(); setMobileMenuOpen(false); }} className="btn-entrar-mobile">Entrar na minha conta</button>
         </div>
       </div>
@@ -1126,12 +1127,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
           <p className="hero-sub">O Lyvo é o único app financeiro que funciona por conversa — como o WhatsApp, mas dentro do próprio site. Registre gastos em 3 segundos. Feche o mês sem angústia.</p>
           <div className="hero-ctas">
             <button onClick={openSignUpModal} className="btn-hero-main">
-              Começar Agora — 3 dias grátis
+              Começar Agora — {td} dias grátis
               <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
             </button>
             <div className="hero-trust">
               <span>✓ Sem cartão de crédito</span>
-              <span>✓ 3 dias grátis para testar</span>
+              <span>✓ {td} dias grátis para testar</span>
               <span>✓ 30 dias de garantia</span>
             </div>
           </div>
@@ -1175,7 +1176,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
           <div className="steps-title">Em 3 passos você já está no controle</div>
           <div className="steps-grid">
             {[
-              { n: '1', t: 'Cadastre-se em 30 segundos', d: 'Crie sua conta. Nenhum formulário longo, nenhuma configuração complicada. Pode entrar do celular agora — 3 dias grátis.' },
+              { n: '1', t: 'Cadastre-se em 30 segundos', d: `Crie sua conta. Nenhum formulário longo, nenhuma configuração complicada. Pode entrar do celular agora — ${td} dias grátis.` },
               { n: '2', t: 'Mande uma mensagem', d: 'Texto, áudio ou foto do comprovante. O Lyvo entende e categoriza automaticamente. Três segundos por gasto.' },
               { n: '3', t: 'Feche o mês no positivo', d: 'Veja a projeção exata antes do dia 30. Sem surpresa na fatura. Sem angústia. Só controle.' },
             ].map(s => (
@@ -1664,7 +1665,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
         <h2>Pronto para organizar<br />sua vida de vez?</h2>
         <p>Junte-se a quem parou de adivinhar onde o dinheiro vai e começou a fechar o mês no positivo.</p>
         <button onClick={openSignUpModal} className="btn-hero-main" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 17, padding: '18px 48px', border: 'none', cursor: 'pointer' }}>
-          Começar Agora — 3 dias grátis
+          Começar Agora — {td} dias grátis
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
         </button>
         <div className="cta-final-note">✓ Sem cartão de crédito &nbsp;·&nbsp; ✓ 30 dias de garantia &nbsp;·&nbsp; ✓ Cancele quando quiser</div>
@@ -1710,7 +1711,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
                 {isSignUp ? 'Crie sua conta grátis' : 'Acesse sua conta'}
               </div>
               <div style={{ fontSize: 15, color: 'var(--text3)' }}>
-                {isSignUp ? '3 dias grátis — sem cartão de crédito' : 'Bem-vindo de volta ao Lyvo'}
+                {isSignUp ? `${td} dias grátis — sem cartão de crédito` : 'Bem-vindo de volta ao Lyvo'}
               </div>
             </div>
 
@@ -1803,7 +1804,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
               {/* Submit */}
               <button type="submit"
                 style={{ width: '100%', padding: '15px', background: 'var(--teal)', color: 'var(--ink)', border: 'none', borderRadius: 'var(--pill)', fontFamily: 'var(--display)', fontSize: 16, fontWeight: 800, cursor: 'pointer', marginTop: isSignUp ? 4 : 0, transition: 'background .15s' }}>
-                {isSignUp ? 'Criar minha conta — 3 dias grátis' : 'Entrar na minha conta'}
+                {isSignUp ? `Criar minha conta — ${td} dias grátis` : 'Entrar na minha conta'}
               </button>
             </form>
 

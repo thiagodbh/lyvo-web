@@ -682,11 +682,18 @@ async function recomputeUsage(req: CallableRequest) {
   const users = await db().collection("users").get();
   let n = 0;
   for (const u of users.docs) {
+    // só a data de criação de cada registro: dá contagem, primeiro e último registro sem índice composto
     const [tx, ev] = await Promise.all([
-      db().collection("transactions").where("uid", "==", u.id).count().get(),
-      db().collection("events").where("uid", "==", u.id).where("source", "==", "INTERNAL").count().get(),
+      db().collection("transactions").where("uid", "==", u.id).select("createdAt").get(),
+      db().collection("events").where("uid", "==", u.id).where("source", "==", "INTERNAL").select("createdAt").get(),
     ]);
-    await u.ref.set({ usage: { transactions: tx.data().count, events: ev.data().count } }, { merge: true });
+    const times = [...tx.docs, ...ev.docs].map((d) => ms(d.get("createdAt"))).filter((t): t is number => !!t);
+    const usage: any = { transactions: tx.size, events: ev.size };
+    if (times.length) {
+      usage.firstTxAt = TS.fromMillis(Math.min(...times));
+      usage.lastTxAt = TS.fromMillis(Math.max(...times));
+    }
+    await u.ref.set({ usage }, { merge: true });
     n++;
   }
   await audit(req, "recompute_usage", null, { params: { users: n } });
