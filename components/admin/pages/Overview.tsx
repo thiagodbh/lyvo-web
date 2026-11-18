@@ -86,6 +86,30 @@ export default function OverviewPage() {
         <Kpi label="Perfil completo" value={pct(k.profileComplete, 0)} sub="cadastros com todos os dados" tone={k.profileComplete < 0.5 ? 'warn' : undefined} />
       </div>
 
+      {k.inactive && (
+        <Card className="mt-6" title="Clientes sumidos (com acesso e sem abrir o app)"
+          action={<button onClick={() => go('messages')} className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-900">Mandar lembretes <ArrowRight className="h-3.5 w-3.5" /></button>}>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            {([
+              ['idle3', '3 a 6 dias', k.inactive.d3, 'bg-slate-50 ring-slate-200'],
+              ['idle7', '7 a 13 dias', k.inactive.d7, 'bg-amber-50 ring-amber-200'],
+              ['idle14', '14 a 29 dias', k.inactive.d14, 'bg-orange-50 ring-orange-200'],
+              ['idle30', '30 dias ou mais', k.inactive.d30, 'bg-rose-50 ring-rose-200'],
+            ] as const).map(([f, label, v, cls]) => (
+              <button key={f} onClick={() => go(`users?filter=${f}`)} className={cx('rounded-xl p-3 text-left ring-1 transition hover:brightness-95', cls)}>
+                <div className="text-xl font-semibold tabular-nums text-slate-900">{num(v)}</div>
+                <div className="text-xs text-slate-600">{label}</div>
+              </button>
+            ))}
+            <div className="col-span-2 rounded-xl bg-slate-900 p-3 text-white md:col-span-1">
+              <div className="text-xl font-semibold tabular-nums">{num(k.inactive.paying)}</div>
+              <div className="text-xs text-slate-300">pagantes sumidos há 7+ dias: risco de cancelar</div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-slate-500">De {num(k.inactive.withAccess)} contas com acesso. “Acesso” = abriu o app ou registrou algo. Histórico anterior a esta versão vem do login do Firebase.</p>
+        </Card>
+      )}
+
       <div className="mt-6 grid gap-4 xl:grid-cols-3">
         <Card title="Receita por mês" className="xl:col-span-2">
           <div className="h-64">

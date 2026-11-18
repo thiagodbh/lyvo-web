@@ -142,7 +142,7 @@ function build() {
     }
 
     const lastActiveAt = status === 'active' || status === 'past_due' || status === 'courtesy'
-      ? NOW - Math.floor(rnd() * 6 * DAY)
+      ? NOW - Math.floor((chance(0.3) ? 7 + rnd() * 35 : rnd() * 6) * DAY)
       : activated ? Math.min(NOW, createdAt + Math.floor(rnd() * 6 * DAY)) : createdAt + 60000;
 
     users.push({
@@ -151,7 +151,7 @@ function build() {
       phone: legacy ? '' : `(${pick(['31', '11', '48', '41', '21'])}) 9${Math.floor(1000 + rnd() * 8999)}-${Math.floor(1000 + rnd() * 8999)}`,
       city: legacy ? '' : city, state: legacy ? '' : uf,
       income: legacy ? '' : pick(INCOMES), profession: legacy ? '' : pick(PROFS),
-      createdAt, lastSignInAt: lastActiveAt - 3600e3, lastActiveAt,
+      createdAt, lastSignInAt: lastActiveAt - 3600e3, lastActiveAt, lastOpenAt: lastActiveAt, lastOpenVia: chance(0.4) ? 'pwa' : 'browser',
       emailVerified: chance(0.3), authProviders: ['password'],
       status, hasAccess: ['trial', 'active', 'past_due', 'canceled', 'courtesy'].includes(status),
       planId, provider, periodEnd, graceUntil, trialEndsAt, everPaid, totalPaid,
@@ -259,6 +259,13 @@ function computeOverview(): Overview {
       arpu: paying.length ? mrr / paying.length : 0,
       trialConversion: trialEnded.length ? trialEnded.filter((u) => u.everPaid).length / trialEnded.length : null,
       churn30d: paying.length + churned.size ? churned.size / (paying.length + churned.size) : null,
+      inactive: (() => {
+        const b = users.filter((u) => u.hasAccess && !u.blocked);
+        const dd = (u: any) => (u.lastActiveAt ? (NOW - u.lastActiveAt) / DAY : 999);
+        return { withAccess: b.length, d3: b.filter((u) => dd(u) >= 3 && dd(u) < 7).length, d7: b.filter((u) => dd(u) >= 7 && dd(u) < 14).length,
+          d14: b.filter((u) => dd(u) >= 14 && dd(u) < 30).length, d30: b.filter((u) => dd(u) >= 30).length,
+          paying: b.filter((u) => ['active', 'past_due', 'canceled'].includes(u.status) && dd(u) >= 7).length };
+      })(),
       dau: users.filter((u) => within(u.lastActiveAt, 1)).length, wau: users.filter((u) => within(u.lastActiveAt, 7)).length, mau: users.filter((u) => within(u.lastActiveAt, 30)).length,
       profileComplete: users.filter((u) => u.profileCompleteness === 100).length / users.length,
     },

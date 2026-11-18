@@ -199,7 +199,8 @@ function ProfileTab({ d }: { d: UserDetail }) {
         <Card title="Conta">
           <Row k="Cadastro" v={dateBR(r.createdAt, true)} />
           <Row k="Último login" v={dateBR(r.lastSignInAt, true)} />
-          <Row k="Último uso" v={rel(r.lastActiveAt)} />
+          <Row k="Último acesso ao app" v={r.lastActiveAt ? `${dateBR(r.lastActiveAt, true)} · ${rel(r.lastActiveAt)}${r.lastOpenVia ? (r.lastOpenVia === 'pwa' ? ' · app instalado' : ' · navegador') : ''}` : '—'} />
+          <Row k="Último registro" v={r.usage.lastTxAt ? `${dateBR(r.usage.lastTxAt, true)} · ${rel(r.usage.lastTxAt)}` : 'nunca registrou'} />
           <Row k="Login via" v={r.authProviders.join(', ')} />
           <Row k="Notificações" v={r.pushEnabled ? 'ativadas' : 'desativadas'} />
           <Row k="WhatsApp" v={r.whatsappOptOut ? 'não quer receber' : r.whatsappOptIn ? 'aceitou no cadastro' : 'sem registro de consentimento'} />

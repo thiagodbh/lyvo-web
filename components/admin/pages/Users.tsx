@@ -8,8 +8,8 @@ import {
 } from '../ui';
 import UserDrawer from './UserDrawer';
 
-type Filter = 'all' | 'paying' | UserStatus | 'nodoc' | 'incomplete' | 'inactive';
-type SortKey = 'createdAt' | 'lastActiveAt' | 'periodEnd' | 'totalPaid' | 'tx';
+type Filter = 'all' | 'paying' | UserStatus | 'nodoc' | 'incomplete' | 'inactive' | 'idle3' | 'idle7' | 'idle14' | 'idle30';
+type SortKey = 'createdAt' | 'lastActiveAt' | 'lastTxAt' | 'periodEnd' | 'totalPaid' | 'tx';
 const PAGE = 50;
 
 export default function UsersPage() {
@@ -35,13 +35,18 @@ export default function UsersPage() {
       case 'nodoc': return !u.hasDoc;
       case 'incomplete': return u.profileCompleteness < 100;
       case 'inactive': return !u.lastActiveAt || Date.now() - u.lastActiveAt > 14 * 864e5;
+      // "sumidos": têm acesso agora e não abrem o app há N dias (é com quem vale falar)
+      case 'idle3': case 'idle7': case 'idle14': case 'idle30': {
+        const n = Number(f.slice(4));
+        return u.hasAccess && !u.blocked && (!u.lastActiveAt || Date.now() - u.lastActiveAt >= n * 864e5);
+      }
       default: return u.status === f;
     }
   };
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
-    (['all', 'paying', 'trial', 'past_due', 'canceled', 'courtesy', 'trial_expired', 'expired', 'refunded', 'blocked', 'incomplete', 'inactive', 'nodoc'] as Filter[])
+    (['all', 'paying', 'trial', 'past_due', 'canceled', 'courtesy', 'trial_expired', 'expired', 'refunded', 'blocked', 'incomplete', 'inactive', 'idle3', 'idle7', 'idle14', 'idle30', 'nodoc'] as Filter[])
       .forEach((f) => { c[f] = users.filter((u) => matchFilter(u, f)).length; });
     return c;
   }, [users]);
@@ -51,6 +56,7 @@ export default function UsersPage() {
     const val = (u: UserRow): number => {
       switch (sort.key) {
         case 'tx': return u.usage.transactions + u.usage.events;
+        case 'lastTxAt': return u.usage.lastTxAt || 0;
         case 'totalPaid': return u.totalPaid;
         default: return (u[sort.key] as number) || 0;
       }
@@ -70,7 +76,7 @@ export default function UsersPage() {
   const exportCsv = () => downloadCsv(`lyvo-usuarios-${new Date().toISOString().slice(0, 10)}.csv`, rows.map((u) => ({
     uid: u.uid, nome: u.name, email: u.email, telefone: u.phone, cidade: u.city, uf: u.state, renda: u.income, profissao: u.profession,
     status: STATUS[u.status]?.label || u.status, plano: u.planId || '', gateway: u.provider || '',
-    cadastro: dateBR(u.createdAt), trial_ate: dateBR(u.trialEndsAt), acesso_ate: dateBR(u.periodEnd), ultimo_uso: dateBR(u.lastActiveAt),
+    cadastro: dateBR(u.createdAt), trial_ate: dateBR(u.trialEndsAt), acesso_ate: dateBR(u.periodEnd), ultimo_acesso: dateBR(u.lastActiveAt), dias_sem_acesso: u.lastActiveAt ? Math.floor((Date.now() - u.lastActiveAt) / 864e5) : '', ultimo_registro: dateBR(u.usage.lastTxAt),
     lancamentos: u.usage.transactions, eventos: u.usage.events, total_pago: u.totalPaid.toFixed(2).replace('.', ','),
     utm_source: u.acquisition?.utm_source || '', utm_campaign: u.acquisition?.utm_campaign || '', indicado_por: u.acquisition?.ref || '',
     perfil_completo: `${u.profileCompleteness}%`,
@@ -102,7 +108,11 @@ export default function UsersPage() {
           { value: 'expired', label: 'Expirados', count: counts.expired },
           { value: 'refunded', label: 'Reembolsados', count: counts.refunded },
           { value: 'blocked', label: 'Bloqueados', count: counts.blocked },
-          { value: 'inactive', label: 'Inativos 14d+', count: counts.inactive },
+          { value: 'idle3', label: 'Sumidos 3d+', count: counts.idle3 },
+          { value: 'idle7', label: 'Sumidos 7d+', count: counts.idle7 },
+          { value: 'idle14', label: 'Sumidos 14d+', count: counts.idle14 },
+          { value: 'idle30', label: 'Sumidos 30d+', count: counts.idle30 },
+          { value: 'inactive', label: 'Inativos 14d+ (todos)', count: counts.inactive },
           { value: 'incomplete', label: 'Perfil incompleto', count: counts.incomplete },
           { value: 'nodoc', label: 'Sem doc', count: counts.nodoc },
         ]} />
@@ -130,7 +140,8 @@ export default function UsersPage() {
                   <th className="px-3 py-2.5 font-medium">Status</th>
                   <th className="px-3 py-2.5 font-medium">Plano</th>
                   <SortTh k="periodEnd">Acesso até</SortTh>
-                  <SortTh k="lastActiveAt">Último uso</SortTh>
+                  <SortTh k="lastActiveAt">Último acesso</SortTh>
+                  <SortTh k="lastTxAt">Último registro</SortTh>
                   <SortTh k="tx" right>Registros</SortTh>
                   <SortTh k="totalPaid" right>Pago</SortTh>
                   <th className="px-3 py-2.5 font-medium">Origem</th>
@@ -161,7 +172,11 @@ export default function UsersPage() {
                         <div className="text-slate-700">{dateBR(accessUntil)}</div>
                         <div className={cx('text-xs', accessUntil && accessUntil < Date.now() ? 'text-slate-400' : 'text-slate-500')}>{accessUntil ? rel(accessUntil) : ''}</div>
                       </td>
-                      <td className="px-3 py-2.5 text-slate-600">{rel(u.lastActiveAt)}</td>
+                      <td className="px-3 py-2.5">
+                        <div className={cx('text-slate-700', u.hasAccess && u.lastActiveAt && Date.now() - u.lastActiveAt >= 7 * 864e5 && 'font-medium text-amber-700')}>{rel(u.lastActiveAt)}</div>
+                        {u.lastOpenVia && <div className="text-[11px] text-slate-400">{u.lastOpenVia === 'pwa' ? 'app instalado' : 'navegador'}</div>}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-600">{rel(u.usage.lastTxAt)}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">
                         <span className={cx(u.usage.transactions + u.usage.events === 0 && 'text-rose-500')}>{u.usage.transactions + u.usage.events}</span>
                       </td>

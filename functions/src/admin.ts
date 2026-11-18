@@ -85,7 +85,12 @@ function buildRow(auth: admin.auth.UserRecord | undefined, uid: string, u: any, 
     income: u.income || "", profession: u.profession || "",
     createdAt: ms(u.createdAt) ?? (auth ? Date.parse(auth.metadata.creationTime) : null),
     lastSignInAt: auth?.metadata.lastSignInTime ? Date.parse(auth.metadata.lastSignInTime) : null,
-    lastActiveAt: ms(u.lastActiveAt) ?? (auth?.metadata.lastRefreshTime ? Date.parse(auth.metadata.lastRefreshTime) : null),
+    // Firebase Auth renova o token enquanto o app está aberto: dá histórico real mesmo de quem é anterior ao rastreio
+    lastOpenAt: maxT(ms(u.lastOpenAt), auth?.metadata.lastRefreshTime ? Date.parse(auth.metadata.lastRefreshTime) : null,
+      auth?.metadata.lastSignInTime ? Date.parse(auth.metadata.lastSignInTime) : null),
+    lastOpenVia: u.lastOpenVia || null,
+    lastActiveAt: maxT(ms(u.lastOpenAt), ms(u.lastActiveAt), ms(usage.lastTxAt),
+      auth?.metadata.lastRefreshTime ? Date.parse(auth.metadata.lastRefreshTime) : null),
     emailVerified: !!auth?.emailVerified,
     authProviders: auth?.providerData.map((p) => p.providerId) || [],
     status: displayStatus(u, now),
@@ -202,6 +207,7 @@ async function overview() {
       wau: users.filter((u) => within(u.lastActiveAt, 7)).length,
       mau: users.filter((u) => within(u.lastActiveAt, 30)).length,
       profileComplete: users.length ? users.filter((u) => u.profileCompleteness === 100).length / users.length : 0,
+      inactive: inactiveBuckets(users, now),
     },
     funnel: [
       { step: "Cadastros", value: users.length },
@@ -645,6 +651,25 @@ async function health(): Promise<{ at: number; checks: Check[] }> {
   add({ id: "errors", label: "Erros de integração (7 dias)", status: errs.empty ? "ok" : "warn", link: "gateways",
     detail: errs.empty ? "Nenhum." : `${errs.size} erro(s). Último: ${String(errs.docs.map((d) => d.data()).sort((a, b) => (ms(b.at) || 0) - (ms(a.at) || 0))[0]?.error || "").slice(0, 160)}` });
   return { at: now, checks };
+}
+
+function maxT(...t: (number | null | undefined)[]): number | null {
+  const v = t.filter((x): x is number => typeof x === "number" && !isNaN(x));
+  return v.length ? Math.max(...v) : null;
+}
+
+/** Quem tem acesso (trial, pagante, cortesia) e sumiu, por faixa de dias sem abrir o app. */
+function inactiveBuckets(users: any[], now: number) {
+  const base = users.filter((u) => u.hasAccess && !u.isAdmin && !u.blocked);
+  const days = (u: any) => (u.lastActiveAt ? (now - u.lastActiveAt) / DAY : 999);
+  return {
+    withAccess: base.length,
+    d3: base.filter((u) => days(u) >= 3 && days(u) < 7).length,
+    d7: base.filter((u) => days(u) >= 7 && days(u) < 14).length,
+    d14: base.filter((u) => days(u) >= 14 && days(u) < 30).length,
+    d30: base.filter((u) => days(u) >= 30).length,
+    paying: base.filter((u) => ["active", "past_due", "canceled"].includes(u.status) && days(u) >= 7).length,
+  };
 }
 
 async function listAudit(d: any) {

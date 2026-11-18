@@ -394,6 +394,9 @@ function SettingsTab({ messaging, onSaved }: { messaging: MessagingConfig; onSav
           <Field label="Dias sem repetir a mesma etapa (padrão)" hint="Cada etapa tem o seu próprio intervalo; este vale para as que não definem.">
             <input type="number" min={1} max={60} className={inputCls} value={c.dedupDays} onChange={(e) => setC({ ...c, dedupDays: Number(e.target.value) })} />
           </Field>
+          <Field label="Assinante é considerado sumido após (dias sem abrir o app)" hint="Entra na etapa “Assinante sumido”. Quem está em teste entra em “Sumiu no teste” após 30 horas sem abrir.">
+            <input type="number" min={2} max={60} className={inputCls} value={c.inactiveDays} onChange={(e) => setC({ ...c, inactiveDays: Math.max(2, Math.min(60, Number(e.target.value) || 7)) })} />
+          </Field>
           <div className="rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200">
             <Toggle checked={c.requireOptIn} onChange={(v) => setC({ ...c, requireOptIn: v })} label="Mensagens de marketing só para quem aceitou no cadastro" />
             <p className="mt-2 text-xs leading-relaxed text-slate-500">

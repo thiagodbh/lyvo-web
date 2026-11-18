@@ -42,6 +42,10 @@ export interface UserRow {
   profession: string;
   createdAt: number | null;
   lastSignInAt: number | null;
+  /** última vez que abriu o app (inclui o histórico do Firebase Auth) */
+  lastOpenAt: number | null;
+  lastOpenVia: 'pwa' | 'browser' | null;
+  /** última atividade de qualquer tipo: abriu o app ou registrou algo */
   lastActiveAt: number | null;
   emailVerified: boolean;
   authProviders: string[];
@@ -135,6 +139,7 @@ export interface Overview {
     mrr: number; arr: number; revenueThisMonth: number; revenue30d: number; refunds30d: number; arpu: number;
     trialConversion: number | null; churn30d: number | null;
     dau: number; wau: number; mau: number; profileComplete: number;
+    inactive?: { withAccess: number; d3: number; d7: number; d14: number; d30: number; paying: number };
   };
   funnel: { step: string; value: number }[];
   series: { signupsByDay: { day: string; value: number }[]; revenueByMonth: { month: string; value: number }[] };

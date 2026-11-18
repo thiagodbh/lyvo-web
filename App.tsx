@@ -28,7 +28,9 @@ async function pingActivity(uid: string) {
   if (Date.now() - lastActivityPing < ACTIVITY_THROTTLE_MS) return;
   lastActivityPing = Date.now();
   try {
-    await updateDoc(doc(db, "users", uid), { lastActiveAt: serverTimestamp() });
+    let via = "browser";
+    try { if (window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone) via = "pwa"; } catch { /* */ }
+    await updateDoc(doc(db, "users", uid), { lastOpenAt: serverTimestamp(), lastActiveAt: serverTimestamp(), lastOpenVia: via });
   } catch (e) {
     console.error("Erro ao registrar atividade:", e);
   }

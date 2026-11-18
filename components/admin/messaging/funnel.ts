@@ -6,7 +6,7 @@ import type { BillingConfig, BillingEvent, Subscription, UserRow } from '../type
 
 export type StageId =
   | 'checkout_abandoned' | 'past_due' | 'payment_confirmed' | 'renewal_soon' | 'canceled'
-  | 'trial_ending' | 'activation' | 'welcome' | 'trial_expired' | 'inactive_paying' | 'winback' | 'referral';
+  | 'trial_ending' | 'activation' | 'welcome' | 'inactive_trial' | 'trial_expired' | 'inactive_paying' | 'winback' | 'referral';
 
 export type Phase = 'Ativação' | 'Conversão' | 'Recuperação' | 'Retenção' | 'Expansão';
 
@@ -42,10 +42,12 @@ export const STAGES: Stage[] = [
     goal: 'Fazer o primeiro registro acontecer', rule: 'Criou a conta há mais de 20 horas e não fez nenhum registro' },
   { id: 'welcome', label: 'Boas-vindas', phase: 'Ativação', transactional: false, cooldownDays: 365,
     goal: 'Abrir o canal e mostrar o primeiro passo', rule: 'Cadastrou-se nas últimas 24 horas' },
+  { id: 'inactive_trial', label: 'Sumiu no teste', phase: 'Ativação', transactional: false, cooldownDays: 3,
+    goal: 'Trazer de volta antes do teste acabar', rule: 'Em teste, já registrou algo, mas não abre o app há mais de 30 horas' },
   { id: 'trial_expired', label: 'Teste expirou', phase: 'Recuperação', transactional: false, cooldownDays: 4,
     goal: 'Trazer de volta quem quase comprou', rule: 'Teste terminou há até 10 dias e nunca pagou' },
   { id: 'inactive_paying', label: 'Assinante sumido', phase: 'Retenção', transactional: false, cooldownDays: 14,
-    goal: 'Reengajar antes que vire cancelamento', rule: 'Pagante sem usar o app há mais de 10 dias' },
+    goal: 'Reengajar antes que vire cancelamento', rule: 'Assinante ou cortesia sem abrir o app há X dias (X em Configurar)' },
   { id: 'winback', label: 'Reconquista', phase: 'Recuperação', transactional: false, cooldownDays: 30,
     goal: 'Reativar ex-clientes e testes antigos', rule: 'Ex-assinante expirado, ou teste expirado entre 10 e 60 dias' },
   { id: 'referral', label: 'Pedir indicação', phase: 'Expansão', transactional: false, cooldownDays: 60,
@@ -67,6 +69,8 @@ export interface MessagingConfig {
   senderNumber: string;
   senderName: string;
   dedupDays: number;
+  /** dias sem abrir o app para o assinante entrar em "Assinante sumido" */
+  inactiveDays: number;
   requireOptIn: boolean;
   templates: Template[];
 }
@@ -141,6 +145,13 @@ Testa agora com algo de hoje:
 
 Seu teste vai até *{fim_trial}*. Quer que eu te mostre em 1 minuto como deixar tudo pronto?` },
 
+  { id: 'inactive_trial', stage: 'inactive_trial', name: 'Lembrete no teste', active: true, body:
+`Oi, {primeiro_nome}! Aqui é {atendente}, do Lyvo.
+
+Você começou bem: {seus_registros}. Mas o Lyvo só mostra o mês de verdade quando você registra todo dia, nem que seja um áudio de 10 segundos no fim do dia.
+
+Seu teste vai até *{fim_trial}*. Abre agora e manda o que gastou hoje: {link_app}` },
+
   { id: 'welcome', stage: 'welcome', name: 'Boas-vindas ao teste', active: true, body:
 `Oi, {primeiro_nome}! Aqui é {atendente}, do Lyvo 👋
 
@@ -163,7 +174,7 @@ Assinando agora, você continua exatamente de onde parou:
 Ficou alguma dúvida que te impediu de seguir? Me conta aqui.` },
 
   { id: 'inactive_paying', stage: 'inactive_paying', name: 'Reengajar assinante', active: true, body:
-`{primeiro_nome}, faz {dias_sem_uso} dias que você não registra nada no Lyvo. Correria, né?
+`{primeiro_nome}, faz {dias_sem_uso} dias que você não abre o Lyvo. Correria, né?
 
 Uma dica de quem anda sem tempo: mande um áudio no fim do dia, tipo *hoje gastei 40 de mercado e 15 de café*. O Lyvo separa tudo sozinho.
 
@@ -190,6 +201,7 @@ export const DEFAULT_MESSAGING: MessagingConfig = {
   senderNumber: '',
   senderName: 'Thiago',
   dedupDays: 5,
+  inactiveDays: 7,
   requireOptIn: false,
   templates: DEFAULT_TEMPLATES,
 };
@@ -331,8 +343,12 @@ export function matchStage(u: UserRow, ctx: Ctx): { stage: StageId; reason: stri
   if (u.status === 'trial_expired' && !u.everPaid && u.trialEndsAt && now - u.trialEndsAt < 10 * DAY) {
     return { stage: 'trial_expired', reason: `Teste expirou ${dateBR(u.trialEndsAt)} · ${regs} registros` };
   }
-  if (paying && u.lastActiveAt && now - u.lastActiveAt > 10 * DAY) {
-    return { stage: 'inactive_paying', reason: `Pagante sem usar há ${Math.floor((now - u.lastActiveAt) / DAY)} dias` };
+  const idle = u.lastActiveAt ? now - u.lastActiveAt : null;
+  if (u.status === 'trial' && regs > 0 && idle != null && idle > 30 * 3600e3) {
+    return { stage: 'inactive_trial', reason: `Em teste, sem abrir há ${idle < 2 * DAY ? Math.round(idle / 3600e3) + ' h' : Math.floor(idle / DAY) + ' dias'} · ${regs} registros` };
+  }
+  if ((paying || u.status === 'courtesy') && idle != null && idle >= (ctx.messaging.inactiveDays || 7) * DAY) {
+    return { stage: 'inactive_paying', reason: `${u.status === 'courtesy' ? 'Cortesia' : 'Assinante'} sem abrir o app há ${Math.floor(idle / DAY)} dias` };
   }
   if ((['expired', 'refunded'].includes(u.status) && u.everPaid) ||
       (u.status === 'trial_expired' && u.trialEndsAt && now - u.trialEndsAt >= 10 * DAY && now - u.trialEndsAt < 60 * DAY)) {
