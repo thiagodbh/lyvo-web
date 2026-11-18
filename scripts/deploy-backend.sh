@@ -13,6 +13,8 @@ command -v node >/dev/null || fail "Node.js não encontrado. Instale em https://
 if ! command -v firebase >/dev/null; then
   echo "Firebase CLI não encontrado. Instalando (npm i -g firebase-tools)…"
   npm i -g firebase-tools || fail "Não consegui instalar. Rode: sudo npm i -g firebase-tools"
+  export PATH="$(npm prefix -g)/bin:$PATH"
+  command -v firebase >/dev/null || fail "Firebase instalado, mas fora do PATH. Rode: export PATH=\"\$(npm prefix -g)/bin:\$PATH\" e tente de novo"
 fi
 
 branch=$(git rev-parse --abbrev-ref HEAD)
