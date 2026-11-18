@@ -50,7 +50,7 @@ function Shell({ api, email, onLogout }: { api: AdminApi; email: string; onLogou
   const nav = (
     <nav className="flex h-full flex-col">
       <div className="flex items-center gap-2.5 px-4 pb-5 pt-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-sm font-black text-slate-950">L</div>
+        <img src="/brand/lyvo-icon-128.png" alt="Lyvo" className="h-9 w-9 object-contain" />
         <div>
           <div className="text-sm font-semibold text-white">Lyvo Admin</div>
           <div className="text-[11px] text-slate-400">Operação & Receita</div>
@@ -125,7 +125,7 @@ function AdminLogin({ error }: { error?: string }) {
         finally { setBusy(false); }
       }}>
         <div className="mb-5 flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500 font-black text-slate-950">L</div>
+          <img src="/brand/lyvo-icon-128.png" alt="Lyvo" className="h-11 w-11 object-contain" />
           <div><div className="font-semibold">Lyvo Admin</div><div className="text-xs text-slate-500">Acesso restrito</div></div>
         </div>
         <div className="space-y-3">

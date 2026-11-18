@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, Camera, TrendingDown, TrendingUp, Calendar, Loader2, X, Check, Bot, ChevronDown, DollarSign, Type as TypeIcon, Tag, CalendarDays, CreditCard as CreditCardIcon, Clock } from 'lucide-react';
+import { Send, Mic, Camera, TrendingDown, TrendingUp, Calendar, Loader2, X, Check, ChevronDown, DollarSign, Type as TypeIcon, Tag, CalendarDays, CreditCard as CreditCardIcon, Clock } from 'lucide-react';
 import { processUserCommand } from '../services/geminiService';
 import { store } from '../services/firestoreStore';
 
@@ -348,7 +348,7 @@ const ChatInterface: React.FC = () => {
       {/* Visual Header */}
       <div className="bg-white/95 backdrop-blur-md shadow-sm z-10 rounded-b-[2.5rem] w-full p-6 pb-4 border-b border-gray-100">
         <div className="flex items-center space-x-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-lyvo-primary flex items-center justify-center text-white shadow-lg"><Bot /></div>
+            <div className="w-12 h-12 rounded-full bg-white ring-1 ring-teal-100 flex items-center justify-center shadow-md p-1.5 flex-shrink-0"><img src="/brand/lyvo-icon-128.png" alt="Lyvo" className="w-full h-full object-contain" /></div>
             <div>
                 <h1 className="font-poppins font-black text-gray-900 text-xl tracking-tight leading-none">Lyvo Assistente</h1>
                 <div className="flex items-center space-x-1 mt-1">

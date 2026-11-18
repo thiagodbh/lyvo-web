@@ -445,8 +445,8 @@ export const sendEventReminders = onSchedule("every 5 minutes", async () => {
         data: { eventId: docSnap.id },
         webpush: {
           notification: {
-            icon: "https://meulyvo.com/favicon.ico",
-            badge: "https://meulyvo.com/favicon.ico",
+            icon: "https://meulyvo.com/icons/icon-192.png",
+            badge: "https://meulyvo.com/icons/badge-96.png",
             requireInteraction: false,
           },
         },

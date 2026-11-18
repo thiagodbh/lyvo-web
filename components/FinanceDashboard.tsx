@@ -277,10 +277,10 @@ const FinanceDashboard: React.FC = () => {
                         </div>
                         <ArrowDownCircle className="w-8 h-8 text-red-500 opacity-20" />
                     </div>
-                    <div className="bg-lyvo-primary p-4 rounded-2xl shadow-md border-l-4 border-blue-300 text-white flex justify-between items-center">
+                    <div className="bg-gradient-to-br from-lyvo-primary to-lyvo-dark p-4 rounded-2xl shadow-md border-l-4 border-lyvo-light text-white flex justify-between items-center">
                         <div>
-                            <p className="text-xs text-gray-900 font-medium uppercase">Saldo Acumulado</p>
-                            <p className="text-2xl font-bold mt-1 text-blue-600">{formatCurrency(balanceData.balance)}</p>
+                            <p className="text-xs text-white/80 font-medium uppercase">Saldo Acumulado</p>
+                            <p className="text-2xl font-bold mt-1 text-white">{formatCurrency(balanceData.balance)}</p>
                         </div>
                     </div>
                 </div>
@@ -293,7 +293,7 @@ const FinanceDashboard: React.FC = () => {
                                     <CreditCardIcon className="w-5 h-5 text-lyvo-primary" />
                                     <h2 className="text-lg font-bold text-lyvo-text">Contas Fixas</h2>
                                 </div>
-                                <button onClick={() => setShowAddBillModal(true)} className="text-lyvo-primary text-sm font-bold flex items-center bg-blue-50 px-3 py-1.5 rounded-xl transition-colors">
+                                <button onClick={() => setShowAddBillModal(true)} className="text-lyvo-primary text-sm font-bold flex items-center bg-teal-50 px-3 py-1.5 rounded-xl transition-colors">
                                     <Plus className="w-4 h-4 mr-1" /> Adicionar
                                 </button>
                             </div>
@@ -351,7 +351,7 @@ const FinanceDashboard: React.FC = () => {
                                     <CreditCardIcon className="w-5 h-5 text-lyvo-primary" />
                                     Meus Cartões
                                 </h2>
-                                <button onClick={() => { setEditingCard(null); setShowAddCardModal(true); }} className="text-lyvo-primary text-sm font-bold flex items-center bg-blue-50 px-3 py-1.5 rounded-xl transition-colors">
+                                <button onClick={() => { setEditingCard(null); setShowAddCardModal(true); }} className="text-lyvo-primary text-sm font-bold flex items-center bg-teal-50 px-3 py-1.5 rounded-xl transition-colors">
                                     <Plus className="w-4 h-4 mr-1" /> Novo
                                 </button>
                             </div>
@@ -455,7 +455,7 @@ const FinanceDashboard: React.FC = () => {
                                     <TrendingUp className="w-5 h-5 text-lyvo-primary" />
                                     Previsibilidade
                                 </h2>
-                                <button onClick={() => { setEditingForecast(null); setShowAddForecastModal(true); }} className="text-lyvo-primary text-sm font-bold flex items-center bg-blue-50 px-3 py-1.5 rounded-xl transition-colors">
+                                <button onClick={() => { setEditingForecast(null); setShowAddForecastModal(true); }} className="text-lyvo-primary text-sm font-bold flex items-center bg-teal-50 px-3 py-1.5 rounded-xl transition-colors">
                                     <Plus className="w-4 h-4 mr-1" /> Receita
                                 </button>
                             </div>
@@ -525,7 +525,7 @@ const FinanceDashboard: React.FC = () => {
                         <div className="bg-white p-5 rounded-3xl shadow-sm">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-lg font-bold text-lyvo-text">Categorias</h2>
-                                <button onClick={() => { setEditingCategory(null); setShowCategoryModal(true); }} className="p-1 text-lyvo-primary hover:bg-blue-50 rounded-lg transition-colors">
+                                <button onClick={() => { setEditingCategory(null); setShowCategoryModal(true); }} className="p-1 text-lyvo-primary hover:bg-teal-50 rounded-lg transition-colors">
                                     <Plus className="w-5 h-5" />
                                 </button>
                             </div>

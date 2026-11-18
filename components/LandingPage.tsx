@@ -88,17 +88,7 @@ nav{
 .logo{
   text-decoration:none;display:flex;align-items:center;gap:10px;flex-shrink:0;
 }
-.logo-mark{
-  width:34px;height:34px;background:var(--ink);border-radius:9px;
-  display:flex;align-items:center;justify-content:center;position:relative;
-  overflow:hidden;
-}
-.logo-mark::after{
-  content:'';position:absolute;
-  width:20px;height:20px;background:var(--teal);
-  border-radius:50%;left:-4px;bottom:-4px;opacity:.8;
-}
-.logo-mark svg{width:16px;height:16px;fill:#fff;position:relative;z-index:1}
+.logo-mark{width:38px;height:38px;display:block;flex-shrink:0;object-fit:contain}
 .logo-word{
   font-family:var(--display);font-size:21px;font-weight:900;
   color:var(--ink);letter-spacing:-0.04em;
@@ -1069,9 +1059,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
       <header>
         <nav>
           <a href="#" className="logo">
-            <div className="logo-mark">
-              <svg viewBox="0 0 20 20"><path d="M10 2L4 6v7l6 4 6-4V6L10 2z" /></svg>
-            </div>
+            <img className="logo-mark" src="/brand/lyvo-icon-128.png" alt="" width={38} height={38} />
             <span className="logo-word">LYVO<sup>™</sup></span>
           </a>
           <ul className="nav-links">
@@ -1139,7 +1127,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
           <div className="hero-phone-wrap">
             <div className="hero-phone">
               <div className="hero-phone-topbar">
-                <div className="hpt-avatar">L</div>
+                <div className="hpt-avatar" style={{ background: '#fff', padding: 4 }}><img src="/brand/lyvo-icon-128.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /></div>
                 <div>
                   <div className="hpt-name">Lyvo Assistente 🤖</div>
                   <div className="hpt-status">ATIVO</div>
@@ -1675,7 +1663,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
       <footer>
         <div className="footer-grid">
           <div className="footer-brand">
-            <div className="fb-name">LYVO<sup style={{ fontSize: 10, verticalAlign: 'super', fontWeight: 600, color: 'rgba(255,255,255,.2)' }}>™</sup><div className="fb-dot" /></div>
+            <div className="fb-name"><img src="/brand/lyvo-logo-horizontal.png" alt="Lyvo" style={{ height: 44, width: 'auto', display: 'block' }} /></div>
             <p>Controle financeiro e agenda inteligente em um só lugar. O único app de finanças que funciona por conversa.</p>
           </div>
           <div className="footer-col">
@@ -1706,9 +1694,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
 
             {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <div style={{ width: 52, height: 52, background: 'var(--teal-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 24 }}>
-                {isSignUp ? '🚀' : '👋'}
-              </div>
+              <img src="/brand/lyvo-icon-128.png" alt="Lyvo" width={60} height={60} style={{ display: 'block', margin: '0 auto 14px', width: 60, height: 60, objectFit: 'contain' }} />
               <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 900, color: 'var(--ink)', letterSpacing: '-0.03em', marginBottom: 6 }}>
                 {isSignUp ? 'Crie sua conta grátis' : 'Acesse sua conta'}
               </div>

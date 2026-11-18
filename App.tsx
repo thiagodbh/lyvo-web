@@ -157,7 +157,7 @@ const ProfileScreen = ({ onLogout }: { onLogout: () => void }) => {
 
       {/* Header */}
       <div className="flex flex-col items-center pt-10 pb-6 px-6">
-        <div className="w-24 h-24 bg-lyvo-primary rounded-full flex items-center justify-center shadow-lg mb-4">
+        <div className="w-24 h-24 bg-gradient-to-br from-lyvo-light to-lyvo-dark rounded-full flex items-center justify-center shadow-lg mb-4">
           <svg width="44" height="44" viewBox="0 0 28 28" fill="none">
             <circle cx="14" cy="10" r="5.5" fill="white" />
             <path d="M3.5 25c0-5.799 4.701-10.5 10.5-10.5S24.5 19.201 24.5 25" fill="white" />
@@ -366,8 +366,9 @@ function App() {
 
   if (isAuthenticated === null) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
-        <div className="text-gray-500 font-medium">Carregando...</div>
+      <div className="h-screen w-full flex flex-col items-center justify-center gap-4 bg-gray-50">
+        <img src="/brand/lyvo-icon-128.png" alt="Lyvo" className="w-16 h-16 object-contain animate-pulse" />
+        <div className="text-gray-400 text-sm font-medium">Carregando…</div>
       </div>
     );
   }

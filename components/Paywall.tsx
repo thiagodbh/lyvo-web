@@ -125,6 +125,8 @@ export default function Paywall({ onLogout }: Props) {
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-6">
       <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
 
+        <img src="/brand/lyvo-logo.png" alt="Lyvo" className="mx-auto h-24 w-auto object-contain" />
+
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
             Seu teste acabou. Continue no controle absoluto da sua vida.
