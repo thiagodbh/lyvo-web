@@ -29,6 +29,10 @@ export function createLiveApi(): AdminApi {
     recomputeUsage: () => call('recomputeUsage'),
     olimpoPing: () => call('olimpoPing'),
     olimpoSyncAll: () => call('olimpoSyncAll'),
+    getMessaging: () => call('getMessaging'),
+    saveMessaging: (config, reason) => call('saveMessaging', { config, reason }),
+    logMessage: (entry) => call('logMessage', entry),
+    listMessageLog: () => call('listMessageLog', { limit: 2000 }),
   };
 }
 

@@ -1,4 +1,4 @@
-import { AlertTriangle, AlertOctagon, Info, ArrowRight, RefreshCw } from 'lucide-react';
+import { AlertTriangle, AlertOctagon, Info, ArrowRight, RefreshCw, MessageCircle } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useApi, go } from '../ctx';
 import { brl, Button, Card, cx, dateBR, ErrorBox, Kpi, Loading, num, PageHeader, pct, PROVIDER_LABEL, rel, useAsync } from '../ui';
@@ -58,6 +58,18 @@ export default function OverviewPage() {
           })}
         </div>
       )}
+
+      <button onClick={() => go('messages')}
+        className="mb-6 flex w-full flex-col gap-3 rounded-xl bg-slate-950 p-4 text-left text-white ring-1 ring-slate-900 transition hover:bg-slate-900 sm:flex-row sm:items-center">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#1fa855]"><MessageCircle className="h-5 w-5" /></div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold">Central de mensagens</div>
+          <div className="text-xs text-slate-300">
+            {d.upcoming.trialsEnding72h.length} teste(s) acabando · {k.pastDue} em atraso · {d.upcoming.renewals7d.length} renovação(ões) na semana. Mensagens prontas para cada momento do funil.
+          </div>
+        </div>
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#5be38f]">Abrir fila de hoje<ArrowRight className="h-4 w-4" /></span>
+      </button>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Kpi label="MRR" value={brl(k.mrr)} sub={`ARR ${brl(k.arr, true)}`} hint="Receita recorrente mensal: anual ÷ 12 + mensal" />

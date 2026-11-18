@@ -113,6 +113,9 @@ function buildRow(auth: admin.auth.UserRecord | undefined, uid: string, u: any, 
     hasAuth: !!auth,
     notesCount: Array.isArray(u.adminNotes) ? u.adminNotes.length : 0,
     pushEnabled: !!u.fcmToken,
+    whatsappOptIn: u.whatsappOptIn === true,
+    whatsappOptOut: u.whatsappOptOut === true,
+    lastContactAt: ms(u.lastContactAt),
   };
 }
 
@@ -279,7 +282,7 @@ async function getUser(uid: string) {
     events: [...evMap.values()].sort((a, b) => (b.occurredAt || 0) - (a.occurredAt || 0)),
     subscriptions: subs.docs.map((d) => {
       const s = d.data();
-      return { id: d.id, ...s, startedAt: ms(s.startedAt), lastPaymentAt: ms(s.lastPaymentAt), currentPeriodEnd: ms(s.currentPeriodEnd), canceledAt: ms(s.canceledAt), updatedAt: ms(s.updatedAt) };
+      return { id: d.id, ...s, createdAt: ms(s.createdAt), nextChargeAt: ms(s.nextChargeAt), lastSyncedAt: ms(s.lastSyncedAt), startedAt: ms(s.startedAt), lastPaymentAt: ms(s.lastPaymentAt), currentPeriodEnd: ms(s.currentPeriodEnd), canceledAt: ms(s.canceledAt), updatedAt: ms(s.updatedAt) };
     }),
     audit: auditSnap.docs.map((d) => ({ id: d.id, ...d.data(), at: ms(d.data().at) })).sort((a: any, b: any) => b.at - a.at),
     referrals: { invited: refBy.size, invitedBy: refTo.docs[0]?.data().referredBy || null },
@@ -306,7 +309,7 @@ async function userAction(req: CallableRequest, d: any) {
   const before = { access: u.access || null, trialEndsAt: u.trialEndsAt || null, blocked: !!u.blocked };
   const cfg = await getBillingConfig();
   const now = Date.now();
-  const needsReason = !["note", "password_reset_link", "update_profile"].includes(d.action);
+  const needsReason = !["note", "password_reset_link", "update_profile", "set_whatsapp_optout"].includes(d.action);
   if (needsReason && reason.length < 3) throw new HttpsError("invalid-argument", "Informe o motivo (fica no log de auditoria).");
 
   let patch: any = {};
@@ -394,6 +397,10 @@ async function userAction(req: CallableRequest, d: any) {
       }
       break;
     }
+    case "set_whatsapp_optout": {
+      patch = { whatsappOptOut: !!d.value, whatsappOptOutAt: d.value ? TS.now() : null };
+      break;
+    }
     case "apply_pending": {
       result = { ok: true, applied: await applyPendingAccess(uid, email) };
       break;
@@ -449,7 +456,7 @@ async function listBilling(d: any) {
     }),
     subscriptions: subs.docs.map((x) => {
       const s = x.data();
-      return { id: x.id, ...s, startedAt: ms(s.startedAt), lastPaymentAt: ms(s.lastPaymentAt), currentPeriodEnd: ms(s.currentPeriodEnd), canceledAt: ms(s.canceledAt), updatedAt: ms(s.updatedAt) };
+      return { id: x.id, ...s, createdAt: ms(s.createdAt), nextChargeAt: ms(s.nextChargeAt), lastSyncedAt: ms(s.lastSyncedAt), startedAt: ms(s.startedAt), lastPaymentAt: ms(s.lastPaymentAt), currentPeriodEnd: ms(s.currentPeriodEnd), canceledAt: ms(s.canceledAt), updatedAt: ms(s.updatedAt) };
     }),
   };
 }
@@ -614,6 +621,44 @@ export const adminApi = onCall({ timeoutSeconds: 120, memory: "512MiB", secrets:
     case "dryRun": return dryRun(d);
     case "listAudit": return listAudit(d);
     case "recomputeUsage": return recomputeUsage(req);
+    case "getMessaging": {
+      const s = await db().doc("config/messaging").get();
+      return s.exists ? s.data() : null; // null = o painel usa os modelos padrão
+    }
+    case "saveMessaging": {
+      const c = d.config || {};
+      if (!Array.isArray(c.templates)) throw new HttpsError("invalid-argument", "Modelos inválidos");
+      const clean = {
+        senderNumber: String(c.senderNumber || "").replace(/\D/g, "").slice(0, 15),
+        senderName: String(c.senderName || "").slice(0, 60),
+        dedupDays: Math.max(1, Math.min(60, Number(c.dedupDays) || 5)),
+        requireOptIn: !!c.requireOptIn,
+        templates: c.templates.slice(0, 60).map((t: any) => ({
+          id: String(t.id).slice(0, 40), stage: String(t.stage).slice(0, 40), name: String(t.name || "").slice(0, 80),
+          body: String(t.body || "").slice(0, 2000), active: t.active !== false,
+        })),
+        updatedAt: FV.serverTimestamp(),
+      };
+      await db().doc("config/messaging").set(clean);
+      await audit(req, "save_messaging", null, { reason: d.reason || null, params: { templates: clean.templates.length } });
+      return { ok: true };
+    }
+    case "logMessage": {
+      const uid = String(d.uid || "");
+      const u = (await db().collection("users").doc(uid).get()).data();
+      if (!u) throw new HttpsError("not-found", "Usuário não encontrado");
+      const ref = await db().collection("messageLog").add({
+        uid, email: u.email || null, name: u.name || null, stage: String(d.stage || ""), templateId: String(d.templateId || ""),
+        channel: "whatsapp_manual", preview: String(d.preview || "").slice(0, 300),
+        by: req.auth.token.email || req.auth.uid, at: FV.serverTimestamp(),
+      });
+      await db().collection("users").doc(uid).set({ lastContactAt: FV.serverTimestamp() }, { merge: true });
+      return { ok: true, id: ref.id };
+    }
+    case "listMessageLog": {
+      const s = await db().collection("messageLog").orderBy("at", "desc").limit(Math.min(Number(d.limit) || 1000, 3000)).get();
+      return s.docs.map((x) => ({ id: x.id, ...x.data(), at: ms(x.data().at) }));
+    }
     case "olimpoPing": {
       try { await olimpoPing(OLIMPO_API_KEY.value()); return { ok: true }; }
       catch (e: any) { return { ok: false, error: String(e?.message || e), status: e?.status ?? null }; }

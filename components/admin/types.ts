@@ -64,6 +64,9 @@ export interface UserRow {
   hasAuth: boolean;
   notesCount: number;
   pushEnabled: boolean;
+  whatsappOptIn?: boolean;
+  whatsappOptOut?: boolean;
+  lastContactAt?: number | null;
 }
 
 export interface BillingEvent {
@@ -97,6 +100,7 @@ export interface Subscription {
   planId: string | null;
   status: 'waiting' | 'active' | 'past_due' | 'canceled' | 'expired' | 'refunded' | 'abandoned';
   paymentLink?: string | null;
+  createdAt?: number | null;
   nextChargeAt?: number | null;
   remoteStatus?: string | null;
   startedAt: number | null;
@@ -175,7 +179,7 @@ export interface GatewayInfo {
 export type UserActionName =
   | 'grant_access' | 'extend_trial' | 'set_period_end' | 'revoke_access' | 'block' | 'unblock'
   | 'note' | 'update_profile' | 'password_reset_link' | 'revoke_sessions' | 'set_admin'
-  | 'apply_pending' | 'delete_account' | 'cancel_gateway_subscription';
+  | 'apply_pending' | 'delete_account' | 'cancel_gateway_subscription' | 'set_whatsapp_optout';
 
 export interface AdminApi {
   mode: 'live' | 'demo';
@@ -197,4 +201,8 @@ export interface AdminApi {
   recomputeUsage(): Promise<any>;
   olimpoPing(): Promise<{ ok: boolean; error?: string; status?: number | null }>;
   olimpoSyncAll(): Promise<{ synced: number; changed: number; errors: number }>;
+  getMessaging(): Promise<any | null>;
+  saveMessaging(config: any, reason?: string): Promise<any>;
+  logMessage(entry: { uid: string; stage: string; templateId: string; preview: string }): Promise<{ ok: boolean; id: string }>;
+  listMessageLog(): Promise<any[]>;
 }

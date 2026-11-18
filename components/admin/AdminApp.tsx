@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  LayoutDashboard, Users, Repeat, Receipt, Package, PlugZap, ScrollText, Menu, LogOut, ShieldAlert, FlaskConical,
+  LayoutDashboard, Users, Repeat, Receipt, Package, PlugZap, ScrollText, Menu, LogOut, ShieldAlert, FlaskConical, MessageCircle,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
@@ -16,10 +16,12 @@ import PaymentsPage from './pages/Payments';
 import PlansPage from './pages/Plans';
 import GatewaysPage from './pages/Gateways';
 import AuditPage from './pages/Audit';
+import MessagesPage from './pages/Messages';
 
 const NAV = [
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
   { id: 'users', label: 'Usuários', icon: Users },
+  { id: 'messages', label: 'Mensagens', icon: MessageCircle },
   { id: 'subscriptions', label: 'Assinaturas', icon: Repeat },
   { id: 'payments', label: 'Pagamentos', icon: Receipt },
   { id: 'plans', label: 'Planos', icon: Package },
@@ -35,6 +37,7 @@ function Shell({ api, email, onLogout }: { api: AdminApi; email: string; onLogou
   const page = useMemo(() => {
     switch (path) {
       case 'users': return <UsersPage />;
+      case 'messages': return <MessagesPage />;
       case 'subscriptions': return <SubscriptionsPage />;
       case 'payments': return <PaymentsPage />;
       case 'plans': return <PlansPage />;

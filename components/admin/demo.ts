@@ -55,6 +55,8 @@ const events: BillingEvent[] = [];
 const subs: Subscription[] = [];
 const audit: AuditEntry[] = [];
 const notes = new Map<string, { text: string; by: string; at: number }[]>();
+let messagingCfg: any = null;
+const msgLog: any[] = [];
 let evId = 1;
 
 const addEvent = (e: Partial<BillingEvent>) => {
@@ -159,6 +161,7 @@ function build() {
       profileCompleteness: legacy ? 0 : 100,
       blocked: status === 'blocked', isAdmin: i === 0, hasDoc: !(legacy && chance(0.1)), hasAuth: true,
       notesCount: 0, pushEnabled: chance(0.3),
+      whatsappOptIn: createdAt > NOW - 5 * DAY ? chance(0.7) : false, whatsappOptOut: chance(0.015), lastContactAt: null,
     });
   }
   users[0] = { ...users[0], name: 'Thiago (você)', email: 'admin@exemplo.com', isAdmin: true, status: 'courtesy', hasAccess: true, planId: 'annual', provider: 'manual', periodEnd: NOW + 300 * DAY };
@@ -181,10 +184,24 @@ function build() {
   users.filter((x) => x.status === 'trial_expired' && x.createdAt && x.createdAt > NOW - 10 * DAY).slice(0, 4).forEach((x, i) => {
     subs.push({ id: `olimpopay_9${i}`, provider: 'olimpopay', email: x.email, uid: x.uid, planId: i % 2 ? 'annual' : 'monthly', status: 'waiting',
       startedAt: null, lastPaymentAt: null, paymentsCount: 0, currentPeriodEnd: null, canceledAt: null, externalSubscriptionId: `9${i}`,
-      paymentLink: 'https://go.olimpopay.com.br/link/exemplo', remoteStatus: 'WAITING' });
+      paymentLink: 'https://go.olimpopay.com.br/link/exemplo', remoteStatus: 'WAITING', createdAt: NOW - (i * 9 + 3) * 3600e3 });
   });
   subs.forEach((sb) => { if (sb.provider === 'olimpopay' && sb.status === 'active') sb.nextChargeAt = sb.currentPeriodEnd; });
   events.sort((a, b) => (b.receivedAt || 0) - (a.receivedAt || 0));
+
+  // histórico de mensagens fictício (últimos 20 dias)
+  const STG = ['trial_ending', 'activation', 'trial_expired', 'checkout_abandoned', 'past_due', 'welcome', 'renewal_soon', 'winback'];
+  for (let k = 0; k < 46; k++) {
+    const x = users[1 + Math.floor(rnd() * (users.length - 1))];
+    const at = NOW - Math.floor(rnd() * 20 * DAY) - 2 * DAY;
+    const stage = pick(STG);
+    msgLog.push({ id: `m${k}`, uid: x.uid, email: x.email, name: x.name, stage, templateId: stage, channel: 'whatsapp_manual',
+      preview: `Oi, ${x.name.split(' ')[0] || 'tudo bem'}! Aqui é Thiago, do Lyvo.`, by: 'admin@exemplo.com', at });
+    x.lastContactAt = Math.max(x.lastContactAt || 0, at);
+  }
+  msgLog.sort((a, b) => b.at - a.at);
+  // alguns cadastros de hoje e pagamentos recém-confirmados para a fila ter todas as etapas
+  users.slice(1).filter((x) => x.status === 'trial').slice(0, 3).forEach((x, i) => { x.createdAt = NOW - (i * 5 + 2) * 3600e3; x.trialEndsAt = x.createdAt + 3 * DAY; });
 
   const actor = 'admin@exemplo.com';
   const sample = users.filter((x) => x.status === 'courtesy').slice(0, 2);
@@ -312,6 +329,7 @@ export function createDemoApi(): AdminApi {
         case 'note': notes.set(uid, [{ text: p.text, by: 'admin@exemplo.com', at: Date.now() }, ...(notes.get(uid) || [])]); u.notesCount++; break;
         case 'update_profile': Object.assign(u, p.profile); break;
         case 'set_admin': u.isAdmin = !!p.value; break;
+        case 'set_whatsapp_optout': u.whatsappOptOut = !!p.value; break;
         case 'password_reset_link': return wait({ ok: true, link: 'https://lyvo-web.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=EXEMPLO-DEMO' });
         case 'delete_account': users.splice(users.indexOf(u), 1); break;
       }
@@ -361,6 +379,15 @@ export function createDemoApi(): AdminApi {
     listAudit: () => wait(audit),
     recomputeUsage: () => wait({ ok: true, users: users.length }, 900),
     olimpoPing: () => wait({ ok: true }, 600),
+    getMessaging: () => wait(messagingCfg, 120),
+    async saveMessaging(cfg, reason) { messagingCfg = JSON.parse(JSON.stringify(cfg)); log('save_messaging', null, reason); return wait({ ok: true }); },
+    async logMessage(e) {
+      const u = users.find((x) => x.uid === e.uid)!;
+      const entry = { id: `m${Date.now()}`, uid: e.uid, email: u.email, name: u.name, stage: e.stage, templateId: e.templateId, channel: 'whatsapp_manual', preview: e.preview, by: 'admin@exemplo.com', at: Date.now() };
+      msgLog.unshift(entry); u.lastContactAt = Date.now();
+      return wait({ ok: true, id: entry.id }, 80);
+    },
+    listMessageLog: () => wait(msgLog),
     olimpoSyncAll: () => wait({ synced: subs.filter((x) => x.provider === 'olimpopay' && ['waiting', 'active', 'past_due'].includes(x.status)).length, changed: 0, errors: 0 }, 900),
   };
 }

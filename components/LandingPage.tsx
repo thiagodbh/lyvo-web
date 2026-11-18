@@ -937,6 +937,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
   const [city, setCity] = useState('');
   const [userState, setUserState] = useState('');
   const [income, setIncome] = useState('');
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
 
   const openLoginModal = () => { setIsSignUp(false); setFormError(null); setShowModal(true); };
   const openSignUpModal = () => { setIsSignUp(true); setFormError(null); setShowModal(true); };
@@ -947,7 +948,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
     setFormError(null);
     try {
       if (isSignUp) {
-        await onSignUp({ name, email, password, phone, birthDate, city, state: userState, income });
+        await onSignUp({ name, email, password, phone, birthDate, city, state: userState, income, whatsappOptIn });
       } else {
         await onLogin(email, password);
       }
@@ -1773,6 +1774,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignUp, onResetPas
                     style={{ width: '100%', padding: '12px 16px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 15, outline: 'none', fontFamily: 'var(--body)', color: 'var(--text)' }} />
                 </div>
               </div>
+
+              {isSignUp && (
+                <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', margin: '14px 0 18px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.45, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={whatsappOptIn} onChange={e => setWhatsappOptIn(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, accentColor: 'var(--teal)' }} />
+                  <span>Quero receber dicas, avisos da minha conta e novidades do Lyvo pelo WhatsApp. Posso cancelar quando quiser.</span>
+                </label>
+              )}
 
               {!isSignUp && (
                 <div style={{ textAlign: 'right', marginBottom: 20 }}>

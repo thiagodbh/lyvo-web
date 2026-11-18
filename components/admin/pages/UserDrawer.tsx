@@ -9,6 +9,9 @@ import {
   ProviderBadge, rel, Segmented, StatusBadge, useAsync, useToast,
 } from '../ui';
 import { EVENT_LABEL } from './Payments';
+import { buildVars, matchStage, mergeMessaging, phoneDigits } from '../messaging/funnel';
+import { SendModal } from '../messaging/parts';
+import { MessageCircle, BellOff, Bell } from 'lucide-react';
 
 type Tab = 'summary' | 'billing' | 'usage' | 'history';
 
@@ -34,6 +37,9 @@ export default function UserDrawer({ uid, onClose, onChanged }: { uid: string; o
   const [tab, setTab] = useState<Tab>('summary');
   const [action, setAction] = useState<UserActionName | null>(null);
   const [subId, setSubId] = useState<string | null>(null);
+  const [waOpen, setWaOpen] = useState(false);
+  const msgQ = useAsync(() => api.getMessaging(), [api]);
+  const cfgQ = useAsync(() => api.getConfig(), [api]);
   const [note, setNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
 
@@ -46,6 +52,23 @@ export default function UserDrawer({ uid, onClose, onChanged }: { uid: string; o
       {error ? <div className="p-5"><ErrorBox error={error} onRetry={reload} /></div> : loading && !data ? <Loading /> : data && (
         <div className="space-y-4 p-4 sm:p-5">
           <AccessBox d={data} />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => setWaOpen(true)} disabled={!phoneDigits(data.row.phone) || !!data.row.whatsappOptOut}
+              title={!phoneDigits(data.row.phone) ? 'Sem celular válido no cadastro' : data.row.whatsappOptOut ? 'Cliente pediu para não receber mensagens' : 'Abrir mensagem pronta no WhatsApp'}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#1fa855] px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1a9049] disabled:cursor-not-allowed disabled:opacity-40">
+              <MessageCircle className="h-4 w-4" />Mensagem no WhatsApp
+            </button>
+            <button onClick={async () => {
+                try { await api.userAction(uid, 'set_whatsapp_optout', { value: !data.row.whatsappOptOut }); toast(data.row.whatsappOptOut ? 'Mensagens reativadas' : 'Marcado: não quer receber mensagens'); after(); }
+                catch (e: any) { toast(e.message, 'err'); }
+              }}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-3 text-xs font-medium text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50">
+              {data.row.whatsappOptOut ? <><Bell className="h-3.5 w-3.5" />Voltar a enviar mensagens</> : <><BellOff className="h-3.5 w-3.5" />Não quer receber</>}
+            </button>
+            {data.row.whatsappOptIn && <Pill tone="green">aceitou WhatsApp no cadastro</Pill>}
+            {data.row.whatsappOptOut && <Pill tone="red">não quer receber</Pill>}
+          </div>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {ACTIONS.filter((a) => !GRID_HIDDEN.includes(a.id) && (a.id === 'unblock' ? data.row.blocked : a.id === 'block' ? !data.row.blocked : true)).map((a) => {
@@ -108,6 +131,22 @@ export default function UserDrawer({ uid, onClose, onChanged }: { uid: string; o
         </div>
       )}
 
+      {waOpen && data && (() => {
+        const messaging = mergeMessaging(msgQ.data);
+        const waitingSub = data.subscriptions.find((s) => s.provider === 'olimpopay' && s.status === 'waiting' && s.paymentLink) || null;
+        const firstPaidAt = data.events.filter((e) => e.revenue > 0 && !e.isTest).map((e) => e.occurredAt || 0).sort((a, b) => a - b)[0] || null;
+        const ctx = { now: Date.now(), cfg: cfgQ.data || null, messaging, waitingSub, firstPaidAt };
+        const suggested = matchStage(data.row, ctx)?.stage || null;
+        return (
+          <SendModal user={data.row} templates={messaging.templates} initialStage={suggested} vars={buildVars(data.row, ctx)}
+            senderNumber={messaging.senderNumber} onClose={() => setWaOpen(false)}
+            onSent={async (stage, templateId, text) => {
+              try { await api.logMessage({ uid, stage, templateId, preview: text.slice(0, 300) }); toast('Envio registrado no histórico'); reload(); }
+              catch (e: any) { toast(e.message, 'err'); }
+            }} />
+        );
+      })()}
+
       {action && data && (
         <ActionModal action={action} d={data} subscriptionId={subId} onClose={() => { setAction(null); setSubId(null); }}
           onDone={(msg) => { setAction(null); toast(msg); if (action === 'delete_account') { onChanged(); onClose(); } else after(); }} />
@@ -163,6 +202,8 @@ function ProfileTab({ d }: { d: UserDetail }) {
           <Row k="Último uso" v={rel(r.lastActiveAt)} />
           <Row k="Login via" v={r.authProviders.join(', ')} />
           <Row k="Notificações" v={r.pushEnabled ? 'ativadas' : 'desativadas'} />
+          <Row k="WhatsApp" v={r.whatsappOptOut ? 'não quer receber' : r.whatsappOptIn ? 'aceitou no cadastro' : 'sem registro de consentimento'} />
+          <Row k="Último contato" v={rel(r.lastContactAt)} />
           <Row k="UID" v={<span className="inline-flex items-center gap-1.5 font-mono text-xs">{r.uid.slice(0, 14)}…<CopyButton text={r.uid} label="UID" /></span>} />
         </Card>
         <Card title="Origem">

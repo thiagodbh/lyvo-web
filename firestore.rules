@@ -14,7 +14,8 @@ service cloud.firestore {
 
     // Campos que só o servidor (functions/admin) pode alterar
     function privilegedFields() {
-      return ['access', 'active', 'plan', 'blocked', 'accessBeforeBlock', 'adminNotes', 'usage', 'referredBy'];
+      return ['access', 'active', 'plan', 'blocked', 'accessBeforeBlock', 'adminNotes', 'usage', 'referredBy',
+              'whatsappOptOut', 'whatsappOptOutAt', 'lastContactAt'];
     }
 
     match /users/{uid} {
@@ -22,7 +23,7 @@ service cloud.firestore {
 
       // cadastro: só pode nascer como trial, sem acesso pago e com trial curto
       allow create: if isOwner(uid)
-        && !request.resource.data.keys().hasAny(['access', 'blocked', 'accessBeforeBlock', 'adminNotes', 'usage'])
+        && !request.resource.data.keys().hasAny(['access', 'blocked', 'accessBeforeBlock', 'adminNotes', 'usage', 'whatsappOptOut', 'lastContactAt'])
         && request.resource.data.get('active', false) == false
         && request.resource.data.get('plan', 'trial') == 'trial'
         && (!('trialEndsAt' in request.resource.data)

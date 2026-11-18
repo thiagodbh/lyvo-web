@@ -23,6 +23,7 @@ export type SignUpProfile = {
   gender?: string;
   profession?: string;
   income?: string;
+  whatsappOptIn?: boolean;
 };
 
 const TRIAL_DAYS = 3;
@@ -47,6 +48,7 @@ async function ensureUserDoc(uid: string, email: string, profile?: SignUpProfile
       const cur = snap.data();
       const patch: Record<string, string> = {};
       (Object.keys(profile) as (keyof SignUpProfile)[]).forEach((k) => {
+        if (typeof profile[k] !== 'string') return;
         const v = clean(profile[k]);
         if (v && !cur[k]) patch[k] = v;
       });
@@ -66,6 +68,8 @@ async function ensureUserDoc(uid: string, email: string, profile?: SignUpProfile
     profession: clean(profile?.profession),
     income: clean(profile?.income, 30),
     acquisition: getAcquisition(),
+    whatsappOptIn: profile?.whatsappOptIn === true,
+    ...(profile?.whatsappOptIn === true ? { whatsappOptInAt: serverTimestamp() } : {}),
     active: false,
     plan: "trial",
     createdAt: serverTimestamp(),

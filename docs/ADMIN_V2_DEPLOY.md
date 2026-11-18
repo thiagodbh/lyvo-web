@@ -46,6 +46,21 @@ O modo demo só existe em `npm run dev` (ou build com `VITE_ADMIN_DEMO=1`); em p
 
 Os passos abaixo detalham o que os scripts fazem e o que vem depois (regras, webhook da LastLink).
 
+## Central de mensagens (WhatsApp)
+
+- Menu **Mensagens**: fila do dia com quem abordar em cada um dos 12 momentos do funil (checkout abandonado, atraso,
+  pagamento confirmado, renovação, cancelou, teste acabando, não ativou, boas-vindas, teste expirou, assinante sumido,
+  reconquista, indicação). A regra de cada etapa usa os dados reais do sistema (status, teste, assinatura Olimpo pendente,
+  pagamentos, uso).
+- Envio **semiautomático**: o texto já vem personalizado; o clique abre o WhatsApp (wa.me) com a mensagem e registra no
+  histórico (`messageLog`). A mesma etapa não se repete para a mesma pessoa antes do intervalo definido.
+- **Modelos** editáveis com variáveis, **Histórico** com conversão (pagou em até 7 dias) e **Configurar** (número do Lyvo,
+  quem assina, consentimento).
+- Cadastro novo pede **consentimento de WhatsApp** (desmarcado por padrão, exigência da LGPD). Na ficha do cliente há
+  “Não quer receber”, que tira a pessoa da fila.
+- **Automático** (sem clique) exige a API oficial do WhatsApp (Meta): empresa verificada, modelos aprovados e cobrança
+  por mensagem. Fica para quando a conta existir.
+
 ## Ordem de implantação
 
 0. **Chave da Olimpo Pay (você mesmo, no terminal):** `firebase functions:secrets:set OLIMPO_API_KEY`
