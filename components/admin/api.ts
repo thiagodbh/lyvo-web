@@ -36,6 +36,8 @@ export function createLiveApi(): AdminApi {
     logMessage: (entry) => call('logMessage', entry),
     listMessageLog: () => call('listMessageLog', { limit: 2000 }),
     health: () => call('health'),
+    costs: () => call('costs'),
+    saveCosts: (config, reason) => call('saveCosts', { config, reason }),
     probeRules: async () => {
       const base = { id: 'rules', label: 'Regras de segurança do banco (Firestore)', link: '' };
       try {

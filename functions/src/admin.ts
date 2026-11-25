@@ -11,6 +11,7 @@ import {
   Access, applyPendingAccess, findUidByEmail, getBillingConfig, hasAccess, legacyMirror, nextAccess, resolvePlan,
 } from "./billing/engine";
 import { BillingConfig, INTERVAL_DAYS, PROVIDERS, ProviderId } from "./billing/types";
+import { AI_MODEL, AI_PRICE, brParts } from "./ai";
 import { OLIMPO_API_KEY, cancelSubscription as olimpoCancel, ping as olimpoPing, syncWhere as olimpoSync } from "./billing/olimpo";
 
 export const ADMIN_EMAILS = defineString("ADMIN_EMAILS", { default: "" });
@@ -674,6 +675,95 @@ function inactiveBuckets(users: any[], now: number) {
   };
 }
 
+// ─── custos de operação ──────────────────────────────────────────────────────
+type CostsConfig = {
+  usdBrl: number;
+  /** taxa do gateway: % sobre o valor + R$ fixo por pagamento */
+  fees: Record<string, { pct: number; fixed: number }>;
+  /** custos fixos mensais em R$ (Vercel, domínio, chip etc.) */
+  fixed: { id: string; name: string; amountBrl: number }[];
+  /** fatura do Google Cloud/Firebase por mês (R$), copiada do console de faturamento */
+  cloudBills: Record<string, number>;
+};
+const DEFAULT_COSTS: CostsConfig = {
+  usdBrl: 5.4,
+  fees: { olimpopay: { pct: 0, fixed: 0 }, lastlink: { pct: 0, fixed: 0 } },
+  fixed: [],
+  cloudBills: {},
+};
+async function getCostsConfig(): Promise<CostsConfig> {
+  const c = (await db().doc("config/costs").get()).data() || {};
+  return { ...DEFAULT_COSTS, ...c, fees: { ...DEFAULT_COSTS.fees, ...(c.fees || {}) } } as CostsConfig;
+}
+
+/** Início do mês (BRT) em ms para "YYYY-MM". */
+const monthStart = (m: string) => Date.parse(`${m}-01T03:00:00Z`);
+const nextMonth = (m: string) => { const [y, mo] = m.split("-").map(Number); return mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, "0")}`; };
+const prevMonth = (m: string) => { const [y, mo] = m.split("-").map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, "0")}`; };
+
+async function costs() {
+  const cfg = await getCostsConfig();
+  const now = Date.now();
+  const cur = brParts(now).month;
+  const months = [cur, prevMonth(cur), prevMonth(prevMonth(cur))];
+  const from = monthStart(months[2]);
+  const evSnap = await db().collection("billingEvents").where("receivedAt", ">=", TS.fromMillis(from)).get();
+  const events = evSnap.docs.map((d) => d.data()).filter((e) => !e.isTest && e.revenue);
+  const users = await loadUsers();
+  const emailOf = new Map(users.map((u) => [u.uid, u.email]));
+  const fixedTotal = cfg.fixed.reduce((s, f) => s + (Number(f.amountBrl) || 0), 0);
+
+  const out = [];
+  for (const m of months) {
+    const a = (await db().doc(`aiUsage/${m}`).get()).data() || {};
+    const aiUsers = await db().collection(`aiUsage/${m}/users`).orderBy("costUsd", "desc").get();
+    const start = monthStart(m), end = monthStart(nextMonth(m));
+    const evs = events.filter((e) => { const t = ms(e.receivedAt) || 0; return t >= start && t < end; });
+    const revenue = evs.reduce((s, e) => s + Number(e.revenue || 0), 0);
+    const byProvider: Record<string, { revenue: number; payments: number; fee: number }> = {};
+    for (const e of evs) {
+      const p = (byProvider[e.provider] ||= { revenue: 0, payments: 0, fee: 0 });
+      p.revenue += Number(e.revenue || 0);
+      if (Number(e.revenue) > 0) p.payments += 1;
+    }
+    let fees = 0;
+    for (const [prov, v] of Object.entries(byProvider)) {
+      const f = cfg.fees[prov] || { pct: 0, fixed: 0 };
+      v.fee = Math.max(0, v.revenue) * (Number(f.pct) || 0) / 100 + v.payments * (Number(f.fixed) || 0);
+      fees += v.fee;
+    }
+    const aiUsd = Number(a.costUsd || 0);
+    const ai = aiUsd * cfg.usdBrl;
+    const cloud = cfg.cloudBills?.[m] ?? null;
+    const total = ai + fees + fixedTotal + (cloud || 0);
+    const isCurrent = m === cur;
+    const elapsedDays = isCurrent ? Math.max(1, (now - start) / DAY) : null;
+    const monthDays = (end - start) / DAY;
+    out.push({
+      month: m, isCurrent,
+      ai: { calls: a.calls || 0, images: a.images || 0, errors: a.errors || 0, inTok: a.inTok || 0, outTok: a.outTok || 0, usd: aiUsd, brl: ai,
+        projectedBrl: isCurrent && elapsedDays ? (ai / elapsedDays) * monthDays : null,
+        users: aiUsers.size, perCallBrl: a.calls ? ai / a.calls : 0, perUserBrl: aiUsers.size ? ai / aiUsers.size : 0,
+        top: aiUsers.docs.slice(0, 10).map((d) => ({ uid: d.id, email: emailOf.get(d.id) || d.id, calls: d.get("calls") || 0, brl: (d.get("costUsd") || 0) * cfg.usdBrl })) },
+      revenue, fees, byProvider, fixed: fixedTotal, cloud, total, margin: revenue - total,
+    });
+  }
+  return { config: cfg, model: AI_MODEL, price: AI_PRICE, months: out };
+}
+
+async function saveCosts(req: CallableRequest, d: any) {
+  const c = d.config || {};
+  const clean: CostsConfig = {
+    usdBrl: Math.max(1, Math.min(20, Number(c.usdBrl) || DEFAULT_COSTS.usdBrl)),
+    fees: Object.fromEntries(Object.entries(c.fees || {}).map(([k, v]: any) => [k, { pct: Math.max(0, Math.min(30, Number(v?.pct) || 0)), fixed: Math.max(0, Math.min(50, Number(v?.fixed) || 0)) }])),
+    fixed: (Array.isArray(c.fixed) ? c.fixed : []).slice(0, 30).map((f: any, i: number) => ({ id: String(f.id || `f${i}`), name: String(f.name || "").slice(0, 60), amountBrl: Math.max(0, Number(f.amountBrl) || 0) })).filter((f: any) => f.name),
+    cloudBills: Object.fromEntries(Object.entries(c.cloudBills || {}).filter(([k]) => /^\d{4}-\d{2}$/.test(k)).map(([k, v]) => [k, Math.max(0, Number(v) || 0)])),
+  };
+  await db().doc("config/costs").set({ ...clean, updatedAt: FV.serverTimestamp() });
+  await audit(req, "save_costs", null, { reason: d.reason || "Custos atualizados" });
+  return { ok: true };
+}
+
 async function listAudit(d: any) {
   const s = await db().collection("adminAudit").orderBy("at", "desc").limit(Math.min(Number(d.limit) || 300, 1000)).get();
   return s.docs.map((x) => ({ id: x.id, ...x.data(), at: ms(x.data().at) }));
@@ -766,6 +856,8 @@ export const adminApi = onCall({ timeoutSeconds: 120, memory: "512MiB", secrets:
       catch (e: any) { return { ok: false, error: String(e?.message || e), status: e?.status ?? null }; }
     }
     case "health": return health();
+    case "costs": return costs();
+    case "saveCosts": return saveCosts(req, d);
     case "olimpoSyncAll": {
       const r = await olimpoSync(OLIMPO_API_KEY.value(), null);
       await db().doc("systemStatus/olimpoSync").set({ ...r, at: FV.serverTimestamp(), source: "admin" });

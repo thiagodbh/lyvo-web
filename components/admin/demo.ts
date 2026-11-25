@@ -401,6 +401,22 @@ export function createDemoApi(): AdminApi {
       { id: 'olimpo_flow', label: 'Venda pela Olimpo Pay de ponta a ponta', status: 'warn', detail: 'Nenhum pagamento confirmado ainda. Faça uma compra de teste.', link: 'payments' },
       { id: 'legacy', label: 'Webhook antigo da LastLink desligado', status: 'fail', detail: 'Ainda aceita eventos sem token. Desligue depois de migrar a URL.', link: 'gateways' },
     ] }, 700),
+    costs: () => wait((() => {
+      const mk = (month: string, isCurrent: boolean, calls: number, users: number, revenue: number) => {
+        const brl = calls * 0.0042;
+        return { month, isCurrent, ai: { calls, images: Math.round(calls * 0.05), errors: 2, inTok: calls * 1600, outTok: calls * 110, usd: brl / 5.4, brl,
+          projectedBrl: isCurrent ? brl * 1.25 : null, users, perCallBrl: 0.0042, perUserBrl: brl / users,
+          top: [{ uid: 'u1', email: 'marina.alves@gmail.com', calls: 412, brl: 1.73 }, { uid: 'u2', email: 'rafael.cunha@outlook.com', calls: 288, brl: 1.21 }] },
+          revenue, fees: revenue * 0.0399 + 3, byProvider: { olimpopay: { revenue, payments: 10, fee: revenue * 0.0399 + 3 } },
+          fixed: 85, cloud: isCurrent ? null : 12.4, total: brl + revenue * 0.0399 + 3 + 85 + (isCurrent ? 0 : 12.4), margin: 0 };
+      };
+      const months = [mk('2026-11', true, 3120, 41, 498), mk('2026-10', false, 3890, 47, 622.5), mk('2026-09', false, 2210, 33, 373.5)];
+      months.forEach((m) => { m.margin = m.revenue - m.total; });
+      return { model: 'gemini-2.5-flash', price: { inText: 0.3, inAudio: 1, out: 2.5 }, months,
+        config: { usdBrl: 5.4, fees: { olimpopay: { pct: 3.99, fixed: 0.3 }, lastlink: { pct: 9.9, fixed: 1 } },
+          fixed: [{ id: 'f1', name: 'Vercel Pro', amountBrl: 110 }, { id: 'f2', name: 'Domínio meulyvo.com', amountBrl: 5 }], cloudBills: { '2026-10': 12.4 } } };
+    })(), 600),
+    saveCosts: () => wait({ ok: true as const }, 500),
     probeRules: () => wait({ id: 'rules', label: 'Regras de segurança do banco (Firestore)', status: 'ok' as const, detail: 'Demonstração.' }),
     olimpoSyncAll: () => wait({ synced: subs.filter((x) => x.provider === 'olimpopay' && ['waiting', 'active', 'past_due'].includes(x.status)).length, changed: 0, errors: 0 }, 900),
   };

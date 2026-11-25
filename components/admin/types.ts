@@ -213,6 +213,23 @@ export interface AdminApi {
   health(): Promise<{ at: number; checks: HealthCheck[] }>;
   /** Tenta ler um dado privado direto do navegador. Seguro = permissão negada. */
   probeRules(): Promise<HealthCheck>;
+  costs(): Promise<CostsReport>;
+  saveCosts(config: CostsConfig, reason?: string): Promise<{ ok: true }>;
 }
+
+export type CostsConfig = {
+  usdBrl: number;
+  fees: Record<string, { pct: number; fixed: number }>;
+  fixed: { id: string; name: string; amountBrl: number }[];
+  cloudBills: Record<string, number>;
+};
+export type CostMonth = {
+  month: string; isCurrent: boolean;
+  ai: { calls: number; images: number; errors: number; inTok: number; outTok: number; usd: number; brl: number; projectedBrl: number | null;
+    users: number; perCallBrl: number; perUserBrl: number; top: { uid: string; email: string; calls: number; brl: number }[] };
+  revenue: number; fees: number; byProvider: Record<string, { revenue: number; payments: number; fee: number }>;
+  fixed: number; cloud: number | null; total: number; margin: number;
+};
+export type CostsReport = { config: CostsConfig; model: string; price: { inText: number; inAudio: number; out: number }; months: CostMonth[] };
 
 export type HealthCheck = { id: string; label: string; status: 'ok' | 'warn' | 'fail'; detail: string; link?: string };

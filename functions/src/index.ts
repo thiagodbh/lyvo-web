@@ -510,3 +510,5 @@ export const olimpoSyncScheduled = onSchedule({ schedule: "every 15 minutes", se
   // o Diagnóstico do admin usa isto para saber se a rotina está rodando
   await admin.firestore().doc("systemStatus/olimpoSync").set({ ...r, at: admin.firestore.FieldValue.serverTimestamp(), source: "schedule" });
 });
+
+export { aiAssistant } from "./ai";
