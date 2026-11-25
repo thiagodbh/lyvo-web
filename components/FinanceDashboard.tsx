@@ -355,8 +355,13 @@ const FinanceDashboard: React.FC = () => {
                                 {creditCards.map(card => {
                                     const currentInvoice = store.calculateCardInvoice(card.id, selectedMonth, selectedYear);
                                     const invoicePaid = store.isInvoicePaid(card.id, selectedMonth, selectedYear);
-                                    const available = card.limit - currentInvoice;
-                                    const percent = Math.min((currentInvoice / card.limit) * 100, 100);
+                                    // limite comprometido = faturas ainda não pagas, deste mês em diante (inclui parcelas futuras)
+                                    const fromKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+                                    const committed = store.transactions
+                                        .filter((t: any) => t.relatedCardId === card.id && t.billingMonth >= fromKey && !(card.paidInvoices || []).includes(t.billingMonth))
+                                        .reduce((acc, t) => acc + (Number(t.value) || 0), 0);
+                                    const available = card.limit - committed;
+                                    const percent = card.limit ? Math.min((committed / card.limit) * 100, 100) : 0;
                                     
                                     return (
                                         <div 
@@ -414,7 +419,7 @@ const FinanceDashboard: React.FC = () => {
                                                 {t.type === 'INCOME' ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <p className="font-semibold text-gray-900 text-sm truncate">{t.description || t.category}</p>
+                                                <p className="font-semibold text-gray-900 text-sm truncate">{(t.description || t.category).replace(/\s*\(Ref: PGTO_[^)]*\)/, '')}</p>
                                                 <p className="text-[10px] text-gray-400">{formatDate(t.date)} • {t.category}</p>
                                             </div>
                                             <p className={`shrink-0 text-sm font-bold tabular-nums ${t.type === 'INCOME' ? 'text-emerald-600' : 'text-gray-900'}`}>
