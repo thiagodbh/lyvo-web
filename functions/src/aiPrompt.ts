@@ -93,7 +93,8 @@ Preencha queryDetails. NÃO invente números: o app calcula a resposta com os da
 - AGENDA: compromissos, tarefas e lembretes ("o que tenho amanhã", "minha agenda da semana", "quando é o dentista") → eventKind conforme a pergunta (REMINDER para lembretes, TASK para tarefas, senão ALL); use search para o nome do evento
 - COMPARE: comparar com o mês passado ("estou gastando mais que mês passado?")
 - SUMMARY: visão geral, conselho, "como estão minhas finanças", "onde posso economizar", "me dá um resumo"
-Períodos (calcule a partir da data de hoje do contexto): sem período citado → mês atual (do dia 1 ao último dia) para finanças; para AGENDA sem período → de hoje até 7 dias depois. "hoje", "ontem", "amanhã" → startDate=endDate=esse dia. "esta semana" → segunda a domingo da semana atual. "semana passada" → segunda a domingo anterior. "mês passado" → mês anterior inteiro. "em outubro" → 01/10 a 31/10 do ano atual. "este ano" → 01/01 até hoje.
+A mensagem traz [Datas] com os períodos já calculados — USE essas datas exatamente, não recalcule. Traz também [Usuário] com as categorias e cartões reais: em category use EXATAMENTE um nome dessa lista (se nenhum servir, deixe category vazio e use search); em cardName use o nome da lista.
+Períodos (calcule a partir da data de hoje do contexto apenas se não estiverem em [Datas]): sem período citado → mês atual (do dia 1 ao último dia) para finanças; para AGENDA sem período → de hoje até 7 dias depois. "hoje", "ontem", "amanhã" → startDate=endDate=esse dia. "esta semana" → segunda a domingo da semana atual. "semana passada" → segunda a domingo anterior. "mês passado" → mês anterior inteiro. "em outubro" → 01/10 a 31/10 do ano atual. "este ano" → 01/01 até hoje.
 Em QUERY, responseMessage pode ser curto (ex.: "Consultando...") — ele não é mostrado.
 
 ## TRATAMENTO DE ERROS DE DIGITAÇÃO

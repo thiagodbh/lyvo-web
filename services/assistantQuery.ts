@@ -83,21 +83,26 @@ function expensesIn(d: AssistantData, start: string, end: string, q: QueryDetail
     const day = dayOf(t.date);
     if (day < start || day > end) return false;
     if (q.cardName && (!card || t.relatedCardId !== card.id)) return false;
-    return matchCategory(t, q.category) && matchSearch(t, q.search);
+    return matchFilters(t, q);
   });
+}
+/** Categoria e busca: se vierem as duas, basta bater uma (a IA chuta a categoria padrão e o usuário usa outra). */
+function matchFilters(t: Transaction, q: QueryDetails) {
+  if (q.category && q.search) return matchCategory(t, q.category) || matchSearch(t, q.search);
+  return matchCategory(t, q.category) && matchSearch(t, q.search);
 }
 function incomesIn(d: AssistantData, start: string, end: string, q: QueryDetails) {
   return d.transactions.filter((t) => {
     if (t.type !== 'INCOME') return false;
     const day = dayOf(t.date);
-    return day >= start && day <= end && matchCategory(t, q.category) && matchSearch(t, q.search);
+    return day >= start && day <= end && matchFilters(t, q);
   });
 }
 const sum = (xs: { value: any }[]) => xs.reduce((s, t) => s + val(t), 0);
 
 function groupByCategory(xs: Transaction[]) {
   const m = new Map<string, number>();
-  for (const t of xs) m.set(t.category || 'Outros', (m.get(t.category || 'Outros') || 0) + val(t));
+  for (const t of xs) { const c = (t.category || 'Outros').trim(); m.set(c, (m.get(c) || 0) + val(t)); }
   return [...m.entries()].sort((a, b) => b[1] - a[1]);
 }
 const line = (t: Transaction, cards: CreditCard[]) => {
@@ -106,8 +111,8 @@ const line = (t: Transaction, cards: CreditCard[]) => {
 };
 const filterLabel = (q: QueryDetails, d: AssistantData) => {
   const parts: string[] = [];
-  if (q.category) parts.push(`em ${q.category}`);
-  if (q.search) parts.push(`com "${q.search}"`);
+  if (q.category && q.search) parts.push(`com "${q.search}"`);
+  else { if (q.category) parts.push(`em ${q.category}`); if (q.search) parts.push(`com "${q.search}"`); }
   if (q.cardName) { const c = findCard(d.creditCards, q.cardName); parts.push(`no cartão ${c?.name || q.cardName}`); }
   return parts.length ? ' ' + parts.join(' ') : '';
 };
@@ -192,13 +197,21 @@ export function answerQuery(q: QueryDetails, d: AssistantData, today = new Date(
       const m = Number(month.slice(5));
       const cards = q.cardName ? [findCard(d.creditCards, q.cardName)].filter(Boolean) as CreditCard[] : d.creditCards;
       if (!cards.length) return q.cardName ? `Não achei o cartão "${q.cardName}". Seus cartões: ${d.creditCards.map((c) => c.name).join(', ') || 'nenhum cadastrado'}.` : 'Você ainda não tem cartões cadastrados.';
+      const nextKey = (k: string) => { const [yy, mm] = k.split('-').map(Number); return mm === 12 ? `${yy + 1}-01` : `${yy}-${pad(mm + 1)}`; };
       const blocks = cards.map((c) => {
-        const items = d.transactions.filter((t) => t.relatedCardId === c.id && (t as any).billingMonth === month);
-        const total = sum(items);
-        const paid = (c.paidInvoices || []).includes(month);
-        const used = sum(d.transactions.filter((t) => t.relatedCardId === c.id && (t as any).billingMonth >= monthKey(ymd(today))));
-        const free = c.limit ? c.limit - used : null;
-        return `💳 ${c.name} — fatura de ${MONTHS[m - 1]}: ${money(total)}${paid ? ' (paga ✅)' : ` · vence dia ${pad(c.dueDay)}`}${free != null ? `\nLimite livre: ${money(Math.max(0, free))} de ${money(c.limit)}` : ''}`;
+        const inv = (k: string) => sum(d.transactions.filter((t) => t.relatedCardId === c.id && (t as any).billingMonth === k));
+        const isPaid = (k: string) => (c.paidInvoices || []).includes(k);
+        const total = inv(month);
+        const lines = [`💳 ${c.name} — fatura de ${MONTHS[m - 1]}: ${money(total)}${isPaid(month) ? ' (paga ✅)' : ` · vence dia ${pad(c.dueDay)}`}`];
+        // fatura do mês já paga: o que interessa é a próxima, que está aberta
+        if (isPaid(month) && !q.startDate) {
+          const nk = nextKey(month);
+          lines.push(`Próxima fatura (${MONTHS[Number(nk.slice(5)) - 1]}): ${money(inv(nk))} até agora · vence dia ${pad(c.dueDay)}`);
+        }
+        // limite comprometido = tudo que ainda não foi pago, inclusive parcelas futuras (como o banco calcula)
+        const used = sum(d.transactions.filter((t) => t.relatedCardId === c.id && (t as any).billingMonth >= monthKey(ymd(today)) && !isPaid((t as any).billingMonth)));
+        if (c.limit) lines.push(`Limite livre: ${money(Math.max(0, c.limit - used))} de ${money(c.limit)} (já descontando parcelas futuras)`);
+        return lines.join('\n');
       });
       return blocks.join('\n\n');
     }
@@ -224,9 +237,9 @@ export function answerQuery(q: QueryDetails, d: AssistantData, today = new Date(
       const paid = bills.filter((b) => (b.paidMonths || []).includes(month));
       const todayDay = month === monthKey(ymd(today)) ? today.getDate() : 0;
       let msg = `🧾 Contas fixas de ${MONTHS[m - 1]}: ${money(sum(bills.map((b) => ({ value: b.baseValue }))))} no total.`;
-      if (open.length) msg += `\n\nA pagar (${money(sum(open.map((b) => ({ value: b.baseValue }))))}):\n${open.map((b) => `• dia ${pad(b.dueDay)} ${b.name} — ${money(b.baseValue)}${todayDay && b.dueDay < todayDay ? ' ⚠️ atrasada' : ''}`).join('\n')}`;
+      if (open.length) msg += `\n\nA pagar (${money(sum(open.map((b) => ({ value: b.baseValue }))))}):\n${open.map((b) => `• dia ${pad(b.dueDay)} ${b.name.trim()} — ${money(b.baseValue)}${todayDay && b.dueDay < todayDay ? ' ⚠️ atrasada' : ''}`).join('\n')}`;
       else msg += '\n\nTodas pagas ✅';
-      if (paid.length && open.length) msg += `\n\nJá pagas: ${paid.map((b) => b.name).join(', ')}.`;
+      if (paid.length && open.length) msg += `\n\nJá pagas: ${paid.map((b) => b.name.trim()).join(', ')}.`;
       return msg;
     }
     case 'FORECASTS': {
