@@ -21,3 +21,23 @@ root.render(
     </GoogleOAuthProvider>
   </React.StrictMode>
 );
+
+// Atualiza sozinho quando sai versão nova: ao voltar para o app (e a cada 30 min),
+// compara o pacote carregado com o publicado e recarrega se mudou.
+(() => {
+  const current = () => [...document.scripts].map((s) => s.src).find((s) => /\/assets\/index-[^/]+\.js$/.test(s))?.split('/').pop();
+  const loaded = current();
+  if (!loaded) return; // ambiente de desenvolvimento
+  let checking = false;
+  const check = async () => {
+    if (checking || document.visibilityState !== 'visible') return;
+    checking = true;
+    try {
+      const html = await fetch('/', { cache: 'no-store' }).then((r) => r.text());
+      const live = html.match(/assets\/(index-[^"']+\.js)/)?.[1];
+      if (live && live !== loaded) window.location.reload();
+    } catch { /* offline: tenta na próxima */ } finally { checking = false; }
+  };
+  document.addEventListener('visibilitychange', check);
+  setInterval(check, 30 * 60e3);
+})();

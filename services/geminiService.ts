@@ -8,7 +8,8 @@ import "./firebase"; // garante initializeApp
 export async function processUserCommand(text: string, imageBase64?: string) {
   const today = new Date();
   const dateContext = `Hoje é ${today.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. `;
-  const body = { text: dateContext + text, imageBase64 };
+  // v: versão do app — a IA só devolve consultas (QUERY) para quem sabe respondê-las
+  const body = { text: dateContext + text, imageBase64, v: 2 };
 
   try {
     const r: any = (await httpsCallable(getFunctions(), "aiAssistant", { timeout: 25000 })(body)).data;

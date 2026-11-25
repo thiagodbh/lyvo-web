@@ -30,6 +30,8 @@ const DynamicManualEntryModal: React.FC<{
   
   // AJUSTE: Puxa o título identificado pela IA para a descrição
   const [description, setDescription] = useState(initialData?.description || initialData?.title || '');
+  // lançamento sem valor não pode ser salvo (evita registro vazio por Enter acidental)
+  const invalidValue = type !== 'EVENT' && !(parseFloat(String(value).replace(',', '.')) > 0);
   
   // AJUSTE: Sincroniza categorias com o Fluxo Geral (store.budgetLimits)
   const availableCategories = store.budgetLimits.map(l => l.category);
@@ -204,9 +206,10 @@ const DynamicManualEntryModal: React.FC<{
 
         <div className="p-8 flex space-x-3 bg-white border-t border-gray-50">
           <button
-            onClick={() => onSave({ type, value, description, category, date, time, paymentMethod, cardId, installments })}
+            onClick={() => { if (!invalidValue) onSave({ type, value: String(value).replace(',', '.'), description, category, date, time, paymentMethod, cardId, installments }); }}
+            disabled={invalidValue}
             style={{ backgroundColor: primaryColor }}
-            className="flex-[4] text-white py-4 rounded-2xl font-poppins font-black text-sm uppercase tracking-widest active:scale-95 transition-all shadow-xl"
+            className="flex-[4] disabled:opacity-40 text-white py-4 rounded-2xl font-poppins font-black text-sm uppercase tracking-widest active:scale-95 transition-all shadow-xl"
           >
             Confirmar
           </button>

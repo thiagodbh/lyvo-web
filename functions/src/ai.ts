@@ -71,6 +71,10 @@ export const aiAssistant = onCall({ secrets: [GEMINI_API_KEY], timeoutSeconds: 3
   const raw = response.text ?? "";
   try {
     const parsed = JSON.parse(raw);
+    // app antigo (aberto antes de atualizar) trataria a consulta como lançamento: pede para atualizar
+    if (parsed.action === "QUERY" && !(Number(req.data?.v) >= 2)) {
+      return { message: "🔄 Tem uma versão nova do Lyvo que responde perguntas. Feche e abra o app (ou atualize a página) para usar.", data: { action: "UNKNOWN" } };
+    }
     return { message: parsed.responseMessage || "Comando processado.", data: parsed };
   } catch {
     return { message: "Houve uma oscilação ao interpretar o comando. Tente novamente.", data: { action: "UNKNOWN" } };
