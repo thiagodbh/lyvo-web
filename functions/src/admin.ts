@@ -303,7 +303,9 @@ async function getUser(uid: string) {
 }
 
 // ─── ações sobre usuário ────────────────────────────────────────────────────
-async function userAction(req: CallableRequest, d: any) {
+async function userAction(req: CallableRequest, d0: any) {
+  // a ação do usuário vem em `op` (`action` é a rota "userAction"); aceita o formato antigo também
+  const d = { ...d0, action: d0.op || (d0.action !== "userAction" ? d0.action : undefined) };
   const uid = String(d.uid || "");
   const reason = String(d.reason || "").trim();
   if (!uid) throw new HttpsError("invalid-argument", "uid obrigatório");

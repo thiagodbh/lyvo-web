@@ -7,7 +7,8 @@ import type { AdminApi } from './types';
 export function createLiveApi(): AdminApi {
   const fn = httpsCallable(getFunctions(), 'adminApi', { timeout: 120000 });
   const call = async <T,>(action: string, data: Record<string, any> = {}): Promise<T> => {
-    const r = await fn({ action, ...data });
+    // `action` é a rota; nada em `data` pode sobrescrevê-la
+    const r = await fn({ ...data, action });
     return r.data as T;
   };
   return {
@@ -16,7 +17,7 @@ export function createLiveApi(): AdminApi {
     overview: () => call('overview'),
     listUsers: () => call('listUsers'),
     getUser: (uid) => call('getUser', { uid }),
-    userAction: (uid, action, params) => call('userAction', { uid, action, ...params }),
+    userAction: (uid, op, params) => call('userAction', { uid, ...params, op }),
     listBilling: () => call('listBilling', { limit: 1000 }),
     getEventRaw: (id) => call('getEventRaw', { id }),
     linkEvent: (eventId, uid, planId, reason) => call('linkEvent', { eventId, uid, planId, reason }),
