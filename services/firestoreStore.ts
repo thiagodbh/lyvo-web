@@ -10,7 +10,16 @@ import {
   doc,
   updateDoc,
   getDocs,
+  setDoc,
 } from "firebase/firestore";
+
+/** Como o saldo do topo de Finanças é calculado. */
+export type BalancePrefs = {
+  /** accumulated: soma os meses; monthly: cada mês começa do zero (resultado do mês) */
+  mode: "accumulated" | "monthly";
+  /** "YYYY-MM": o acumulado só conta a partir deste mês (recomeçar do zero) */
+  startMonth?: string | null;
+};
 
 import {
   Transaction,
@@ -123,8 +132,24 @@ class FirestoreStore {
     return query(this.col(name), where("uid", "==", this.uid));
   }
 
+  balancePrefs: BalancePrefs = { mode: "accumulated", startMonth: null };
+
+  async setBalancePrefs(p: BalancePrefs) {
+    if (!this.uid) return;
+    this.balancePrefs = p;
+    window.dispatchEvent(new Event("lyvo:data-changed"));
+    await setDoc(doc(db, "users", this.uid), { balancePrefs: { mode: p.mode, startMonth: p.startMonth || null } }, { merge: true });
+  }
+
   private startSubscriptions() {
     if (!this.uid) return;
+
+    // preferências do saldo ficam no documento do usuário (valem em qualquer aparelho)
+    this.unsubs.push(onSnapshot(doc(db, "users", this.uid), (snap) => {
+      const p = (snap.data() as any)?.balancePrefs;
+      this.balancePrefs = { mode: p?.mode === "monthly" ? "monthly" : "accumulated", startMonth: p?.startMonth || null };
+      window.dispatchEvent(new Event("lyvo:data-changed"));
+    }, () => {}));
 
     const bind = <T>(colName: string, assign: (items: T[]) => void) => {
       const q = this.qByUid(colName);
@@ -196,13 +221,27 @@ class FirestoreStore {
       .filter((t) => t.type === "EXPENSE")
       .reduce((sum, t) => sum + safeVal(t.value), 0);
 
-    const allTransactions = this.transactions.filter((t: any) => !t.relatedCardId);
-    const totalIncome = allTransactions
-      .filter((t) => t.type === "INCOME")
-      .reduce((sum, t) => sum + safeVal(t.value), 0);
-    const totalExpense = allTransactions
-      .filter((t) => t.type === "EXPENSE")
-      .reduce((sum, t) => sum + safeVal(t.value), 0);
+    const prefs = this.balancePrefs;
+    if (prefs.mode === "monthly") return { income, expense, balance: income - expense };
+
+    // acumulado ATÉ o fim do mês escolhido. Mês futuro: mostra o saldo de hoje (o futuro ainda não aconteceu).
+    const key = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, "0")}`;
+    const now = new Date();
+    const selected = key(year, month), current = key(now.getFullYear(), now.getMonth());
+    const cutoff = selected < current ? selected : current;
+    // recomeço só vale do mês de recomeço em diante; meses anteriores mantêm o histórico
+    const start = prefs.startMonth && selected >= prefs.startMonth ? prefs.startMonth : "";
+    const monthOf = (t: Transaction) => {
+      const d = parseDate(t.date);
+      return key(d.getFullYear(), d.getMonth());
+    };
+    const inRange = this.transactions.filter((t: any) => {
+      if (t.relatedCardId) return false;
+      const k = monthOf(t);
+      return k <= cutoff && (!start || k >= start);
+    });
+    const totalIncome = inRange.filter((t) => t.type === "INCOME").reduce((sum, t) => sum + safeVal(t.value), 0);
+    const totalExpense = inRange.filter((t) => t.type === "EXPENSE").reduce((sum, t) => sum + safeVal(t.value), 0);
 
     return { income, expense, balance: totalIncome - totalExpense };
   }
@@ -290,7 +329,13 @@ class FirestoreStore {
       if ((bill as any).endedAt && currentMonthStr > (bill as any).endedAt) return false;
       if (bill.skippedMonths.includes(currentMonthStr)) return false;
       return true;
-    });
+    }).map((bill) => this.billForMonth(bill, currentMonthStr));
+  }
+
+  /** A conta como ela é naquele mês: valores base + ajuste feito só para o mês, se houver. */
+  billForMonth(bill: FixedBill, monthKey: string): FixedBill {
+    const o = bill.overrides?.[monthKey];
+    return o ? { ...bill, ...o } : bill;
   }
 
   async addFixedBill(
@@ -320,10 +365,11 @@ class FirestoreStore {
   }
 
   async toggleFixedBillStatus(id: string, month: number, year: number) {
-    const bill = this.fixedBills.find((b) => b.id === id);
-    if (!bill) return;
+    const raw = this.fixedBills.find((b) => b.id === id);
+    if (!raw) return;
 
     const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const bill = this.billForMonth(raw, key);
     const isPaid = bill.paidMonths.includes(key);
 
     if (!isPaid) {
@@ -339,9 +385,9 @@ class FirestoreStore {
     } else {
       await updateDoc(doc(db, "fixedBills", id), { paidMonths: bill.paidMonths.filter((m) => m !== key) });
 
-      const desc = `Pagamento: ${bill.name}`;
+      const descs = [`Pagamento: ${bill.name}`, `Pagamento: ${raw.name}`];
       const trans = this.transactions.find(
-        (t) => t.description === desc && parseDate(t.date).getMonth() === month && parseDate(t.date).getFullYear() === year
+        (t) => descs.includes(t.description) && parseDate(t.date).getMonth() === month && parseDate(t.date).getFullYear() === year
       );
       if (trans) await this.deleteTransaction(trans.id);
     }
@@ -511,20 +557,30 @@ class FirestoreStore {
     if (!bill) return;
 
     if (mode === 'ONLY_THIS') {
-      // 1. "Deleta" apenas neste mês (adiciona aos meses pulados)
-      await this.deleteFixedBill(id, 'ONLY_THIS', month, year);
-      
-      // 2. Cria uma transação avulsa editada para este mês específico
-      await this.addTransaction({
-        type: "EXPENSE",
-        value: data.baseValue,
-        description: data.name,
-        category: data.category,
-        date: new Date(year, month, data.dueDay).toISOString(),
-      } as any);
+      // Guarda um ajuste só para este mês: a conta continua na lista (paga ou a pagar) e os outros meses não mudam.
+      const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+      const before = this.billForMonth(bill, key);
+      const patch = { name: data.name, baseValue: Number(data.baseValue), dueDay: Number(data.dueDay), category: data.category };
+      await updateDoc(doc(db, "fixedBills", id), { [`overrides.${key}`]: patch } as any);
+
+      // se já estava paga neste mês, corrige também o lançamento do pagamento
+      if (bill.paidMonths.includes(key)) {
+        const descs = [`Pagamento: ${before.name}`, `Pagamento: ${bill.name}`];
+        const trans = this.transactions.find(
+          (t) => descs.includes(t.description) && parseDate(t.date).getMonth() === month && parseDate(t.date).getFullYear() === year
+        );
+        if (trans) {
+          await updateDoc(doc(db, "transactions", trans.id), {
+            value: patch.baseValue, description: `Pagamento: ${patch.name}`, category: patch.category,
+            date: new Date(year, month, patch.dueDay).toISOString(),
+          } as any);
+        }
+      }
     } else {
-      // Atualiza o documento original para todos os meses futuros
-      await updateDoc(doc(db, "fixedBills", id), data);
+      // Atualiza o valor base; ajustes "só deste mês" daqui pra frente deixam de valer
+      const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+      const kept = Object.fromEntries(Object.entries(bill.overrides || {}).filter(([k]) => k < key));
+      await updateDoc(doc(db, "fixedBills", id), { ...data, overrides: kept });
     }
   }
 

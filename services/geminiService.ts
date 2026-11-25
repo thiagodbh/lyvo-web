@@ -2,6 +2,9 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 import "./firebase"; // garante initializeApp
 import { store } from "./firestoreStore";
 
+export { INCOME_CATEGORIES, pickCategory } from "./categories";
+import { INCOME_CATEGORIES } from "./categories";
+
 /**
  * Envia o comando ao assistente. Roda na função `aiAssistant` do Firebase:
  * exige login, aplica limite diário e registra o custo de cada chamada.
@@ -41,8 +44,10 @@ function calendarContext(t: Date) {
 /** Nomes reais das categorias e cartões do usuário, para a IA filtrar pelo nome certo. */
 function userContext() {
   try {
-    const cats = [...new Set([...store.transactions.map((t) => (t.category || "").trim()), ...store.budgetLimits.map((b) => (b.category || "").trim())].filter(Boolean))].slice(0, 40);
+    // despesas: as categorias que o formulário oferece (limites do usuário); consultas também enxergam as antigas dos lançamentos
+    const expense = [...new Set(store.budgetLimits.map((b) => (b.category || "").trim()).filter(Boolean))].slice(0, 30);
+    const used = [...new Set(store.transactions.map((t) => (t.category || "").trim()).filter(Boolean))].filter((c) => !expense.includes(c)).slice(0, 20);
     const cards = store.creditCards.map((c) => c.name).filter(Boolean).slice(0, 10);
-    return `[Usuário] categorias: ${cats.join(", ") || "padrão"}; cartões: ${cards.join(", ") || "nenhum"}. [Mensagem] `;
+    return `[Usuário] categorias de despesa: ${expense.join(", ") || "padrão"}; categorias de receita: ${INCOME_CATEGORIES.join(", ")}; outras categorias já usadas: ${used.join(", ") || "nenhuma"}; cartões: ${cards.join(", ") || "nenhum"}. [Mensagem] `;
   } catch { return ""; }
 }

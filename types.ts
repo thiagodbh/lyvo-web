@@ -27,6 +27,8 @@ export interface FixedBill {
   paidMonths: string[]; // Chaves no formato YYYY-MM
   skippedMonths: string[]; // Chaves no formato YYYY-MM para exclusão pontual
   endMonth?: string | null;
+  /** Ajustes de um mês só ("YYYY-MM" → valores daquele mês), feitos em "alterar somente este mês" */
+  overrides?: Record<string, Partial<Pick<FixedBill, 'name' | 'baseValue' | 'dueDay' | 'category'>>>;
 }
 
 export interface CreditCard {

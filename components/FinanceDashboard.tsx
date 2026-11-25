@@ -277,12 +277,7 @@ const FinanceDashboard: React.FC = () => {
                         </div>
                         <ArrowDownCircle className="w-8 h-8 text-red-500 opacity-20" />
                     </div>
-                    <div className="bg-gradient-to-br from-lyvo-primary to-lyvo-dark p-4 rounded-2xl shadow-md border-l-4 border-lyvo-light text-white flex justify-between items-center">
-                        <div>
-                            <p className="text-xs text-white/80 font-medium uppercase">Saldo Acumulado</p>
-                            <p className="text-2xl font-bold mt-1 text-white">{formatCurrency(balanceData.balance)}</p>
-                        </div>
-                    </div>
+                    <BalanceCard balance={balanceData.balance} month={selectedMonth} year={selectedYear} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -359,6 +354,7 @@ const FinanceDashboard: React.FC = () => {
                             <div className="flex space-x-4 overflow-x-auto no-scrollbar pb-2">
                                 {creditCards.map(card => {
                                     const currentInvoice = store.calculateCardInvoice(card.id, selectedMonth, selectedYear);
+                                    const invoicePaid = store.isInvoicePaid(card.id, selectedMonth, selectedYear);
                                     const available = card.limit - currentInvoice;
                                     const percent = Math.min((currentInvoice / card.limit) * 100, 100);
                                     
@@ -381,8 +377,15 @@ const FinanceDashboard: React.FC = () => {
                                                 </div>
                                                 
                                                 <div className="mb-4">
-                                                    <p className="text-[10px] text-gray-400 font-black uppercase">Fatura Atual</p>
-                                                    <p className="text-xl font-bold text-gray-900">{formatCurrency(currentInvoice)}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-[10px] text-gray-400 font-black uppercase">Fatura Atual</p>
+                                                        {invoicePaid && (
+                                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700 ring-1 ring-emerald-200">
+                                                                <Check className="w-3 h-3" /> Paga
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className={`text-xl font-bold ${invoicePaid ? 'text-gray-400 line-through decoration-1' : 'text-gray-900'}`}>{formatCurrency(currentInvoice)}</p>
                                                 </div>
 
                                                 <div>
@@ -406,16 +409,19 @@ const FinanceDashboard: React.FC = () => {
                             <div className="space-y-4 mt-4">
                                 {transactionsToShow.map(t => (
                                     <div key={t.id} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0 group">
-                                        <div className="flex items-center space-x-3">
-                                            <div className={`p-2 rounded-full ${t.type === 'INCOME' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
+                                        <div className="flex min-w-0 flex-1 items-center space-x-3">
+                                            <div className={`shrink-0 p-2 rounded-full ${t.type === 'INCOME' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
                                                 {t.type === 'INCOME' ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
                                             </div>
-                                            <div>
-                                                <p className="font-semibold text-gray-900 text-sm">{t.description}</p>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-semibold text-gray-900 text-sm truncate">{t.description || t.category}</p>
                                                 <p className="text-[10px] text-gray-400">{formatDate(t.date)} • {t.category}</p>
                                             </div>
+                                            <p className={`shrink-0 text-sm font-bold tabular-nums ${t.type === 'INCOME' ? 'text-emerald-600' : 'text-gray-900'}`}>
+                                                {t.type === 'INCOME' ? '+' : '−'} {formatCurrency(Number(t.value) || 0)}
+                                            </p>
                                         </div>
-                                        <div className="flex items-center space-x-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                        <div className="ml-2 flex shrink-0 items-center space-x-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                           <button
                                             onClick={() => setEditingGeneralTransaction(t)}
                                             className="p-1.5 text-gray-400 hover:text-blue-500 active:text-blue-600"
@@ -1253,3 +1259,74 @@ const ConfirmationModal: React.FC<{ message: string, onConfirm: () => void, onCa
 );
 
 export default FinanceDashboard;
+
+// ─── card de saldo com escolha de cálculo ───────────────────────────────────
+const MONTH_NAMES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const monthKeyOf = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, '0')}`;
+const monthLabelOf = (k: string) => `${MONTH_NAMES[Number(k.slice(5, 7)) - 1]}/${k.slice(2, 4)}`;
+
+function BalanceCard({ balance, month, year }: { balance: number; month: number; year: number }) {
+    const [open, setOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const prefs = store.balancePrefs;
+    const now = new Date();
+    const selected = monthKeyOf(year, month);
+    const current = monthKeyOf(now.getFullYear(), now.getMonth());
+    const nextMonth = monthKeyOf(now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear(), (now.getMonth() + 1) % 12);
+    const restartActive = prefs.mode === 'accumulated' && prefs.startMonth && selected >= prefs.startMonth;
+
+    const title = prefs.mode === 'monthly' ? 'Resultado do mês' : 'Saldo acumulado';
+    const sub = prefs.mode === 'monthly'
+        ? 'entradas − saídas deste mês'
+        : selected > current
+            ? 'saldo de hoje (mês ainda não começou)'
+            : `${restartActive ? `desde ${monthLabelOf(prefs.startMonth!)}` : 'de todos os meses'} até ${selected === current ? 'hoje' : `o fim de ${MONTH_NAMES[month]}`}`;
+
+    const save = async (p: { mode: 'accumulated' | 'monthly'; startMonth?: string | null }) => {
+        setSaving(true);
+        try { await store.setBalancePrefs({ startMonth: prefs.startMonth || null, ...p }); setOpen(false); }
+        catch (e) { console.error(e); alert('Não consegui salvar agora. Tente de novo.'); }
+        finally { setSaving(false); }
+    };
+
+    const Option = ({ active, title: t, desc, onClick }: { active: boolean; title: string; desc: string; onClick: () => void }) => (
+        <button disabled={saving} onClick={onClick} className={`w-full rounded-xl p-3 text-left transition ${active ? 'bg-teal-50 ring-2 ring-lyvo-primary' : 'bg-gray-50 hover:bg-gray-100'}`}>
+            <p className="text-sm font-bold text-gray-900">{t}</p>
+            <p className="text-xs text-gray-500">{desc}</p>
+        </button>
+    );
+
+    return (
+        <div className="relative bg-gradient-to-br from-lyvo-primary to-lyvo-dark p-4 rounded-2xl shadow-md border-l-4 border-lyvo-light text-white flex justify-between items-center">
+            <div className="min-w-0">
+                <p className="text-xs text-white/80 font-medium uppercase">{title}</p>
+                <p className="text-2xl font-bold mt-1 text-white">{balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                <p className="text-[10px] text-white/70 mt-0.5">{sub}</p>
+            </div>
+            <button onClick={() => setOpen(true)} className="shrink-0 rounded-xl bg-white/15 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white hover:bg-white/25" aria-label="Como calcular o saldo">
+                Ajustar
+            </button>
+
+            {open && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
+                    <div className="w-full max-w-md space-y-3 rounded-t-3xl bg-white p-6 text-gray-900 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold">Como mostrar seu saldo</h3>
+                        <Option active={prefs.mode === 'accumulated' && !prefs.startMonth} title="Acumulado"
+                            desc="Soma tudo o que entrou e saiu, mês a mês. Meses anteriores mostram o saldo daquela época."
+                            onClick={() => save({ mode: 'accumulated', startMonth: null })} />
+                        <Option active={prefs.mode === 'monthly'} title="Cada mês começa do zero"
+                            desc="Mostra só o resultado do mês: o que entrou menos o que saiu naquele mês."
+                            onClick={() => save({ mode: 'monthly' })} />
+                        <Option active={prefs.mode === 'accumulated' && !!prefs.startMonth} title={prefs.startMonth ? `Recomeçado em ${monthLabelOf(prefs.startMonth)}` : `Recomeçar do zero em ${monthLabelOf(nextMonth)}`}
+                            desc={prefs.startMonth
+                                ? 'O acumulado conta a partir desse mês. Meses antes dele continuam com o histórico. Toque para recomeçar no próximo mês.'
+                                : 'Fecha o mês atual e o acumulado volta a contar do zero a partir do próximo mês. Seus lançamentos não são apagados.'}
+                            onClick={() => save({ mode: 'accumulated', startMonth: nextMonth })} />
+                        <button onClick={() => setOpen(false)} className="w-full pt-1 text-sm text-gray-400">Fechar</button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+

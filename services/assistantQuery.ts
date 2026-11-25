@@ -231,7 +231,8 @@ export function answerQuery(q: QueryDetails, d: AssistantData, today = new Date(
     case 'BILLS': {
       const month = monthKey(q.startDate ? start : ymd(today));
       const m = Number(month.slice(5));
-      const bills = d.fixedBills.filter((b) => month >= b.startMonth && !(b.endedAt && month > b.endedAt) && !(b.skippedMonths || []).includes(month));
+      const bills = d.fixedBills.filter((b) => month >= b.startMonth && !(b.endedAt && month > b.endedAt) && !(b.skippedMonths || []).includes(month))
+        .map((b) => ({ ...b, ...(b.overrides?.[month] || {}) }));
       if (!bills.length) return 'Você não tem contas fixas cadastradas.';
       const open = bills.filter((b) => !(b.paidMonths || []).includes(month)).sort((a, b) => a.dueDay - b.dueDay);
       const paid = bills.filter((b) => (b.paidMonths || []).includes(month));
@@ -302,7 +303,8 @@ export function summary(d: AssistantData, today = new Date()): string {
     else if (b.monthlyLimit && s >= b.monthlyLimit * 0.8) tips.push(`🟡 ${b.category} já em ${Math.round((s / b.monthlyLimit) * 100)}% do limite.`);
   }
   const mk = monthKey(t);
-  const openBills = d.fixedBills.filter((b) => mk >= b.startMonth && !(b.endedAt && mk > b.endedAt) && !(b.skippedMonths || []).includes(mk) && !(b.paidMonths || []).includes(mk));
+  const openBills = d.fixedBills.filter((b) => mk >= b.startMonth && !(b.endedAt && mk > b.endedAt) && !(b.skippedMonths || []).includes(mk) && !(b.paidMonths || []).includes(mk))
+    .map((b) => ({ ...b, ...(b.overrides?.[mk] || {}) }));
   if (openBills.length) tips.push(`🧾 ${openBills.length} conta(s) fixa(s) a pagar: ${money(sum(openBills.map((b) => ({ value: b.baseValue }))))}.`);
   const nowKey = `${t}${pad(today.getHours())}:${pad(today.getMinutes())}`;
   const next = eventsIn(d.events, t, ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2)))

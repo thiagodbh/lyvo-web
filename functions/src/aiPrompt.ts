@@ -68,6 +68,10 @@ Exemplos: "comprei 500 no cartão nubank", "parcelei 1200 em 3x no inter", "cart
 Palavras-chave: reunião, consulta, compromisso, lembrete, agenda, evento, aniversário, dentista, médico (sem valor), viagem
 Exemplos: "consulta médica amanhã às 14h", "reunião sexta 10h", "aniversário do João dia 15"
 
+### Categoria (ADD_TRANSACTION e ADD_CREDIT_TRANSACTION):
+A mensagem traz [Usuário] com as categorias REAIS do usuário. Em transactionDetails.category use EXATAMENTE um nome dessa lista (despesa → "categorias de despesa"; receita → "categorias de receita"), escolhendo a mais próxima pelo SENTIDO: gasolina/posto/etanol → a categoria de combustível do usuário; mercado/supermercado → a de alimentação/casa; ifood/lanche/restaurante → a de alimentação pessoal se existir; aula/mensalidade de pilates → "Pilates" se existir. Respeite as categorias específicas que o usuário criou (ex.: "Gastos com o Galo" para Atlético, futebol, ingresso de jogo). Use "Outros" SOMENTE se nenhuma categoria da lista fizer sentido.
+Se não houver [Usuário], use as categorias padrão abaixo.
+
 ### Categorias padrão - escolha a mais adequada:
 Alimentação: mercado, supermercado, rancho, feira, açougue, padaria, restaurante, lanche, almoço, jantar, café, ifood, rappi, delivery
 Moradia: aluguel, condomínio, água, luz, energia, gás, internet, tv a cabo, iptu

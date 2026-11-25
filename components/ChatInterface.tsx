@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Mic, Camera, TrendingDown, TrendingUp, Calendar, Loader2, X, Check, ChevronDown, DollarSign, Type as TypeIcon, Tag, CalendarDays, CreditCard as CreditCardIcon, Clock } from 'lucide-react';
-import { processUserCommand } from '../services/geminiService';
+import { processUserCommand, pickCategory, INCOME_CATEGORIES } from '../services/geminiService';
 import { store } from '../services/firestoreStore';
 import { answerQuery } from '../services/assistantQuery';
 
@@ -50,7 +50,7 @@ const DynamicManualEntryModal: React.FC<{
   const isCredit = type === 'EXPENSE' && paymentMethod === 'Cartão de Crédito';
   
   // Lista reserva para receitas (Income)
-  const incomeCategories = ['Salário', 'Freela', 'Comissão', 'Outros'];
+  const incomeCategories = INCOME_CATEGORIES;
 
   const primaryColor = type === 'EXPENSE' ? '#3A86FF' : type === 'INCOME' ? '#7AE582' : '#3A86FF';
 
@@ -332,6 +332,10 @@ const ChatInterface: React.FC = () => {
           }
         }
 
+          // a IA pode sugerir uma categoria com outro nome: encaixa numa que existe no formulário
+          if (action !== 'ADD_EVENT') {
+            details.category = pickCategory(details.category, type === 'INCOME' ? INCOME_CATEGORIES : store.budgetLimits.map(l => l.category));
+          }
           setModalInitialData({
               ...details,
               paymentMethod: action === 'ADD_CREDIT_TRANSACTION' ? 'Cartão de Crédito' : 'Dinheiro',
