@@ -1,4 +1,4 @@
-// Prompt e schema do assistente (movidos de api/gemini.ts — mantenha os dois iguais até remover o endpoint antigo)
+// Prompt e schema do assistente (usados pela função aiAssistant)
 import { Type } from "@google/genai";
 
 export const actionSchema = {
@@ -27,6 +27,20 @@ export const actionSchema = {
         date: { type: Type.STRING, description: "YYYY-MM-DD" },
         time: { type: Type.STRING, description: "HH:mm" },
         description: { type: Type.STRING },
+      },
+    },
+    queryDetails: {
+      type: Type.OBJECT,
+      description: "Preencha SOMENTE quando action=QUERY",
+      properties: {
+        intent: { type: Type.STRING, enum: ["SPENDING", "INCOME", "BALANCE", "LIST", "BY_CATEGORY", "TOP_EXPENSES", "CARD", "BUDGET", "BILLS", "FORECASTS", "AGENDA", "SUMMARY", "COMPARE"] },
+        startDate: { type: Type.STRING, description: "YYYY-MM-DD, início do período" },
+        endDate: { type: Type.STRING, description: "YYYY-MM-DD, fim do período (inclusive)" },
+        category: { type: Type.STRING, description: "Uma das categorias padrão, se a pergunta for sobre uma categoria" },
+        search: { type: Type.STRING, description: "Palavra para procurar na descrição (ex.: uber, ifood, aluguel, nome do evento)" },
+        cardName: { type: Type.STRING, description: "Nome do cartão citado (ex.: nubank)" },
+        eventKind: { type: Type.STRING, enum: ["ALL", "EVENT", "TASK", "REMINDER"] },
+        limit: { type: Type.NUMBER },
       },
     },
     responseMessage: { type: Type.STRING },
@@ -63,6 +77,25 @@ Lazer: cinema, show, viagem, passeio, hobby, streaming, netflix, spotify
 Educação: escola, faculdade, curso, livro, material escolar
 Outros: qualquer coisa que não se encaixe nas anteriores
 
+### Perguntas e consultas (QUERY) — o usuário quer SABER algo, não registrar:
+Sinais: pergunta ("quanto", "quais", "qual", "quando", "tenho", "como estou", "mostra", "lista", "resumo", "?"), sem dizer que gastou/recebeu agora.
+Preencha queryDetails. NÃO invente números: o app calcula a resposta com os dados do usuário.
+- SPENDING: quanto gastei (total), com filtros. "quanto gastei com uber esse mês" → search="uber"; "quanto gastei em alimentação" → category="Alimentação"; "quanto gastei no nubank" → cardName="nubank"
+- INCOME: quanto recebi/entrou
+- BALANCE: saldo, quanto sobrou, entrou x saiu
+- LIST: listar/mostrar lançamentos ("quais foram meus gastos com ifood", "mostra minhas despesas de ontem")
+- BY_CATEGORY: gastos divididos por categoria
+- TOP_EXPENSES: maiores gastos
+- CARD: fatura, limite do cartão ("quanto está a fatura do nubank", "quanto tenho de limite")
+- BUDGET: limites/orçamento por categoria ("estourei algum limite?")
+- BILLS: contas fixas ("quais contas faltam pagar", "contas do mês")
+- FORECASTS: previsões, o que tenho a receber/pagar previsto
+- AGENDA: compromissos, tarefas e lembretes ("o que tenho amanhã", "minha agenda da semana", "quando é o dentista") → eventKind conforme a pergunta (REMINDER para lembretes, TASK para tarefas, senão ALL); use search para o nome do evento
+- COMPARE: comparar com o mês passado ("estou gastando mais que mês passado?")
+- SUMMARY: visão geral, conselho, "como estão minhas finanças", "onde posso economizar", "me dá um resumo"
+Períodos (calcule a partir da data de hoje do contexto): sem período citado → mês atual (do dia 1 ao último dia) para finanças; para AGENDA sem período → de hoje até 7 dias depois. "hoje", "ontem", "amanhã" → startDate=endDate=esse dia. "esta semana" → segunda a domingo da semana atual. "semana passada" → segunda a domingo anterior. "mês passado" → mês anterior inteiro. "em outubro" → 01/10 a 31/10 do ano atual. "este ano" → 01/01 até hoje.
+Em QUERY, responseMessage pode ser curto (ex.: "Consultando...") — ele não é mostrado.
+
 ## TRATAMENTO DE ERROS DE DIGITAÇÃO
 - Ignore erros de digitação comuns: "mercdo"=mercado, "farmcia"=farmácia, "recbi"=recebi, "gstei"=gastei
 - Entenda abreviações: "cc"=cartão de crédito, "tdm"=todo mês, "qnt"=quanto
@@ -79,7 +112,7 @@ Outros: qualquer coisa que não se encaixe nas anteriores
 - Formato de saída SEMPRE: YYYY-MM-DD
 
 ## QUANDO USAR UNKNOWN
-Somente use UNKNOWN se for completamente impossível identificar uma ação financeira ou evento. Em caso de dúvida, prefira ADD_TRANSACTION com type=EXPENSE.
+Somente use UNKNOWN se for completamente impossível identificar uma ação financeira, evento ou pergunta. Se for pergunta sobre finanças ou agenda, use QUERY (nunca ADD_*). Se for um registro sem ser pergunta e houver dúvida, prefira ADD_TRANSACTION com type=EXPENSE.
 
 ## RESPOSTA
 - responseMessage: resposta curta, amigável, em português, confirmando o que foi registrado

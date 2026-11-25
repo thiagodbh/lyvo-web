@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Mic, Camera, TrendingDown, TrendingUp, Calendar, Loader2, X, Check, ChevronDown, DollarSign, Type as TypeIcon, Tag, CalendarDays, CreditCard as CreditCardIcon, Clock } from 'lucide-react';
 import { processUserCommand } from '../services/geminiService';
 import { store } from '../services/firestoreStore';
+import { answerQuery } from '../services/assistantQuery';
 
 interface Message {
   id: string;
@@ -221,7 +222,7 @@ const DynamicManualEntryModal: React.FC<{
 
 
 const ChatInterface: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([{ id: '1', role: 'assistant', content: 'Olá! Sou o Lyvo. 🤖\n\nEstou pronto para ouvir você ou analisar seus recibos. O que vamos organizar hoje?' }]);
+  const [messages, setMessages] = useState<Message[]>([{ id: '1', role: 'assistant', content: 'Olá! Sou o Lyvo, seu assessor. 🤖\n\nRegistro gastos, receitas e compromissos, e respondo suas dúvidas:\n• "quanto gastei com mercado este mês?"\n• "como está a fatura do nubank?"\n• "quais contas faltam pagar?"\n• "o que tenho amanhã?"\n• "me dá um resumo do mês"' }]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -300,7 +301,20 @@ const ChatInterface: React.FC = () => {
     try {
       const res = await processUserCommand(text, imageBase64);
       
-      if (res.data && res.data.action !== 'UNKNOWN') {
+      // pergunta: o app calcula a resposta com os dados do usuário (nada de abrir formulário)
+      if (res.data?.action === 'QUERY') {
+          let answer: string;
+          try {
+            answer = answerQuery(res.data.queryDetails || { intent: 'SUMMARY' }, {
+              transactions: store.transactions, creditCards: store.creditCards, fixedBills: store.fixedBills,
+              forecasts: store.forecasts, budgetLimits: store.budgetLimits, events: store.events,
+            });
+          } catch (qe) {
+            console.error('Query Error:', qe);
+            answer = 'Não consegui montar essa resposta agora. Tente perguntar de outro jeito, por exemplo: "quanto gastei com mercado este mês?"';
+          }
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: answer }]);
+      } else if (res.data && res.data.action !== 'UNKNOWN') {
           const action = res.data.action;
           const details = res.data.transactionDetails || res.data.eventDetails || {};
           
@@ -326,7 +340,7 @@ const ChatInterface: React.FC = () => {
           }
           setActiveModal(type);
       } else {
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: res.message || "Não entendi bem. Tente algo como: \"gastei 50 no mercado\", \"recebi 3000 de salário\" ou \"consulta médica amanhã às 14h\"." }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: res.message || "Não entendi bem. Tente algo como: \"gastei 50 no mercado\", \"quanto gastei com uber este mês?\" ou \"o que tenho amanhã?\"." }]);
       }
     } catch (e: any) {
       console.error("Chat Error:", e);
