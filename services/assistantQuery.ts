@@ -157,7 +157,7 @@ function groupByCategory(xs: Transaction[]) {
 }
 const line = (t: Transaction, cards: CreditCard[]) => {
   const card = t.relatedCardId ? cards.find((c) => c.id === t.relatedCardId) : null;
-  return `• ${fmtDay(dayOf(t.date))} ${t.description || t.category} — ${money(val(t))}${card ? ` (💳 ${card.name})` : ''}`;
+  return `• ${fmtDay(dayOf(t.date))} ${t.description || t.category} — ${money(val(t))}${card ? ` (💳 ${card.name.trim()})` : ''}`;
 };
 const filterLabel = (q: QueryDetails, d: AssistantData) => {
   const parts: string[] = [];
@@ -209,7 +209,7 @@ function answer(q: QueryDetails, d: AssistantData, today: Date, start: string, e
       const total = sum(xs);
       const card = sum(xs.filter((t) => t.relatedCardId));
       let msg = `💸 Você gastou ${money(total)}${filterLabel(q, d)} ${when} (${xs.length} lançamento${xs.length > 1 ? 's' : ''}).`;
-      if (card > 0 && !q.cardName) msg += `\n${money(card)} foi no cartão de crédito.`;
+      if (card > 0 && !q.cardName) msg += Math.abs(card - total) < 0.005 ? '\nTudo no cartão de crédito.' : `\n${money(card)} foi no cartão de crédito.`;
       if (!q.category && !q.search) {
         const top = groupByCategory(xs).slice(0, 3);
         if (top.length > 1) msg += `\n\nOnde mais pesou:\n${top.map(([c, v]) => `• ${c}: ${money(v)}`).join('\n')}`;
