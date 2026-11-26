@@ -37,6 +37,7 @@ import {
 } from 'recharts';
 import { store } from "../services/firestoreStore";
 import { useHideValues, brl } from '../services/privacy';
+import { SpendingBreakdown, IncomeExpenseChart } from './FinanceCharts';
 import { Transaction, FixedBill, BudgetLimit, Forecast, CreditCard } from '../types';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#F43F5E', '#0EA5E9', '#64748B'];
@@ -216,11 +217,7 @@ const FinanceDashboard: React.FC = () => {
     );
     const transactionsToShow = expandTransactions ? sortedTransactions : sortedTransactions.slice(0, 4);
 
-    const pieData = limits.map((l, index) => ({
-        name: l.category,
-        value: l.spent,
-        color: COLORS[index % COLORS.length]
-    })).filter(d => d.value > 0);
+    const pieData = limits.map((l) => ({ name: l.category, value: Number(l.spent) || 0 })).filter(d => d.value > 0);
 
     const getEvolutionData = () => {
         const data = [];
@@ -632,58 +629,16 @@ const FinanceDashboard: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 h-[400px] flex flex-col">
-                            <h3 className="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Distribuição de Gastos</h3>
-                            <div className="flex-1 min-h-0">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={pieData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={100}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                        >
-                                            {pieData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                                        <Legend verticalAlign="bottom" height={36}/>
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
+                        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col">
+                            <h3 className="text-base font-bold text-gray-900 mb-1">Para onde foi seu dinheiro</h3>
+                            <p className="text-xs text-gray-400 mb-4 capitalize">{viewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
+                            <SpendingBreakdown items={pieData} fmt={formatCurrency} hidden={hideValues} />
                         </div>
 
-                        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 h-[400px] flex flex-col">
-                            <h3 className="text-sm font-black uppercase text-gray-400 tracking-widest mb-6">Evolução de Receitas</h3>
-                            <div className="flex-1 min-h-0">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={evolutionData}>
-                                        <defs>
-                                            <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#3A86FF" stopOpacity={0.8}/>
-                                                <stop offset="95%" stopColor="#3A86FF" stopOpacity={0}/>
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} tickFormatter={(v) => (hideValues ? '•••' : `R$ ${v}`)} />
-                                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                                        <Area 
-                                            type="monotone" 
-                                            dataKey="income" 
-                                            stroke="#3A86FF" 
-                                            fillOpacity={1} 
-                                            fill="url(#colorIncome)" 
-                                            strokeWidth={3}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </div>
+                        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col min-h-[380px]">
+                            <h3 className="text-base font-bold text-gray-900 mb-1">Entradas x saídas</h3>
+                            <p className="text-xs text-gray-400 mb-4">Últimos 6 meses</p>
+                            <IncomeExpenseChart data={evolutionData} fmt={formatCurrency} hidden={hideValues} />
                         </div>
                     </div>
                 </div>
