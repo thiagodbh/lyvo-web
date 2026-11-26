@@ -4,13 +4,15 @@ import { Send, Mic, Camera, TrendingDown, TrendingUp, Calendar, Loader2, X, Chec
 import { processUserCommand, pickCategory, INCOME_CATEGORIES } from '../services/geminiService';
 import { store } from '../services/firestoreStore';
 import { answerQuery } from '../services/assistantQuery';
-import { auth } from '../services/firebase';
+import { auth, db } from '../services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 /** Saudação curta, pelo horário e pelo primeiro nome. */
-function greeting() {
+function greeting(name?: string) {
   const h = new Date().getHours();
   const hi = h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-  const first = (auth.currentUser?.displayName || '').trim().split(/\s+/)[0];
+  const raw = (name || auth.currentUser?.displayName || '').trim().split(/\s+/)[0];
+  const first = raw ? raw[0].toUpperCase() + raw.slice(1).toLowerCase() : '';
   return `${hi}${first ? `, ${first}` : ''}! 👋\n\nMe conta o que aconteceu, do seu jeito, que eu anoto: "almoço 38 reais", "recebi 2 mil do cliente", "dentista quinta às 15h".\n\nE pode perguntar também: "quanto gastei com uber esse mês?"`;
 }
 
@@ -235,6 +237,16 @@ const DynamicManualEntryModal: React.FC<{
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([{ id: '1', role: 'assistant', content: greeting() }]);
+
+  // o nome fica no perfil do usuário (não no login): busca e personaliza a saudação
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    getDoc(doc(db, 'users', uid)).then((snap) => {
+      const name = (snap.data() as any)?.name;
+      if (name) setMessages((prev) => prev.map((m) => (m.id === '1' ? { ...m, content: greeting(name) } : m)));
+    }).catch(() => {});
+  }, []);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
