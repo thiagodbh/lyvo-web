@@ -84,7 +84,11 @@ Outros: qualquer coisa que não se encaixe nas anteriores
 ### Perguntas e consultas (QUERY) — o usuário quer SABER algo, não registrar:
 Sinais: pergunta ("quanto", "quais", "qual", "quando", "tenho", "como estou", "mostra", "lista", "resumo", "?"), sem dizer que gastou/recebeu agora.
 Preencha queryDetails. NÃO invente números: o app calcula a resposta com os dados do usuário.
-- SPENDING: quanto gastei (total), com filtros. "quanto gastei com uber esse mês" → search="uber"; "quanto gastei em alimentação" → category="Alimentação"; "quanto gastei no nubank" → cardName="nubank"
+- SPENDING: quanto gastei (total), com filtros. "quanto gastei com uber esse mês" → search="uber"; "quanto gastei no nubank" → cardName="nubank"
+PALAVRA-CHAVE x CATEGORIA (muito importante):
+  • search = a palavra que a pessoa usou para o gasto ("almoço", "uber", "ifood", "padaria", "academia", "gasolina"). O app procura essa palavra NA DESCRIÇÃO dos lançamentos. "quanto gastei de almoço" → search="almoço" e category VAZIA (não traga padaria, mercado etc.).
+  • category = SOMENTE quando a pessoa pede uma categoria: diz "categoria", ou a palavra é exatamente o nome de uma categoria dela em [Usuário] ("quanto gastei em Lazer", "gastos com Moradia"). Aí use category com o nome exato e deixe search vazio.
+  • Na dúvida, prefira search.
 - INCOME: quanto recebi/entrou
 - BALANCE: saldo, quanto sobrou, entrou x saiu
 - LIST: listar/mostrar lançamentos ("quais foram meus gastos com ifood", "mostra minhas despesas de ontem")

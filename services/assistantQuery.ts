@@ -65,7 +65,15 @@ export function describeRange(start: string, end: string, today: Date) {
 }
 
 const matchCategory = (t: { category?: string }, cat?: string) => !cat || norm(t.category) === norm(cat) || norm(t.category).includes(norm(cat));
-const matchSearch = (t: { description?: string; category?: string }, s?: string) => !s || norm(t.description).includes(norm(s)) || norm(t.category).includes(norm(s));
+/**
+ * Palavra-chave: procura SÓ na descrição do lançamento (ex.: "almoço" não traz "padaria",
+ * mesmo que os dois estejam em Alimentação). Aceita sem acento e singular/plural.
+ */
+const matchSearch = (t: { description?: string }, s?: string) => {
+  if (!s) return true;
+  const desc = norm(t.description);
+  return norm(s).split(/\s+/).filter(Boolean).every((w) => desc.includes(w) || (w.length > 3 && w.endsWith('s') && desc.includes(w.slice(0, -1))));
+};
 function findCard(cards: CreditCard[], name?: string) {
   if (!name) return null;
   const n = norm(name);
@@ -88,8 +96,19 @@ function expensesIn(d: AssistantData, start: string, end: string, q: QueryDetail
 }
 /** Categoria e busca: se vierem as duas, basta bater uma (a IA chuta a categoria padrão e o usuário usa outra). */
 function matchFilters(t: Transaction, q: QueryDetails) {
-  if (q.category && q.search) return matchCategory(t, q.category) || matchSearch(t, q.search);
   return matchCategory(t, q.category) && matchSearch(t, q.search);
+}
+
+/**
+ * Palavra-chave e categoria juntas: vale a palavra-chave (é o que a pessoa escreveu).
+ * Só se nenhum lançamento do período tiver a palavra na descrição é que cai para a categoria — e avisa.
+ */
+function resolveFilters(q: QueryDetails, d: AssistantData, start: string, end: string): { q: QueryDetails; note: string } {
+  if (!q.search) return { q, note: '' };
+  const inRange = d.transactions.filter((t) => { const day = dayOf(t.date); return day >= start && day <= end; });
+  const hasKeyword = inRange.some((t) => matchSearch(t, q.search));
+  if (hasKeyword || !q.category) return { q: { ...q, category: undefined }, note: '' };
+  return { q: { ...q, search: undefined }, note: `Não achei "${q.search}" na descrição dos lançamentos, então somei a categoria ${q.category}.\n\n` };
 }
 function incomesIn(d: AssistantData, start: string, end: string, q: QueryDetails) {
   return d.transactions.filter((t) => {
@@ -111,8 +130,8 @@ const line = (t: Transaction, cards: CreditCard[]) => {
 };
 const filterLabel = (q: QueryDetails, d: AssistantData) => {
   const parts: string[] = [];
-  if (q.category && q.search) parts.push(`com "${q.search}"`);
-  else { if (q.category) parts.push(`em ${q.category}`); if (q.search) parts.push(`com "${q.search}"`); }
+  if (q.category) parts.push(`em ${q.category}`);
+  if (q.search) parts.push(`com "${q.search}"`);
   if (q.cardName) { const c = findCard(d.creditCards, q.cardName); parts.push(`no cartão ${c?.name || q.cardName}`); }
   return parts.length ? ' ' + parts.join(' ') : '';
 };
@@ -142,8 +161,13 @@ export function eventsIn(events: CalendarEvent[], start: string, end: string, ki
 const monthKey = (day: string) => day.slice(0, 7);
 
 // ─── respostas ───────────────────────────────────────────────────────────────
-export function answerQuery(q: QueryDetails, d: AssistantData, today = new Date()): string {
-  const { start, end } = resolveRange(q, today);
+export function answerQuery(q0: QueryDetails, d: AssistantData, today = new Date()): string {
+  const { start, end } = resolveRange(q0, today);
+  const { q, note } = q0.intent === 'AGENDA' ? { q: q0, note: '' } : resolveFilters(q0, d, start, end);
+  return note + answer(q, d, today, start, end);
+}
+
+function answer(q: QueryDetails, d: AssistantData, today: Date, start: string, end: string): string {
   const when = describeRange(start, end, today);
   const limit = Math.max(1, Math.min(30, Number(q.limit) || 10));
 

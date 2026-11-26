@@ -16,7 +16,9 @@ import {
     FileText,
     Download,
     CalendarDays,
-    BarChart2
+    BarChart2,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { 
     BarChart, 
@@ -34,6 +36,7 @@ import {
     Area
 } from 'recharts';
 import { store } from "../services/firestoreStore";
+import { useHideValues, brl } from '../services/privacy';
 import { Transaction, FixedBill, BudgetLimit, Forecast, CreditCard } from '../types';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#F43F5E', '#0EA5E9', '#64748B'];
@@ -46,6 +49,7 @@ const formatDate = (dateStr: string): string => {
 };
 
 const FinanceDashboard: React.FC = () => {
+    const [hideValues, toggleHide] = useHideValues();
     const today = new Date();
     const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -114,10 +118,7 @@ const FinanceDashboard: React.FC = () => {
         return () => window.removeEventListener("lyvo:data-changed", handler);
     }, []);
 
-    const formatCurrency = (val: number) => {
-        const safe = isNaN(val) || !isFinite(val) ? 0 : val;
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(safe);
-    };
+    const formatCurrency = (val: number) => brl(val, hideValues);
 
     const handleToggleBill = (id: string) => {
         store.toggleFixedBillStatus(id, selectedMonth, selectedYear);
@@ -247,7 +248,12 @@ const FinanceDashboard: React.FC = () => {
                         <h1 className="text-2xl font-bold text-lyvo-text">Financeiro</h1>
                         <p className="text-lyvo-subtext text-sm">Controle sua saúde financeira</p>
                     </div>
-                    <div className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-full text-sm font-bold mt-3 sm:mt-0 text-blue-700">
+                    <div className="flex items-center gap-2 mt-3 sm:mt-0">
+                    <button onClick={toggleHide} aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'} title={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+                        className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                        {hideValues ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                    <div className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-full text-sm font-bold text-blue-700">
                         <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-200 rounded-full transition-colors">
                             <ChevronDown className="w-4 h-4 rotate-90" />
                         </button>
@@ -257,6 +263,7 @@ const FinanceDashboard: React.FC = () => {
                         <button onClick={handleNextMonth} className="p-1 hover:bg-gray-200 rounded-full transition-colors">
                             <ChevronDown className="w-4 h-4 -rotate-90" />
                         </button>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -664,7 +671,7 @@ const FinanceDashboard: React.FC = () => {
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} tickFormatter={(v) => `R$ ${v}`} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} tickFormatter={(v) => (hideValues ? '•••' : `R$ ${v}`)} />
                                         <Tooltip formatter={(value: number) => formatCurrency(value)} />
                                         <Area 
                                             type="monotone" 
@@ -826,6 +833,7 @@ const FinanceDashboard: React.FC = () => {
 };
 
 const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number, onClose: () => void, onRefresh: () => void, onPay: () => void }> = ({ card, month, year, onClose, onRefresh, onPay }) => {
+    const [hideValues] = useHideValues();
     const [localUpdate, setLocalUpdate] = useState(0);
     const forceLocalUpdate = () => setLocalUpdate(prev => prev + 1);
 
@@ -881,11 +889,11 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
                         <div className="grid grid-cols-2 gap-y-4">
                             <div>
                                 <span className="text-[10px] font-black uppercase text-gray-400">Total Fatura</span>
-                                <p className="text-xl font-black">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentInvoice)}</p>
+                                <p className="text-xl font-black">{brl(currentInvoice, hideValues)}</p>
                             </div>
                             <div className="text-right">
                                 <span className="text-[10px] font-black uppercase text-gray-400">Total Pago</span>
-                                <p className="text-xl font-bold text-green-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paidValue)}</p>
+                                <p className="text-xl font-bold text-green-600">{brl(paidValue, hideValues)}</p>
                             </div>
                         </div>
                     </div>
@@ -899,7 +907,7 @@ const CardDetailModal: React.FC<{ card: CreditCard, month: number, year: number,
                                     <p className="text-[10px] text-gray-400 font-bold">{formatDate(t.date)}</p>
                                 </div>
                                 <div className="flex items-center space-x-3">
-                                    <span className="text-sm font-black text-gray-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.value)}</span>
+                                    <span className="text-sm font-black text-gray-900">{brl(t.value, hideValues)}</span>
                                     <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => setEditingTransaction(t)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 className="w-4 h-4" /></button>
                                         <button onClick={() => handleDeleteTransaction(t.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
@@ -1271,6 +1279,7 @@ const monthKeyOf = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, '
 const monthLabelOf = (k: string) => `${MONTH_NAMES[Number(k.slice(5, 7)) - 1]}/${k.slice(2, 4)}`;
 
 function BalanceCard({ balance, month, year }: { balance: number; month: number; year: number }) {
+    const [hideValues] = useHideValues();
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const prefs = store.balancePrefs;
@@ -1305,7 +1314,7 @@ function BalanceCard({ balance, month, year }: { balance: number; month: number;
         <div className="relative bg-gradient-to-br from-lyvo-primary to-lyvo-dark p-4 rounded-2xl shadow-md border-l-4 border-lyvo-light text-white flex justify-between items-center">
             <div className="min-w-0">
                 <p className="text-xs text-white/80 font-medium uppercase">{title}</p>
-                <p className="text-2xl font-bold mt-1 text-white">{balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                <p className="text-2xl font-bold mt-1 text-white">{brl(balance, hideValues)}</p>
                 <p className="text-[10px] text-white/70 mt-0.5">{sub}</p>
             </div>
             <button onClick={() => setOpen(true)} className="shrink-0 rounded-xl bg-white/15 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white hover:bg-white/25" aria-label="Como calcular o saldo">
@@ -1315,17 +1324,19 @@ function BalanceCard({ balance, month, year }: { balance: number; month: number;
             {open && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
                     <div className="w-full max-w-md space-y-3 rounded-t-3xl bg-white p-6 text-gray-900 shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold">Como mostrar seu saldo</h3>
-                        <Option active={prefs.mode === 'accumulated' && !prefs.startMonth} title="Acumulado"
-                            desc="Soma tudo o que entrou e saiu, mês a mês. Meses anteriores mostram o saldo daquela época."
+                        <h3 className="text-lg font-bold">Como calcular seu saldo</h3>
+                        <p className="text-xs text-gray-500 -mt-1">Escolha o que o card verde mostra. Nenhuma opção apaga seus lançamentos, e você pode trocar quando quiser.</p>
+                        <Option active={prefs.mode === 'accumulated' && !prefs.startMonth} title="Saldo acumulado (padrão)"
+                            desc="O que sobra de um mês passa para o próximo, como numa conta bancária. Ex.: sobrou R$ 300 em outubro e R$ 200 em novembro → novembro mostra R$ 500."
                             onClick={() => save({ mode: 'accumulated', startMonth: null })} />
-                        <Option active={prefs.mode === 'monthly'} title="Cada mês começa do zero"
-                            desc="Mostra só o resultado do mês: o que entrou menos o que saiu naquele mês."
+                        <Option active={prefs.mode === 'monthly'} title="Só o resultado de cada mês"
+                            desc="Nada passa de um mês para o outro: cada mês mostra apenas o que entrou menos o que saiu nele. Ex.: novembro mostra R$ 200, mesmo que tenha sobrado dinheiro em outubro."
                             onClick={() => save({ mode: 'monthly' })} />
-                        <Option active={prefs.mode === 'accumulated' && !!prefs.startMonth} title={prefs.startMonth ? `Recomeçado em ${monthLabelOf(prefs.startMonth)}` : `Recomeçar do zero em ${monthLabelOf(nextMonth)}`}
+                        <Option active={prefs.mode === 'accumulated' && !!prefs.startMonth}
+                            title={prefs.startMonth ? `Zerado em ${monthLabelOf(prefs.startMonth)}, acumulando desde então` : `Zerar e voltar a acumular a partir de ${monthLabelOf(nextMonth)}`}
                             desc={prefs.startMonth
-                                ? 'O acumulado conta a partir desse mês. Meses antes dele continuam com o histórico. Toque para recomeçar no próximo mês.'
-                                : 'Fecha o mês atual e o acumulado volta a contar do zero a partir do próximo mês. Seus lançamentos não são apagados.'}
+                                ? `O saldo antigo foi deixado de lado em ${monthLabelOf(prefs.startMonth)} e, desde lá, os meses voltaram a se somar. Meses anteriores continuam com o histórico. Toque para zerar de novo a partir de ${monthLabelOf(nextMonth)}.`
+                                : `Bom para "virar a página" de um saldo negativo ou antigo: ${monthLabelOf(nextMonth)} começa do zero e, a partir dele, os meses voltam a se somar. Os meses anteriores continuam como estão.`}
                             onClick={() => save({ mode: 'accumulated', startMonth: nextMonth })} />
                         <button onClick={() => setOpen(false)} className="w-full pt-1 text-sm text-gray-400">Fechar</button>
                     </div>
