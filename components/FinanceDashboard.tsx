@@ -538,77 +538,83 @@ const FinanceDashboard: React.FC = () => {
                         </div>
 
                         <div className="bg-white p-5 rounded-3xl shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-bold text-lyvo-text">Categorias</h2>
-                                <button onClick={() => { setEditingCategory(null); setShowCategoryModal(true); }} className="p-1 text-lyvo-primary hover:bg-teal-50 rounded-lg transition-colors">
-                                    <Plus className="w-5 h-5" />
+                            {(() => {
+                                // ordem: estouradas primeiro, depois as mais perto do limite; sem limite no fim
+                                const rows = limits.map((l) => {
+                                    const spent = Number(l.spent) || 0;
+                                    const lim = Number(l.monthlyLimit) || 0;
+                                    const ratio = lim > 0 ? spent / lim : -1;
+                                    return { l, spent, lim, ratio };
+                                }).sort((a, b) => b.ratio - a.ratio || b.spent - a.spent);
+                                const over = rows.filter((r) => r.ratio >= 1).length;
+                                const near = rows.filter((r) => r.ratio >= 0.8 && r.ratio < 1).length;
+                                const shown = expandCategories ? rows : rows.slice(0, 5);
+                                return (<>
+                            <div className="flex items-start justify-between mb-1">
+                                <div>
+                                    <h2 className="text-lg font-bold text-lyvo-text">Limites por categoria</h2>
+                                    <p className="text-xs text-gray-400">
+                                        {rows.length === 0 ? 'Defina quanto quer gastar em cada categoria.'
+                                            : over ? `${over} acima do limite${near ? ` · ${near} perto` : ''}`
+                                            : near ? `${near} perto do limite` : 'Tudo dentro do planejado'}
+                                    </p>
+                                </div>
+                                <button onClick={() => { setEditingCategory(null); setShowCategoryModal(true); }} className="text-lyvo-primary text-sm font-bold flex items-center bg-teal-50 px-3 py-1.5 rounded-xl transition-colors" aria-label="Nova categoria">
+                                    <Plus className="w-4 h-4" />
                                 </button>
                             </div>
-                            
-                            <div className="space-y-4">
-                                {limits.slice(0, expandCategories ? limits.length : 4).map(l => {
-                                    const percent = l.monthlyLimit > 0 ? Math.min((l.spent / l.monthlyLimit) * 100, 100) : 0;
-                                    
-                                    const getBarColor = (p: number) => {
-                                        if (p >= 85) return 'bg-red-500';
-                                        if (p >= 50) return 'bg-yellow-500';
-                                        return 'bg-green-500';
-                                    };
 
+                            <ul className="mt-4 space-y-4">
+                                {shown.map(({ l, spent, lim, ratio }) => {
+                                    const pct = lim > 0 ? Math.min(ratio * 100, 100) : 0;
+                                    // status: cor + texto (nunca só cor)
+                                    const st = lim <= 0 ? { bar: 'bg-gray-300', text: 'text-gray-400', label: 'sem limite definido' }
+                                        : ratio >= 1 ? { bar: 'bg-red-500', text: 'text-red-600', label: `passou ${formatCurrency(spent - lim)}` }
+                                        : ratio >= 0.8 ? { bar: 'bg-amber-500', text: 'text-amber-600', label: `restam ${formatCurrency(lim - spent)}` }
+                                        : { bar: 'bg-lyvo-primary', text: 'text-gray-400', label: `restam ${formatCurrency(lim - spent)}` };
                                     return (
-                                        <div key={l.id} className="group p-1 hover:bg-gray-50 rounded-xl transition-all">
-                                            <div className="flex justify-between items-start text-xs mb-1">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-gray-700">{l.category}</span>
-                                                    <span className={`font-black text-[10px] ${percent >= 100 ? 'text-red-600' : 'text-gray-400'}`}>
-                                                        {formatCurrency(l.spent)} / {formatCurrency(l.monthlyLimit)}
+                                        <li key={l.id} className="group">
+                                            <div className="flex items-baseline justify-between gap-2 text-sm">
+                                                <span className="flex min-w-0 items-center gap-1.5">
+                                                    <span className="truncate font-semibold text-gray-800">{l.category.trim()}</span>
+                                                    <span className="flex items-center md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => { setEditingCategory(l); setShowCategoryModal(true); }} className="p-1 text-gray-300 hover:text-blue-500" aria-label={`Editar ${l.category}`}>
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button onClick={async () => { if (window.confirm(`Deseja excluir a categoria ${l.category}?`)) { await store.deleteBudgetLimit(l.id); triggerUpdate(); } }}
+                                                            className="p-1 text-gray-300 hover:text-red-500" aria-label={`Excluir ${l.category}`}>
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
                                                     </span>
-                                                </div>
-                                                
-                                                <div className="flex items-center space-x-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => { setEditingCategory(l); setShowCategoryModal(true); }}
-                                                        className="p-1 text-blue-500 hover:bg-blue-100 rounded-md transition-colors"
-                                                    >
-                                                        <Edit2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={async () => {
-                                                            if(window.confirm(`Deseja excluir a categoria ${l.category}?`)) {
-                                                                await store.deleteBudgetLimit(l.id);
-                                                                triggerUpdate();
-                                                            }
-                                                        }}
-                                                        className="p-1 text-red-400 hover:bg-red-50 rounded-md transition-colors"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </div>
+                                                </span>
+                                                <span className="shrink-0 tabular-nums text-xs text-gray-500">
+                                                    <span className="font-bold text-gray-900">{formatCurrency(spent)}</span>{lim > 0 && <> de {formatCurrency(lim)}</>}
+                                                </span>
                                             </div>
-                                            
-                                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner mt-1">
-                                                <div 
-                                                    style={{ width: `${percent}%` }} 
-                                                    className={`h-full transition-all duration-500 ease-out ${getBarColor(percent)}`}
-                                                ></div>
+                                            <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                                                <div style={{ width: `${Math.max(pct, spent > 0 ? 2 : 0)}%` }} className={`h-full rounded-full transition-all duration-500 ${st.bar}`} />
                                             </div>
-                                        </div>
+                                            <p className={`mt-1 text-[11px] font-medium ${st.text}`}>
+                                                {ratio >= 1 ? '⚠ ' : ''}{lim > 0 ? `${Math.round(ratio * 100)}% · ` : ''}{st.label}
+                                            </p>
+                                        </li>
                                     );
                                 })}
+                            </ul>
 
-                                {limits.length > 4 && (
-                                    <button 
-                                        onClick={() => setExpandCategories(!expandCategories)} 
-                                        className="w-full py-2 text-lyvo-primary text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all mt-2"
-                                    >
-                                        {expandCategories ? 'Ver Menos' : `Ver Mais (${limits.length - 4})`}
-                                    </button>
-                                )}
-
-                                {limits.length === 0 && (
-                                    <p className="text-[10px] text-gray-400 text-center py-4">Nenhuma categoria cadastrada.</p>
-                                )}
-                            </div>
+                            {rows.length > 5 && (
+                                <button onClick={() => setExpandCategories(!expandCategories)}
+                                    className="w-full py-2 text-lyvo-primary text-xs font-black uppercase tracking-widest hover:bg-gray-50 rounded-xl transition-all mt-3">
+                                    {expandCategories ? 'Ver menos' : `Ver todas (${rows.length})`}
+                                </button>
+                            )}
+                            {rows.length === 0 && (
+                                <button onClick={() => { setEditingCategory(null); setShowCategoryModal(true); }} className="mt-4 w-full rounded-xl border border-dashed border-gray-200 py-4 text-sm font-semibold text-gray-500 hover:bg-gray-50">
+                                    + Criar primeira categoria
+                                </button>
+                            )}
+                                </>);
+                            })()}
                         </div>
                     </div>
                 </div>
