@@ -631,7 +631,7 @@ const FinanceDashboard: React.FC = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col">
                             <h3 className="text-base font-bold text-gray-900 mb-1">Para onde foi seu dinheiro</h3>
-                            <p className="text-xs text-gray-400 mb-4 capitalize">{viewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
+                            <p className="text-xs text-gray-400 mb-4">{(() => { const t = viewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); return t[0].toUpperCase() + t.slice(1); })()}</p>
                             <SpendingBreakdown items={pieData} fmt={formatCurrency} hidden={hideValues} />
                         </div>
 
