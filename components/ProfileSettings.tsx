@@ -79,7 +79,7 @@ export default function ProfileSettings({ onClose, onSaved }: { onClose: () => v
   const label = 'mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-500';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <div className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h3 className="text-lg font-bold text-gray-900">Configurações</h3>
@@ -138,7 +138,7 @@ export default function ProfileSettings({ onClose, onSaved }: { onClose: () => v
           </div>
         )}
 
-        <div className="space-y-2 border-t border-gray-100 px-6 py-4">
+        <div className="space-y-2 border-t border-gray-100 px-6 py-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
           {msg && <p className={`flex items-center gap-1.5 text-sm ${msg.ok ? 'text-emerald-600' : 'text-red-500'}`}>{msg.ok && <Check className="h-4 w-4" />}{msg.text}</p>}
           <button onClick={save} disabled={saving || loading}
             className="w-full rounded-xl bg-lyvo-primary py-3.5 font-bold text-white hover:bg-lyvo-dark disabled:opacity-60">
