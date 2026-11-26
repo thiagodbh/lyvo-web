@@ -373,8 +373,10 @@ async function userAction(req: CallableRequest, d0: any) {
       break;
     }
     case "update_profile": {
-      const allowed = ["name", "phone", "city", "state", "profession", "income"];
-      allowed.forEach((k) => { if (typeof d.profile?.[k] === "string") patch[k] = d.profile[k].slice(0, 200); });
+      const allowed = ["name", "phone", "city", "state", "profession", "income", "birthDate"];
+      allowed.forEach((k) => { if (typeof d.profile?.[k] === "string") patch[k] = d.profile[k].trim().slice(0, 200); });
+      if (typeof patch.phone === "string") patch.phone = patch.phone.replace(/\D/g, "").slice(0, 13);
+      if (typeof patch.birthDate === "string" && patch.birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(patch.birthDate)) delete patch.birthDate;
       break;
     }
     case "password_reset_link": {

@@ -90,7 +90,7 @@ export default function UserDrawer({ uid, onClose, onChanged }: { uid: string; o
             { value: 'history', label: 'Notas e auditoria', count: data.notes.length + data.audit.length },
           ]} />
 
-          {tab === 'summary' && <ProfileTab d={data} />}
+          {tab === 'summary' && <ProfileTab d={data} onSaved={after} />}
           {tab === 'billing' && <BillingTab d={data} onCancelSub={(id) => { setSubId(id); setAction('cancel_gateway_subscription'); }} />}
           {tab === 'usage' && <UsageTab d={data} />}
           {tab === 'history' && (
@@ -179,13 +179,56 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return <div className="flex justify-between gap-4 py-1.5 text-sm"><span className="text-slate-500">{k}</span><span className="text-right font-medium text-slate-800 break-all">{v || '—'}</span></div>;
 }
 
-function ProfileTab({ d }: { d: UserDetail }) {
+const INCOME_OPTS = ['Até 3k', '3k-7k', '7k-15k', '15k-30k', 'Acima 30k'];
+const UF = 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ');
+
+/** Edita os dados cadastrais do cliente (ação update_profile, registrada na auditoria). */
+function EditProfileModal({ d, open, onClose, onSaved }: { d: UserDetail; open: boolean; onClose: () => void; onSaved: () => void }) {
+  const api = useApi();
+  const toast = useToast();
+  const r = d.row;
+  const init = () => ({ name: r.name || '', phone: r.phone || '', birthDate: d.profile.birthDate || '', city: r.city || '', state: r.state || '', profession: r.profession || '', income: r.income || '' });
+  const [f, setF] = useState(init);
+  const [busy, setBusy] = useState(false);
+  React.useEffect(() => { if (open) setF(init()); /* eslint-disable-next-line */ }, [open]);
+  const set = (k: keyof typeof f) => (e: any) => setF({ ...f, [k]: e.target.value });
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.userAction(r.uid, 'update_profile', { profile: { ...f, phone: f.phone.replace(/\D/g, ''), state: f.state.toUpperCase() } });
+      toast('Dados atualizados'); onClose(); onSaved();
+    } catch (e: any) { toast(e.message, 'err'); } finally { setBusy(false); }
+  };
+  return (
+    <Modal open={open} onClose={onClose} title={`Editar dados · ${r.email}`}
+      footer={<><Button onClick={onClose}>Cancelar</Button><Button variant="primary" loading={busy} onClick={save}>Salvar</Button></>}>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Nome"><input className={inputCls} value={f.name} onChange={set('name')} /></Field>
+        <Field label="Celular (com DDD)"><input className={inputCls} value={f.phone} onChange={set('phone')} inputMode="tel" placeholder="31999998888" /></Field>
+        <Field label="Nascimento"><input type="date" className={inputCls} value={f.birthDate} onChange={set('birthDate')} /></Field>
+        <Field label="Profissão"><input className={inputCls} value={f.profession} onChange={set('profession')} /></Field>
+        <Field label="Cidade"><input className={inputCls} value={f.city} onChange={set('city')} /></Field>
+        <Field label="UF">
+          <select className={inputCls} value={f.state} onChange={set('state')}><option value="">—</option>{UF.map((u) => <option key={u}>{u}</option>)}</select>
+        </Field>
+        <Field label="Renda">
+          <select className={inputCls} value={f.income} onChange={set('income')}><option value="">Não informada</option>{INCOME_OPTS.map((o) => <option key={o}>{o}</option>)}</select>
+        </Field>
+      </div>
+      <p className="mt-3 text-xs text-slate-500">E-mail e senha não mudam aqui: e-mail é o login do cliente; para senha, use "Link de nova senha".</p>
+    </Modal>
+  );
+}
+
+function ProfileTab({ d, onSaved }: { d: UserDetail; onSaved: () => void }) {
   const r = d.row;
   const acq = r.acquisition || {};
   const wa = r.phone ? `https://wa.me/55${r.phone.replace(/\D/g, '')}` : null;
+  const [editing, setEditing] = useState(false);
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <Card title="Dados">
+      <EditProfileModal d={d} open={editing} onClose={() => setEditing(false)} onSaved={onSaved} />
+      <Card title="Dados" action={<Button size="sm" icon={<UserCog className="h-3.5 w-3.5" />} onClick={() => setEditing(true)}>Editar</Button>}>
         <Row k="Nome" v={r.name} />
         <Row k="E-mail" v={<span className="inline-flex items-center gap-1.5">{r.email}{r.emailVerified ? <Pill tone="green">verificado</Pill> : <Pill>não verificado</Pill>}</span>} />
         <Row k="Telefone" v={r.phone && wa ? <a className="text-teal-700 hover:underline" href={wa} target="_blank" rel="noreferrer">{r.phone}</a> : null} />

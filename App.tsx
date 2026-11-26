@@ -1,6 +1,7 @@
 import { checkUserAccess } from "./services/accessControl";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import Paywall from './components/Paywall';
+import ProfileSettings from './components/ProfileSettings';
 import { SubscribeModal, takePlanIntent, usePendingCheckoutWatcher } from './components/Checkout';
 import { hasAccess } from './services/accessControl';
 import { db } from './services/firebase';
@@ -132,6 +133,8 @@ const ProfileScreen = ({ onLogout, onSubscribe }: { onLogout: () => void; onSubs
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [referralCount, setReferralCount] = useState<number>(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [profileName, setProfileName] = useState('');
 
   const uid = authService.getCurrentUser()?.uid || '';
   const referralLink = `https://meulyvo.com?ref=${uid}`;
@@ -139,6 +142,7 @@ const ProfileScreen = ({ onLogout, onSubscribe }: { onLogout: () => void; onSubs
 
   useEffect(() => {
     if (uid) store.getReferralCount(uid).then(setReferralCount).catch(() => {});
+    if (uid) getDoc(doc(db, 'users', uid)).then((s) => setProfileName(((s.data() as any)?.name || '').trim())).catch(() => {});
   }, [uid]);
 
   const handleCopy = async () => {
@@ -214,9 +218,9 @@ const ProfileScreen = ({ onLogout, onSubscribe }: { onLogout: () => void; onSubs
             <path d="M3.5 25c0-5.799 4.701-10.5 10.5-10.5S24.5 19.201 24.5 25" fill="white" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">Meu Perfil</h2>
+        <h2 className="text-2xl font-bold text-gray-800">{profileName ? `Olá, ${profileName.split(/\s+/)[0]}!` : 'Meu Perfil'}</h2>
         <p className="text-gray-500 text-sm text-center mt-1 max-w-xs">
-          Gerencie sua conta e preferências do Lyvo.
+          {profileName ? authService.getCurrentUser()?.email : 'Complete seu cadastro em Configurações.'}
         </p>
       </div>
 
@@ -254,10 +258,11 @@ const ProfileScreen = ({ onLogout, onSubscribe }: { onLogout: () => void; onSubs
 
       {/* Botões de ação */}
       <div className="mx-4 space-y-3">
-        <button className="w-full flex items-center justify-center space-x-2 bg-white p-4 rounded-xl shadow-sm text-gray-700 font-medium border border-gray-100 hover:bg-gray-50 transition">
+        <button onClick={() => setShowSettings(true)} className="w-full flex items-center justify-center space-x-2 bg-white p-4 rounded-xl shadow-sm text-gray-700 font-medium border border-gray-100 hover:bg-gray-50 transition">
           <Settings className="w-5 h-5" />
           <span>Configurações</span>
         </button>
+        {showSettings && <ProfileSettings onClose={() => setShowSettings(false)} onSaved={(p) => setProfileName(p.name.trim())} />}
         <button
           onClick={onLogout}
           className="w-full bg-red-50 text-red-500 p-4 rounded-xl font-bold hover:bg-red-100 transition flex items-center justify-center space-x-2"
