@@ -43,11 +43,42 @@ const isInvoicePayment = (t: Transaction) => /PGTO_/.test(t.description || '');
 const isCardResidual = (t: Transaction) => /^Resíduo Fatura Anterior/.test(t.description || '');
 
 /** Período padrão: mês atual. Corrige datas invertidas ou ausentes. */
+/**
+ * Lê uma data que a IA mandou, aceitando formatos tortos:
+ * "2026-11-05", "2026-11-05T10:00", "2026-11" (mês inteiro), "05/11/2026", "5/11".
+ * Devolve [início, fim] em YYYY-MM-DD, ou null se não der para entender.
+ */
+function parseLoose(raw: any, today: Date): [string, string] | null {
+  const s = String(raw ?? '').trim();
+  if (!s) return null;
+  const valid = (y: number, m: number, d: number) => {
+    const dt = new Date(y, m - 1, d);
+    return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d ? ymd(dt) : null;
+  };
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) { const v = valid(+m[1], +m[2], +m[3]); return v ? [v, v] : (() => { const last = new Date(+m![1], +m![2], 0); return +m![3] > last.getDate() ? [ymd(last), ymd(last)] as [string, string] : null; })(); }
+  m = s.match(/^(\d{4})-(\d{1,2})$/);
+  if (m) { const y = +m[1], mo = +m[2]; if (mo < 1 || mo > 12) return null; return [ymd(new Date(y, mo - 1, 1)), ymd(new Date(y, mo, 0))]; }
+  m = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (m) { const y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : today.getFullYear(); const v = valid(y, +m[2], +m[1]); return v ? [v, v] : null; }
+  return null;
+}
+
+/** Período da consulta. Padrão: mês atual. Sempre devolve datas válidas, mesmo se a IA errar o formato. */
 export function resolveRange(q: QueryDetails, today: Date) {
   const first = ymd(new Date(today.getFullYear(), today.getMonth(), 1));
   const last = ymd(new Date(today.getFullYear(), today.getMonth() + 1, 0));
-  let start = q.startDate && /^\d{4}-\d{2}-\d{2}$/.test(q.startDate) ? q.startDate : first;
-  let end = q.endDate && /^\d{4}-\d{2}-\d{2}$/.test(q.endDate) ? q.endDate : (q.startDate ? q.startDate : last);
+  const a = parseLoose(q.startDate, today);
+  const b = parseLoose(q.endDate, today);
+  let start: string, end: string;
+  if (a && b) { start = a[0]; end = b[1]; }
+  else if (a) {
+    start = a[0]; end = a[1];
+    // só o dia 1º sem fim: a IA quis dizer o mês inteiro ("em novembro")
+    if (start === end && start.endsWith('-01')) end = ymd(new Date(+start.slice(0, 4), +start.slice(5, 7), 0));
+  }
+  else if (b) { start = first; end = b[1]; }
+  else { start = first; end = last; }
   if (end < start) [start, end] = [end, start];
   return { start, end };
 }
